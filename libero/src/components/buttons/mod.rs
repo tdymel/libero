@@ -22,13 +22,13 @@ mod tldr;
 mod toolbar;
 
 #[cfg(feature = "action-icon")]
-pub(crate) use action_icon::{ACTION_ICON_GROWS, TooltipOpenDelay, is_compact};
+pub(crate) use action_icon::{ACTION_ICON_GROWS, TooltipOpenDelay, is_compact, size_words};
 #[cfg(feature = "action-icon")]
 pub use action_icon::{ActionIcon, ActionIconProps};
 #[cfg(feature = "button")]
-pub(crate) use button::button_variables;
-#[cfg(feature = "button")]
 pub use button::{Button, ButtonPart, ButtonProps, LoadingPosition};
+#[cfg(feature = "button")]
+pub(crate) use button::{button_variables, variant_var};
 #[cfg(feature = "button-group")]
 pub use button_group::{ButtonGroup, ButtonGroupProps};
 #[cfg(feature = "copy")]

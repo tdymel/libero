@@ -30,10 +30,12 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
+| `variant` | `Responsive<Variant>` | `outlined` | Visual style, as on `ActionIcon`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `size` | `Responsive<ThemeAwareValue>` | `md` | Button size. The icon takes 55% of it. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
+| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
+| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. The app persists the picked set: Libero stores only the scheme and the direction. `class`, `sx` and extra attributes then land on the group around both. |
 | `with_system` | `bool` | `false` | Adds following the system to the cycle, as a step of its own with a half-filled disc: system, the scheme the system is not showing, the one it is, and back. Following, an OS change applies at once; a picked scheme stays until the next press. Off, a press flips between light and dark, and flipping to the system's own scheme follows the system again. For your own control, such as a menu of all three choices, build on `use_color_scheme()`: it reads the setting and what it resolves to (a `libero::theme::ColorScheme`), and `set`, `toggle` and `cycle` change it. |
 | `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the scheme a press shows next, always `Light` or `Dark` without `with_system` (even when the press stores `System`), and returns what the press does. |

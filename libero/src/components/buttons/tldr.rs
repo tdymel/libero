@@ -16,7 +16,7 @@ use crate::{
     hooks::{use_localization, use_theme},
     localization::fill,
     sx::{ThemeAwareValue, sx},
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 /// An assistant a [`Tldr`] menu can hand a page to.
@@ -139,16 +139,22 @@ base_props! {
         /// Names the icon-only trigger. Unset, the localization's.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// Unset, `theme.tldr.variant`.
+        /// Unset, `theme.tldr.variant`. Per breakpoint too, as on `Chip`.
         #[props(default, into)]
-        variant: Input<Variant>,
-        /// The trigger's size step. Unset, `theme.tldr.size`.
+        variant: Input<Responsive<Variant>>,
+        /// The trigger's size step. Unset, `theme.tldr.size`. Per breakpoint too.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Corner radius, independent of `size`: a size word or any CSS. Unset, `theme.tldr.radius`,
-        /// else the trigger's own: `xl` on the chip, `sm` icon-only.
+        /// else the trigger's own: `xl` on the chip, `sm` icon-only. Per breakpoint too.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Unset, `theme.tldr.color`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -199,13 +205,17 @@ pub fn Tldr(props: TldrProps) -> Element {
         items: links,
     }];
 
-    let variant = props.variant.copied_or(theme.tldr.variant);
-    let size = props.size.copied_or(theme.tldr.size);
+    let variant = props.variant.copied_or(theme.tldr.variant.into());
+    let size = props.size.copied_or(theme.tldr.size.into());
     let radius = props
         .radius
         .clone()
         .into_option()
-        .or(theme.tldr.radius.map(ThemeAwareValue::from));
+        .or(theme
+            .tldr
+            .radius
+            .map(|radius| ThemeAwareValue::from(radius).into()))
+        .map_or(Input::None, Input::Value);
     let color = props
         .color
         .clone()
@@ -222,6 +232,8 @@ pub fn Tldr(props: TldrProps) -> Element {
                     radius: radius.clone(),
                     variant,
                     color,
+                    hidden_from: props.hidden_from,
+                    visible_from: props.visible_from,
                     aria_label: props
                         .aria_label
                         .clone()
@@ -239,6 +251,8 @@ pub fn Tldr(props: TldrProps) -> Element {
                     radius,
                     variant,
                     color,
+                    hidden_from: props.hidden_from,
+                    visible_from: props.visible_from,
                     icon: rsx! {
                         Icon { variant: "standard", size: "sm", color: "inherit", Glyph { slot: IconSlot::Sparkles, icon: lucide::sparkles::outlined } }
                     },

@@ -10,6 +10,7 @@ use crate::{
     context::IconSlot,
     hooks::{use_direction, use_localization, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
+    theme::{Responsive, Size},
     tokens::Direction,
 };
 
@@ -19,14 +20,22 @@ static GLYPH_SX: StaticSx =
 
 base_props! {
     pub struct DirectionToggleProps {
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Names the press, given the direction it turns to. Replaces the localized names.
         #[props(default)]
         label: Option<Callback<Direction, String>>,
@@ -67,9 +76,12 @@ pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
         });
     let group = use_button_group();
     let variant = Input::Value(
-        props
-            .variant
-            .copied_or(group.variant.unwrap_or(theme.direction_toggle.variant)),
+        props.variant.copied_or(
+            group
+                .variant
+                .unwrap_or(theme.direction_toggle.variant)
+                .into(),
+        ),
     );
     let color = props
         .color
@@ -95,6 +107,8 @@ pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
             color,
             size: props.size.clone(),
             radius: props.radius.clone(),
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             disabled: props.disabled,
             class: props.class.clone(),
             sx: props.sx.clone(),

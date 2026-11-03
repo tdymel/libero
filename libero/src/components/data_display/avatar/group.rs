@@ -15,7 +15,7 @@ use crate::{
     hooks::{use_id, use_localization, use_theme},
     localization::fill,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, Size, SizeCss},
+    theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, Responsive, Size, SizeCss},
 };
 
 /// How far the focused chip rises, so its neighbour does not cover the focus ring.
@@ -168,7 +168,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
                     size,
                     radius: props.radius.clone(),
                     // `input_from_str!` covers strings, not the enum itself.
-                    variant: Input::Value(variant),
+                    variant: Input::Value(Responsive::new(variant)),
                     color: match person.color.clone() {
                         Some(color) => Input::Value(color),
                         None => props.color.clone(),

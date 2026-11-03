@@ -15,7 +15,7 @@ use crate::{
     localization::RepositoryLabels,
     platform,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_SIZE, Color},
+    theme::{ACTION_ICON_SIZE, Color, Responsive, Size},
     tokens::NamedColorCss,
 };
 
@@ -181,10 +181,18 @@ base_props! {
         /// Unset, the theme's `muted`; a gradient then takes the theme's gradient.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Replaces the name's subject (host and repo); the stars and the new-tab cue
         /// still follow. A raw `"aria-label"` attribute replaces the name whole.
         #[props(default, into)]
@@ -311,6 +319,7 @@ pub fn Repository(props: RepositoryProps) -> Element {
         .into();
     let wrapper = use_box()
         .framework_sx(&STARS_SX)
+        .visibility(&props.hidden_from, &props.visible_from)
         .states(&wrapper_states)
         .prepare();
 

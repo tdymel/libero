@@ -16,7 +16,7 @@ use crate::{
         Align, ColorSchemeHandle, use_color_scheme, use_localization, use_theme, use_theme_set,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_SIZE, ColorSchemeSetting, ThemeSet},
+    theme::{ACTION_ICON_SIZE, ColorSchemeSetting, Responsive, Size, ThemeSet},
 };
 
 /// `ActionIcon` stretches any `svg` to its whole box; this leaves a margin around the glyph.
@@ -68,14 +68,22 @@ parts_enum! {
 base_props! {
     parts(ThemeSwitcherPart);
     pub struct ThemeSwitcherProps {
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Adds a chevron beside the toggle that opens a menu of these theme sets.
         /// The app persists the picked set: Libero stores only the scheme and the direction.
         #[props(default)]
@@ -150,7 +158,7 @@ pub fn ThemeSwitcher(props: ThemeSwitcherProps) -> Element {
     let variant = Input::Value(
         props
             .variant
-            .copied_or(group.variant.unwrap_or(theme.theme_switcher.variant)),
+            .copied_or(group.variant.unwrap_or(theme.theme_switcher.variant).into()),
     );
     let color = props
         .color
@@ -193,6 +201,7 @@ pub fn ThemeSwitcher(props: ThemeSwitcherProps) -> Element {
         .framework_sx(&SPLIT_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .visibility(&props.hidden_from, &props.visible_from)
         .parts(&props.parts)
         .states(&props.states)
         .prepare()
@@ -208,6 +217,8 @@ pub fn ThemeSwitcher(props: ThemeSwitcherProps) -> Element {
                 color: color.clone(),
                 size: props.size.clone(),
                 radius: props.radius.clone(),
+                hidden_from: props.hidden_from,
+                visible_from: props.visible_from,
                 disabled: props.disabled,
                 class: props.class.clone(),
                 sx: parts_under_sx(&props.parts, props.sx.clone()),

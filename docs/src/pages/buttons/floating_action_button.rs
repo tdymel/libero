@@ -133,20 +133,24 @@ pub fn FloatingActionButtonPage() -> Element {
                 prop("tooltip", "bool")
                     .default("false")
                     .doc("Icon-only: shows `aria_label` in a `Tooltip` on hover and keyboard focus."),
-                prop("variant", "Variant")
+                prop("variant", "Responsive<Variant>")
                     .default(defaults.variant.as_str())
-                    .doc("Visual style, as on `Button`."),
+                    .doc("Visual style, as on `Button`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle. The first stop is `color`."),
                 prop("color", "ThemeAwareValue")
                     .default("primary")
                     .doc("Accent color. A theme color name or any CSS color."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default(defaults.size.as_str())
-                    .doc("A step of `Button`'s heights, 60px at `xl`. Icon-only, a CSS length works too; with `children`, only a size word applies."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("A step of `Button`'s heights, 60px at `xl`. Icon-only, a CSS length works too; with `children`, only a size word applies. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(defaults.radius.as_str())
-                    .doc("Corner radius. The default rounds an icon-only button into a circle and an extended one into a pill; `lg` gives a rounded square."),
+                    .doc("Corner radius. The default rounds an icon-only button into a circle and an extended one into a pill; `lg` gives a rounded square. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("placement", "Placement")
                     .default(defaults.placement.as_str())
                     .doc("The corner or edge it sits at. `start` and `end` follow the text direction."),

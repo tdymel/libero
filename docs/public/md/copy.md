@@ -34,10 +34,12 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `value` | `String` | required | The text a press writes to the clipboard. On the web the browser allows it only over HTTPS or on localhost, inside a user action; natively it needs the `native` feature. A control of your own builds on `use_clipboard()`: `copy(text)` starts the write, `copied()` or `failed()` rises once the platform answers, and `reset()` clears both. Say the result in a status region that is already mounted. |
-| `variant` | `Variant` | - | Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own. |
+| `variant` | `Responsive<Variant>` | - | Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `md` | Button size. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `size` | `Responsive<ThemeAwareValue>` | `md` | Button size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
+| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
+| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `aria_label` | `String` | `"Copy"` | The button's name, such as "Copy link". Unset, the localization's. |
 | `label` | `String` | - | Describes what a press copies, read after the name, such as "Add libero to your project". |
 | `disabled` | `bool` | `false` | Disables and dims the button. |

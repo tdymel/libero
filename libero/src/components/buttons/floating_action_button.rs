@@ -9,8 +9,8 @@ use crate::{
     hooks::use_theme,
     sx::{REDUCED_MOTION, Sx, ThemeAwareValue, sx},
     theme::{
-        Gradient, ICON_SIZE, OWN_SHADOW, SizeCss, TRANSITION_DURATION, TRANSITION_EASING,
-        Z_INDEX_HEADER,
+        Gradient, ICON_SIZE, OWN_SHADOW, Responsive, Size, SizeCss, TRANSITION_DURATION,
+        TRANSITION_EASING, Z_INDEX_HEADER,
     },
 };
 
@@ -24,19 +24,26 @@ base_props! {
         /// Shows `aria_label` in a `Tooltip` on hover and keyboard focus. Icon-only.
         #[props(default)]
         tooltip: Option<bool>,
-        /// Unset, the theme's `filled`.
+        /// Unset, the theme's `filled`. Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         #[props(default, into)]
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// A step of `Button`'s heights; unset, `xl` (60px). With `children`, only a size word applies.
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
-        /// Unset, `xxl`: a circle, or a pill with `children`.
+        size: Input<Responsive<ThemeAwareValue>>,
+        /// Unset, `xxl`: a circle, or a pill with `children`. Per breakpoint too.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// The corner or edge it sits at; unset, `bottom-end`. `start` and `end` follow the direction.
         #[props(default, into)]
         placement: Input<Placement>,
@@ -173,17 +180,17 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
         .clone()
         .into_option()
         .unwrap_or_else(|| ThemeAwareValue::from(Z_INDEX_HEADER.value()));
-    let variant = props.variant.copied_or(defaults.variant);
+    let variant = props.variant.copied_or(defaults.variant.into());
     let size = props
         .size
         .clone()
         .into_option()
-        .unwrap_or(ThemeAwareValue::Size(defaults.size));
+        .unwrap_or(ThemeAwareValue::Size(defaults.size).into());
     let radius = props
         .radius
         .clone()
         .into_option()
-        .unwrap_or(ThemeAwareValue::Size(defaults.radius));
+        .unwrap_or(ThemeAwareValue::Size(defaults.radius).into());
     let extended = props.children.is_some();
     let states: Input<States> = props
         .states
@@ -191,17 +198,23 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
         .unwrap_or_default()
         .with("extended", extended)
         .into();
-    let button_size = match &size {
-        ThemeAwareValue::Size(size) => *size,
+    let button_size = size.map(|size| match size {
+        ThemeAwareValue::Size(size) => size,
         _ => defaults.size,
-    };
+    });
     let mut button_sx = elevation_sx(SizeCss::SHADOW.value(defaults.elevation));
     if extended {
         // As the icon-only glyph: `Icon`'s size at the step, where `Button` leaves an unsized svg at 0.
-        let glyph = ICON_SIZE.value(button_size);
-        button_sx = button_sx.selector(
-            "& :where([data-slot='button-icon'] > svg)",
-            sx().width(glyph.clone()).height(glyph),
+        let glyph_sx = |rules: Sx, size: Size| {
+            let glyph = ICON_SIZE.value(size);
+            rules.selector(
+                "& :where([data-slot='button-icon'] > svg)",
+                sx().width(glyph.clone()).height(glyph),
+            )
+        };
+        button_sx = button_size.breakpoints().fold(
+            glyph_sx(button_sx, button_size.base()),
+            |rules, (at, size)| rules.breakpoint(at, glyph_sx(sx(), size)),
         );
     }
     if let Some(own) = props.sx.as_ref() {
@@ -230,6 +243,8 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
                     color: props.color.clone(),
                     size: button_size,
                     radius,
+                    hidden_from: props.hidden_from,
+                    visible_from: props.visible_from,
                     disabled: props.disabled,
                     loading: props.loading,
                     loader: props.loader.clone(),
@@ -254,6 +269,8 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
                     color: props.color.clone(),
                     size,
                     radius,
+                    hidden_from: props.hidden_from,
+                    visible_from: props.visible_from,
                     disabled: props.disabled,
                     loading: props.loading,
                     loader: props.loader.clone(),

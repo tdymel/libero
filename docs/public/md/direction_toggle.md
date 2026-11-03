@@ -31,10 +31,12 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
+| `variant` | `Responsive<Variant>` | `outlined` | Visual style, as on `ActionIcon`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `size` | `Responsive<ThemeAwareValue>` | `md` | Button size. The icon takes 55% of it. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
+| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
+| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `label` | `Callback<Direction, String>` | - | Replaces the two built-in names. Gets the direction a press turns the text to and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 

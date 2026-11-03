@@ -59,16 +59,20 @@ pub fn SharePage() -> Element {
                     .doc("The link. Where no share sheet exists, a press copies it, else `text`, else `title`."),
                 prop("files", "Vec<ShareFile>")
                     .doc("Files (name, MIME type, bytes), shared where the target takes them: on the web where `canShare` takes them, on Android by name from the app's cache (kept a day). Elsewhere the title, text and link still go."),
-                prop("variant", "Variant")
-                    .doc("Visual style, as on `ActionIcon` or `Button`. Icon-only with `color` also unset, the button draws no chrome of its own."),
+                prop("variant", "Responsive<Variant>")
+                    .doc("Visual style, as on `ActionIcon` or `Button`. Icon-only with `color` also unset, the button draws no chrome of its own. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color. A theme color name or any CSS color."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.size.as_str())
-                    .doc("Button size. The default is the icon-only `ActionIcon`'s; with `children`, the `Button`'s, and only a size word applies."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("Button size. The default is the icon-only `ActionIcon`'s; with `children`, the `Button`'s, and only a size word applies. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.radius.as_str())
-                    .doc("Corner radius, independent of `size`."),
+                    .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("aria_label", "String")
                     .doc("The button's name, such as \"Share this article\". Unset, the name is the localization's `share`, or the `children` text."),
                 prop("label", "String")

@@ -31,18 +31,22 @@ pub fn ThemeSwitcherPage() -> Element {
             source: "libero/src/components/buttons/theme_switcher.rs",
             markdown: "/md/theme_switcher.md",
             properties: vec![props("ThemeSwitcher", vec![
-                prop("variant", "Variant")
+                prop("variant", "Responsive<Variant>")
                     .default(theme.theme_switcher.variant.as_str())
-                    .doc("Visual style, as on `ActionIcon`."),
+                    .doc("Visual style, as on `ActionIcon`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.theme_switcher.color.as_str())
                     .doc("Accent color. A theme color name or any CSS color."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.size.as_str())
-                    .doc("Button size. The icon takes 55% of it."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("Button size. The icon takes 55% of it. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.radius.as_str())
-                    .doc("Corner radius, independent of `size`."),
+                    .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("themes", "&'static [&'static ThemeSet]")
                     .doc("Adds the theme picker, a second button that opens a menu of these sets. The app persists the picked set: Libero stores only the scheme and the direction. `class`, `sx` and extra attributes then land on the group around both."),
                 prop("with_system", "bool")

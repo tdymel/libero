@@ -10,6 +10,7 @@ use crate::{
     context::IconSlot,
     hooks::{listener, use_clipboard, use_id, use_localization, use_silent_focus_out, use_timeout},
     sx::ThemeAwareValue,
+    theme::{Responsive, Size},
 };
 
 base_props! {
@@ -18,14 +19,23 @@ base_props! {
         #[props(into)]
         value: String,
         /// Unset with `color` also unset, no chrome of its own.
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Replaces the localized name, e.g. "Copy link".
         #[props(default, into)]
         aria_label: Option<String>,
@@ -88,6 +98,8 @@ pub fn Copy(props: CopyProps) -> Element {
                 color: props.color.clone(),
                 size: props.size.clone(),
                 radius: props.radius.clone(),
+                hidden_from: props.hidden_from,
+                visible_from: props.visible_from,
                 disabled: props.disabled,
                 aria_describedby: described,
                 class: props.class.clone(),

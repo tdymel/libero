@@ -141,7 +141,7 @@ const VARIANT_VARS: [CssVar; 8] = [
 ];
 
 /// `var` for one variant of a responsive one, as `--lsx-button-hover-v-filled`.
-fn variant_var(var: &CssVar, variant: Variant) -> CssVar {
+pub(crate) fn variant_var(var: &CssVar, variant: Variant) -> CssVar {
     CssVar::Owned(format!("{}-v-{}", var.name(), variant.as_str()))
 }
 

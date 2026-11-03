@@ -4,6 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Loader, Text};
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 /// The `shortcut` switch's chord, shown in the tooltip and as `aria-keyshortcuts`.
@@ -14,6 +15,11 @@ const CUSTOM_LOADER: &str =
 
 fn is_link(values: &DemoValues) -> bool {
     values.str("link") == "true"
+}
+
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
 }
 
 fn custom_loader(values: &DemoValues) -> Option<Element> {
@@ -31,18 +37,22 @@ pub fn ActionIconPage() -> Element {
             source: "libero/src/components/buttons/action_icon.rs",
             markdown: "/md/action_icon.md",
             properties: vec![props("ActionIcon", vec![
-                prop("variant", "Variant")
-                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. Set alone, it takes the primary color. With neither `variant` nor `color`, the button takes the surrounding text color."),
+                prop("variant", "Responsive<Variant>")
+                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. Set alone, it takes the primary color. With neither `variant` nor `color`, the button takes the surrounding text color. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. Under a gradient, its first stop."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.size.as_str())
-                    .doc("A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `\"20px\"` sizes the box, and the icon fills it."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `\"20px\"` sizes the box, and the icon fills it. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.radius.as_str())
-                    .doc("Corner radius, independent of `size`."),
+                    .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("aria_label", "String")
                     .default("required")
                     .doc("The button's accessible name."),
@@ -144,7 +154,18 @@ pub fn ActionIconPage() -> Element {
                     Control::color("color"),
                     gradient_to,
                     gradient_deg,
-                    Control::sizes("size").default(theme.action_icon.size.as_str()),
+                    Control::sizes("size")
+                        .default(theme.action_icon.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // Off by default, unlike `Button`: the breakpoint pair is opt-in.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::sizes("radius")
                         .default(theme.action_icon.radius.as_str()),
                     // As on Button: off is still a toggle, unset a plain action.
@@ -204,7 +225,10 @@ pub fn ActionIconPage() -> Element {
                         "primary" => Input::None,
                         color => Input::from(color),
                     },
-                    size: values.str("size"),
+                    size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                        (true, size) => responsive(Size::Sm).md(size),
+                        (false, size) => size.into(),
+                    },
                     radius: values.str("radius"),
                     selected: match values.str("selected").as_str() {
                         _ if is_link(&values) => None,

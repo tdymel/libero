@@ -2,7 +2,8 @@
 //! behaviour prop, Tabs `placement` (todo 5653).
 
 use dioxus::prelude::*;
-use libero::components::{Badge, Button, Flex, Options, Tabs};
+use libero::components::{ActionIcon, Badge, Button, Chip, Flex, Options, Tabs};
+use libero::sx::ThemeAwareValue;
 use libero::theme::{Size, TabsPlacement, Variant, responsive};
 
 use crate::Routes;
@@ -41,6 +42,13 @@ fn ResponsivePage() -> Element {
             }
             Button { id: "rsp-hidden", hidden_from: "md", "Narrow only" }
             Badge { id: "rsp-badge", visible_from: "md", "Wide only" }
+            ActionIcon {
+                id: "rsp-icon",
+                aria_label: "Close",
+                size: responsive(ThemeAwareValue::from(Size::Sm)).md(Size::Xl.into()),
+                "x"
+            }
+            Chip { id: "rsp-chip", size: responsive(Size::Xs).md(Size::Lg), "Tag" }
             Button { id: "rsp-add", onclick: move |_| late.set(true), "Add" }
             if late() {
                 Button { id: "rsp-late", size: responsive(Size::Xs).md(Size::Lg), "Late" }

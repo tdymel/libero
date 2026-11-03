@@ -89,11 +89,11 @@ impl PaperDefaults {
         ..Self::DEFAULT
     };
 
-    fn radius_sx(radius: Size) -> Sx {
+    pub(crate) fn radius_sx(radius: Size) -> Sx {
         sx().border_radius(SizeCss::RADIUS.overridable(radius))
     }
 
-    fn shadow_sx(shadow: Size) -> Sx {
+    pub(crate) fn shadow_sx(shadow: Size) -> Sx {
         sx().box_shadow(SizeCss::SHADOW.overridable(shadow))
     }
 

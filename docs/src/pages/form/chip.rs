@@ -2,8 +2,14 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, disabled_prop,
 use dioxus::prelude::*;
 use libero::components::ChipPart;
 use libero::components::{Chip, Code, Icon, Input, Text};
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 use pictogram_icons_lucide as lucide;
+
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
 
 /// A bare glyph in the chip's label colour, as the demo's code prints it.
 fn glyph_code(name: &str) -> String {
@@ -22,13 +28,17 @@ pub fn ChipPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default(theme.chip.color.as_str())
                     .doc("Accent color. A theme color name or any CSS color; `theme.chip.color` when unset."),
-                prop("variant", "Variant")
+                prop("variant", "Responsive<Variant>")
                     .default(theme.chip.variant.as_str())
-                    .doc("The unselected look. A checked chip is always a tonal container, with a check before its label."),
-                prop("size", "Size").default(theme.chip.size.as_str()).doc("Height, padding and font size."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("The unselected look. A checked chip is always a tonal container, with a check before its label. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
+                prop("size", "Responsive<Size>").default(theme.chip.size.as_str()).doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.chip.radius.as_str())
-                    .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`."),
+                    .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("checked", "bool")
                     .doc("Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. A debug build warns when one comes without the other."),
                 disabled_prop("chip"),
@@ -115,7 +125,17 @@ pub fn ChipPage() -> Element {
                     ).default(theme.chip.variant.as_str())
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Text"]),
                     Control::sizes("size")
-                        .default(theme.chip.size.as_str()),
+                        .default(theme.chip.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // Off by default, unlike `Button`: the breakpoint pair is opt-in.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::sizes("radius")
                         .default(theme.chip.radius.as_str()),
                     // What the chip is: a plain tag, a checkbox, a button or
@@ -174,7 +194,10 @@ pub fn ChipPage() -> Element {
                     Chip {
                         color: values.str("color"),
                         variant: values.str("variant"),
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, size) => responsive(Size::Sm).md(size),
+                            (false, size) => size.into(),
+                        },
                         radius: values.str("radius"),
                         // Both or neither: `checked` alone can never
                         // change, `onchange` alone can never look selected.

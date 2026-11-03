@@ -27,18 +27,22 @@ pub fn DirectionTogglePage() -> Element {
             source: "libero/src/components/buttons/direction_toggle.rs",
             markdown: "/md/direction_toggle.md",
             properties: vec![props("DirectionToggle", vec![
-                prop("variant", "Variant")
+                prop("variant", "Responsive<Variant>")
                     .default(theme.direction_toggle.variant.as_str())
-                    .doc("Visual style, as on `ActionIcon`."),
+                    .doc("Visual style, as on `ActionIcon`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                 prop("color", "ThemeAwareValue")
                     .default("muted")
                     .doc("Accent color. A theme color name or any CSS color."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default("md")
-                    .doc("Button size. The icon takes 55% of it."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("Button size. The icon takes 55% of it. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default("sm")
-                    .doc("Corner radius, independent of `size`."),
+                    .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("label", "Callback<Direction, String>")
                     .doc("Replaces the two built-in names. Gets the direction a press turns the text to and returns what the press does."),
                 prop("disabled", "bool")

@@ -91,11 +91,13 @@ fn Demo() -> Element {
 | `icon` | `Element` | required | The glyph, as `rsx! { Pictogram { icon: lucide::plus::outlined } }`. It takes `Icon`'s size at the button's step. |
 | `aria_label` | `String` | - | The name of an icon-only button, after the action: "New message", not "Plus". With `children`, leave it unset: the label names the button. |
 | `tooltip` | `bool` | `false` | Icon-only: shows `aria_label` in a `Tooltip` on hover and keyboard focus. |
-| `variant` | `Variant` | `filled` | Visual style, as on `Button`. |
+| `variant` | `Responsive<Variant>` | `filled` | Visual style, as on `Button`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle. The first stop is `color`. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
-| `size` | `ThemeAwareValue` | `xl` | A step of `Button`'s heights, 60px at `xl`. Icon-only, a CSS length works too; with `children`, only a size word applies. |
-| `radius` | `ThemeAwareValue` | `xxl` | Corner radius. The default rounds an icon-only button into a circle and an extended one into a pill; `lg` gives a rounded square. |
+| `size` | `Responsive<ThemeAwareValue>` | `xl` | A step of `Button`'s heights, 60px at `xl`. Icon-only, a CSS length works too; with `children`, only a size word applies. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `xxl` | Corner radius. The default rounds an icon-only button into a circle and an extended one into a pill; `lg` gives a rounded square. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
+| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
+| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `placement` | `Placement` | `bottom-end` | The corner or edge it sits at. `start` and `end` follow the text direction. |
 | `offset` | `ThemeAwareValue` | `md` | Distance from the placed edges: a spacing word or any CSS length. |
 | `fixed` | `bool` | `true` | Against the viewport. A bottom one sits above a docked `NavigationBar` and the bottom safe area, a top one below the top safe area. `false` places it in the nearest `position: relative` ancestor instead. |

@@ -36,12 +36,16 @@ pub fn AlertPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("info")
                     .doc("The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. A `gradient` surface keeps the theme's gradient: there only the role follows this."),
-                prop("variant", "Variant")
+                prop("variant", "Responsive<Variant>")
                     .default(theme.alert.variant.as_str())
-                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. `gradient` paints the theme's gradient whatever the `color`."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. `gradient` paints the theme's gradient whatever the `color`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.alert.radius.as_str())
-                    .doc("Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: \"0\"`."),
+                    .doc("Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("actions", "Option<Element>")
                     .doc("Buttons or links beside the message, before the close button. Give each a label that says what it does: `Button { variant: \"standard\", color: \"currentColor\", size: \"xs\" }` reads on every variant."),
                 prop("onclose", "EventHandler<()>")

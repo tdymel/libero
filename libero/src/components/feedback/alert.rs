@@ -5,19 +5,20 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Part, States, Variables, Variant,
-            VariantVars, base_color, base_props, contrast_color, fill_color, label_color,
-            literal_contrast, parts_enum, variables, variant_chrome_sx, variant_container_colors,
+            COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Part, ScaleOrCss, States,
+            Variables, Variant, VariantVars, base_color, base_props, contrast_color, fill_color,
+            label_color, literal_contrast, parts_enum, responsive_sx, variables, variant_chrome_sx,
+            variant_container_colors, with_own,
         },
         layout::{paper_sx, use_box},
     },
     context::IconSlot,
-    hooks::{use_localization, use_root_id, use_theme},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    hooks::{use_localization, use_range_css, use_root_id, use_theme},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         ALERT_BODY_GAP, ALERT_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, ANCHOR_COLOR, AlertDefaults,
-        AnchorDefaults, BUTTON_HEIGHT, Color, CssVar, FOCUS_RING_HALO, NamedColorCss,
-        SURFACE_LABEL, SizeCss,
+        AnchorDefaults, BUTTON_HEIGHT, Color, CssVar, FOCUS_RING_HALO, NamedColorCss, Responsive,
+        SURFACE_LABEL, Size, SizeCss,
     },
 };
 
@@ -122,38 +123,48 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
 
     // Chrome only, no `:hover`: an alert is not a click target.
     Variant::ALL.iter().fold(base, |base, &variant| {
-        let chrome = variant_chrome_sx(variant, &ALERT_VARS);
-        // On a tint or fill the page's link colour falls to about 1.5:1: links take
-        // the text colour, as on `Mark` (todo 1576), underlined at rest (todo 1647);
-        // so does an uncoloured standard Button (todo 1663).
-        let links = sx()
-            .var(ANCHOR_COLOR, "currentColor")
-            .var(SURFACE_LABEL, "currentColor");
-        // `Filled`: children's focus ring takes the text colour, haloed by the fill
-        // (todo 630). `currentColor` fallback, as an unset var erases the ring.
-        let chrome = match variant {
-            Variant::Filled => chrome.and(AnchorDefaults::underline_at_rest()).selector(
-                "& > *",
-                links
-                    .var(
-                        CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
-                        ALERT_CONTRAST_VAR.value_or("currentColor"),
-                    )
-                    .var(
-                        FOCUS_RING_HALO,
-                        ALERT_FILL_VAR.value_or(ALERT_COLOR_VAR.value()),
-                    ),
-            ),
-            Variant::Tonal | Variant::Gradient => chrome
-                .and(AnchorDefaults::underline_at_rest())
-                .selector("& > *", links),
-            _ => chrome,
-        };
-        base.when(variant.state_name(), chrome)
+        base.when(variant.state_name(), variant_sx(variant))
     })
 });
 
-fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant) -> Variables {
+/// One variant's surface, shared by the static sheet and a responsive range's copy.
+fn variant_sx(variant: Variant) -> Sx {
+    let chrome = variant_chrome_sx(variant, &ALERT_VARS);
+    // On a tint or fill the page's link colour falls to about 1.5:1: links take
+    // the text colour, as on `Mark` (todo 1576), underlined at rest (todo 1647);
+    // so does an uncoloured standard Button (todo 1663).
+    let links = sx()
+        .var(ANCHOR_COLOR, "currentColor")
+        .var(SURFACE_LABEL, "currentColor");
+    // `Filled`: children's focus ring takes the text colour, haloed by the fill
+    // (todo 630). `currentColor` fallback, as an unset var erases the ring.
+    match variant {
+        Variant::Filled => chrome.and(AnchorDefaults::underline_at_rest()).selector(
+            "& > *",
+            links
+                .var(
+                    CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
+                    ALERT_CONTRAST_VAR.value_or("currentColor"),
+                )
+                .var(
+                    FOCUS_RING_HALO,
+                    ALERT_FILL_VAR.value_or(ALERT_COLOR_VAR.value()),
+                ),
+        ),
+        Variant::Tonal | Variant::Gradient => chrome
+            .and(AnchorDefaults::underline_at_rest())
+            .selector("& > *", links),
+        _ => chrome,
+    }
+}
+
+/// A range copy of one radius step: the base var that `border-radius` falls back to.
+fn radius_copy_sx(size: Size) -> Sx {
+    sx().var(ALERT_RADIUS, SizeCss::RADIUS.value(size))
+}
+
+/// `variant` is the one whose container colours are written: only `Tonal` reads them.
+fn alert_variables(base: &ThemeAwareValue, variant: Variant, radius: Option<String>) -> Variables {
     let contrast = contrast_color(base);
     // Not `variant_colors`: its hover and selected shades are unused here.
     let (container, on_container) = variant_container_colors(variant, base);
@@ -169,10 +180,7 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
         )
         .with(ALERT_CONTAINER_VAR, container)
         .with(ALERT_ON_CONTAINER_VAR, on_container)
-        .with(
-            ALERT_RADIUS.override_var(),
-            props.radius.resolve(Some(SizeCss::RADIUS)),
-        )
+        .with(ALERT_RADIUS.override_var(), radius)
 }
 
 /// `alert` interrupts the reader: only `error` and `warning` earn it.
@@ -218,11 +226,19 @@ base_props! {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Surface style, without a hover response.
+        /// Per breakpoint too: `responsive(Variant::Outlined).md(Variant::Filled)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         /// A size step from `xs` to `xxl`, or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Buttons or links beside the message, before the close button.
         #[props(default)]
         actions: Option<Element>,
@@ -263,7 +279,7 @@ pub fn Alert(props: AlertProps) -> Element {
     let common = use_localization().common;
     let id = use_root_id(&props.attributes);
 
-    let variant = props.variant.copied_or(theme.alert.variant);
+    let variants = props.variant.copied_or(theme.alert.variant.into());
     let color = props
         .color
         .as_ref()
@@ -272,13 +288,54 @@ pub fn Alert(props: AlertProps) -> Element {
     let base = base_color("Alert", Some(&color));
     let role = alert_role(&color);
 
-    let variables: Input<Variables> = alert_variables(&props, &base, variant).into();
-    let states: Input<States> = props
+    // A plain radius writes its inline override; a responsive one rides the range copies.
+    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
+    let radius_steps = radii
+        .map(|radii| radii.map(|value| ScaleOrCss::new(Some(&value), theme.alert.radius).size));
+    let radius = match radii {
+        Some(_) => None,
+        None => props
+            .radius
+            .as_ref()
+            .and_then(|radius| radius.base_ref().resolve(Some(SizeCss::RADIUS))),
+    };
+    // Custom CSS per breakpoint rides the override var in the user layer; a size resets it.
+    let radius_sx = radii.and_then(|radii| {
+        responsive_sx(radii, |sx, value| {
+            let css = ScaleOrCss::new(Some(&value), theme.alert.radius)
+                .custom_css(SizeCss::RADIUS)
+                .unwrap_or_else(|| "initial".into());
+            sx.var(ALERT_RADIUS.override_var(), css)
+        })
+    });
+    let own_sx = radius_sx.map(|radius_sx| with_own(Some(radius_sx), &props.sx));
+    let user_sx = own_sx.as_ref().unwrap_or(&props.sx);
+
+    // Only `Tonal` reads the container colours: written if any range is tonal.
+    let container = match variants
+        .breakpoints()
+        .any(|(_, variant)| variant == Variant::Tonal)
+    {
+        true => Variant::Tonal,
+        false => variants.base(),
+    };
+    let variables: Input<Variables> = alert_variables(&base, container, radius).into();
+    let states = props
         .states
         .clone()
         .unwrap_or_default()
-        .with(variant.state_name(), true)
-        .into();
+        .responsive(&variants, Variant::state_name);
+    let states: Input<States> = match &radius_steps {
+        Some(steps) => states.responsive(steps, |size| size.radius_state_name()),
+        None => states,
+    }
+    .into();
+
+    let mut copies = variants.range_copies(Variant::state_name, variant_sx);
+    if let Some(steps) = &radius_steps {
+        copies.extend(steps.range_copies(|size| size.radius_state_name(), radius_copy_sx));
+    }
+    use_range_css(&ALERT_BASE_SX, copies);
 
     // A blank title draws no span, so nothing is left for `aria-labelledby` to point at.
     let title = props.title.clone().filter(|title| !title.trim().is_empty());
@@ -327,7 +384,8 @@ pub fn Alert(props: AlertProps) -> Element {
     use_box()
         .framework_sx(&ALERT_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(user_sx)
+        .visibility(&props.hidden_from, &props.visible_from)
         .parts(&props.parts)
         .states(&states)
         .variables(&variables)

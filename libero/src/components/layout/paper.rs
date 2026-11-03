@@ -5,17 +5,17 @@ use crate::{
         common::{
             HtmlTag, Input, ScaleOrCss, States, Variables, allowed_href, base_color, base_props,
             contrast_color, fill_color, focus_ring_sx, hover_color, hover_contrast_color,
-            selected_color, variables,
+            responsive_sx, selected_color, variables, with_own,
         },
         layout::use_box,
     },
-    hooks::{use_glass_gradient_style, use_glass_tint},
+    hooks::{use_glass_gradient_style, use_glass_tint, use_range_css},
     platform::draws_backdrop_filter,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, FOCUS_RING_HALO, GLASS_SHEEN, GRADIENT_LAYER, GlassTint, Gradient, HOVER_LAYER,
-        NamedColorCss, PAPER_BORDER_COLOR, PRESSED_LAYER, PaperDefaults, SURFACE_LABEL, Size,
-        SizeCss, gradient_hover_sx, gradient_pressed_sx, gradient_surface_sx,
+        NamedColorCss, PAPER_BORDER_COLOR, PRESSED_LAYER, PaperDefaults, Responsive, SURFACE_LABEL,
+        Size, SizeCss, gradient_hover_sx, gradient_pressed_sx, gradient_surface_sx,
     },
     utils::warn,
 };
@@ -215,11 +215,19 @@ base_props! {
     extends(a);
     pub struct PaperProps {
         /// Corner radius: a step on the radius scale, or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Elevation: a step on the shadow scale, `"none"`, or any CSS `box-shadow`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        shadow: Input<ThemeAwareValue>,
+        shadow: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// A hairline border in the themed surface border colour.
         #[props(default)]
         bordered: bool,
@@ -296,6 +304,26 @@ pub fn Paper(mut props: PaperProps) -> Element {
             false => Some(format!("{}{declaration}", style.unwrap_or_default())),
         }
     });
+    let overrides = [
+        axis_override_sx(&props.radius, SizeCss::RADIUS),
+        axis_override_sx(&props.shadow, SizeCss::SHADOW),
+    ];
+    let user_sx = with_own(
+        overrides.into_iter().flatten().reduce(|a, b| a.and(b)),
+        &props.sx,
+    );
+
+    let base = props.framework_sx.unwrap_or(&PAPER_BASE_SX);
+    let mut copies = Vec::new();
+    if let Some(steps) = axis_steps(&props.radius) {
+        copies
+            .extend(steps.range_copies(|size| size.radius_state_name(), PaperDefaults::radius_sx));
+    }
+    if let Some(steps) = axis_steps(&props.shadow) {
+        copies
+            .extend(steps.range_copies(|size| size.shadow_state_name(), PaperDefaults::shadow_sx));
+    }
+    use_range_css(base, copies);
 
     let component = props.component.copied_or_default();
     let unreachable = paper_unreachable_press(component, &props.attributes);
@@ -309,9 +337,10 @@ pub fn Paper(mut props: PaperProps) -> Element {
     });
 
     use_box()
-        .framework_sx(props.framework_sx.unwrap_or(&PAPER_BASE_SX))
+        .framework_sx(base)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&user_sx)
+        .visibility(&props.hidden_from, &props.visible_from)
         .states(&states)
         .variables(&props.variables)
         .style(style)
@@ -320,20 +349,47 @@ pub fn Paper(mut props: PaperProps) -> Element {
         .render(component, props.attributes, props.children)
 }
 
-/// Custom CSS rides any step's state class: the override replaces its value.
+/// A plain `radius` or `shadow`: its value, which may be custom CSS, else `None`.
+fn plain_axis(value: &Input<Responsive<ThemeAwareValue>>) -> Option<&ThemeAwareValue> {
+    value
+        .as_ref()
+        .filter(|value| value.is_plain())
+        .map(Responsive::base_ref)
+}
+
+/// Custom CSS rides any step's state class: the override replaces its value. Plain only;
+/// a responsive one rides [`axis_override_sx`].
 fn paper_radius(props: &PaperProps) -> ScaleOrCss {
-    ScaleOrCss::new(props.radius.as_ref(), Size::Md)
+    ScaleOrCss::new(plain_axis(&props.radius), Size::Md)
 }
 
 fn paper_shadow(props: &PaperProps) -> ScaleOrCss {
-    ScaleOrCss::new(props.shadow.as_ref(), Size::Md)
+    ScaleOrCss::new(plain_axis(&props.shadow), Size::Md)
+}
+
+/// The step each viewport range of a `radius` or `shadow` takes; custom CSS keeps the fallback.
+fn axis_steps(value: &Input<Responsive<ThemeAwareValue>>) -> Option<Responsive<Size>> {
+    value
+        .as_ref()
+        .map(|value| value.map(|value| ScaleOrCss::new(Some(&value), Size::Md).size))
+}
+
+/// A responsive `radius` or `shadow`'s custom CSS per range, as its override var.
+fn axis_override_sx(value: &Input<Responsive<ThemeAwareValue>>, scale: SizeCss) -> Option<Sx> {
+    let value = value.as_ref().filter(|value| !value.is_plain())?;
+    responsive_sx(value, |sx, value| {
+        let css = ScaleOrCss::new(Some(&value), Size::Md)
+            .custom_css(scale)
+            .unwrap_or_else(|| "initial".into());
+        sx.var(scale.override_var(), css)
+    })
 }
 
 /// A token only per axis the caller set, unlike `Button`: a `[data-state]` block
 /// would beat the radius or shadow a surface built on [`paper_sx`] chains on.
 fn paper_states(props: &PaperProps) -> Input<States> {
-    let radius = props.radius.as_ref().map(|_| paper_radius(props).size);
-    let shadow = props.shadow.as_ref().map(|_| paper_shadow(props).size);
+    let radius = axis_steps(&props.radius);
+    let shadow = axis_steps(&props.shadow);
     let glass = props.glass && draws_backdrop_filter();
     let gradient = props.gradient.is_some();
     let colored = props.color.as_ref().is_some() && !gradient;
@@ -358,10 +414,10 @@ fn paper_states(props: &PaperProps) -> Input<States> {
 
     let mut states = props.states.clone().unwrap_or_default();
     if let Some(radius) = radius {
-        states = states.active(radius.radius_state_name());
+        states = states.responsive(&radius, |size| size.radius_state_name());
     }
     if let Some(shadow) = shadow {
-        states = states.active(shadow.shadow_state_name());
+        states = states.responsive(&shadow, |size| size.shadow_state_name());
     }
     states
         .with("bordered", props.bordered)
@@ -382,6 +438,8 @@ mod tests {
         PaperProps {
             radius: Input::None,
             shadow: Input::None,
+            hidden_from: Input::None,
+            visible_from: Input::None,
             bordered: false,
             glass: false,
             color: Input::None,
@@ -497,8 +555,8 @@ mod tests {
     #[test]
     fn each_axis_gets_its_own_namespaced_token() {
         let states = paper_states(&PaperProps {
-            radius: Input::Value(Size::Lg.into()),
-            shadow: Input::Value(Size::Xl.into()),
+            radius: Size::Lg.into(),
+            shadow: Size::Xl.into(),
             bordered: true,
             ..props()
         });
@@ -513,7 +571,7 @@ mod tests {
     #[test]
     fn a_custom_shadow_overrides_the_step() {
         let props = PaperProps {
-            shadow: Input::Value("none".into()),
+            shadow: "none".into(),
             ..props()
         };
 
@@ -546,7 +604,7 @@ mod tests {
     fn the_caller_s_own_states_survive() {
         let states = paper_states(&PaperProps {
             states: Input::Value(States::new().active("selected")),
-            radius: Input::Value(Size::Sm.into()),
+            radius: Size::Sm.into(),
             ..props()
         });
 

@@ -38,8 +38,10 @@ fn Demo() -> Element {
 | `host` | `RepoHost` | `GitHub` | Where the repository lives: `RepoHost::GitHub` or `RepoHost::GitLab`. |
 | `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
 | `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. Unset, a `gradient` takes the theme's gradient, as no label reads on a muted one. |
-| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes half of it. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `size` | `Responsive<ThemeAwareValue>` | `md` | Button size. The icon takes half of it. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
+| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
+| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `aria_label` | `String` | - | Replaces the name's subject, the host and repository; the star count and new-tab cue still follow. A raw `"aria-label"` attribute replaces the whole name. |
 | `new_tab_icon` | `bool` | `false` | Draws the new-tab icon in the corner of the link. Unset, the theme's `anchor.new_tab_icon`, which is off. |
 | `parts` | `Parts<RepositoryPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

@@ -4,21 +4,21 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         common::{
-            Glyph, HtmlTag, Input, PROBES_AFTER_MOUNT, Part, SVG_FIT, States, Variables, Variant,
-            VariantVars, attr, base_color, base_props, contrast_color, fill_color, media_url,
-            names_itself, on_failed_after_mount, parts_enum, svg_fit, svg_fit_sx,
-            svg_fit_variables, text_color, use_name_warning, use_svg_probe, variables,
-            variant_chrome_sx, variant_colors,
+            Glyph, HtmlTag, Input, PROBES_AFTER_MOUNT, Part, SVG_FIT, ScaleOrCss, States,
+            Variables, Variant, VariantVars, attr, base_color, base_props, contrast_color,
+            fill_color, media_url, names_itself, on_failed_after_mount, parts_enum, responsive_sx,
+            svg_fit, svg_fit_sx, svg_fit_variables, text_color, use_name_warning, use_svg_probe,
+            variables, variant_chrome_sx, variant_colors, with_own,
         },
         layout::{Box, use_box},
     },
     context::IconSlot,
-    hooks::{listener, use_theme},
+    hooks::{listener, use_range_css, use_theme},
     platform,
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_RADII, AVATAR_RADIUS, AvatarDefaults, CssVar,
-        PAPER_BACKGROUND, Size,
+        PAPER_BACKGROUND, Responsive, Size,
     },
 };
 
@@ -89,7 +89,7 @@ pub(super) fn avatar_sx() -> Sx {
         .fold(base, |base, variant| {
             base.when(
                 format!("{} && grouped", variant.state_name()),
-                sx().background(PAPER_BACKGROUND.value()),
+                grouped_fill_sx(),
             )
         });
 
@@ -99,19 +99,49 @@ pub(super) fn avatar_sx() -> Sx {
         .iter()
         .filter(|&&variant| variant != Variant::Outlined)
         .fold(base, |base, &variant| {
-            base.when(
-                variant.state_name(),
-                sx().selector(
-                    "&:not([data-state~=\"grouped\"])",
-                    sx().outline("1px solid transparent"),
-                ),
-            )
+            base.when(variant.state_name(), outline_sx())
         });
 
     // A border on the outlined arm only: elsewhere it would inset the picture.
-    base.when(
-        Variant::Outlined.state_name(),
-        sx().border_style("solid").border_width("1px"),
+    base.when(Variant::Outlined.state_name(), outlined_border_sx())
+}
+
+/// The paper fill an unfilled grouped member takes: see [`avatar_sx`].
+fn grouped_fill_sx() -> Sx {
+    sx().background(PAPER_BACKGROUND.value())
+}
+
+/// Forced colours drop the fill; this outline keeps the circle.
+fn outline_sx() -> Sx {
+    sx().selector(
+        "&:not([data-state~=\"grouped\"])",
+        sx().outline("1px solid transparent"),
+    )
+}
+
+fn outlined_border_sx() -> Sx {
+    sx().border_style("solid").border_width("1px")
+}
+
+/// A variant's whole look, as its range copy carries it: [`avatar_sx`]'s pieces for one state.
+fn variant_sx(variant: Variant) -> Sx {
+    let look = variant_chrome_sx(variant, &AVATAR_VARS);
+    let look = match variant {
+        Variant::Outlined | Variant::Standard => look.and(sx().when("grouped", grouped_fill_sx())),
+        _ => look,
+    };
+    match variant {
+        Variant::Outlined => look.and(outlined_border_sx()),
+        _ => look.and(outline_sx()),
+    }
+}
+
+/// A radius step in a range copy: the override var when set, else the step.
+fn avatar_radius_sx(size: Size) -> Sx {
+    sx().border_radius(
+        AVATAR_RADIUS
+            .override_var()
+            .value_or(AVATAR_RADII.value(size)),
     )
 }
 
@@ -173,13 +203,22 @@ base_props! {
         /// focusable may sit in it. Other blank text counts as unset.
         #[props(default, into)]
         alt: Option<String>,
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// A step on the avatar's own radius scale, or any CSS, as `radius: "0"`; the default is a circle.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xxl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Per breakpoint too: `responsive(Variant::Outlined).md(Variant::Filled)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Anything in place of the initials, such as an icon.
@@ -221,13 +260,41 @@ pub fn Avatar(props: AvatarProps) -> Element {
         "Avatar: an empty `name` and no `alt`, so it is announced as an unnamed image. Set `alt: \"\"` if it is decorative.",
     );
 
-    let size = props.size.copied_or(theme.avatar.size);
-    let variant = props.variant.copied_or(theme.avatar.variant);
+    let sizes = props.size.copied_or(theme.avatar.size.into());
+    let variants = props.variant.copied_or(theme.avatar.variant.into());
     let color = props
         .color
         .as_ref()
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.avatar.color));
+
+    // Only `Tonal` reads the container colours: computed if any range is tonal.
+    let variant = match variants
+        .breakpoints()
+        .any(|(_, variant)| variant == Variant::Tonal)
+    {
+        true => Variant::Tonal,
+        false => variants.base(),
+    };
+    // A plain radius stays on the override var; a responsive one rides the states and `sx`.
+    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
+    let radius_steps = radii
+        .map(|radii| radii.map(|value| ScaleOrCss::new(Some(&value), theme.avatar.radius).size));
+    let plain_radius = props
+        .radius
+        .as_ref()
+        .filter(|_| radii.is_none())
+        .map(Responsive::base_ref);
+    let radius_sx = radii.and_then(|radii| {
+        responsive_sx(radii, |sx, value| {
+            let css = ScaleOrCss::new(Some(&value), theme.avatar.radius)
+                .custom_css(AVATAR_RADII)
+                .unwrap_or_else(|| "initial".into());
+            sx.var(AVATAR_RADIUS.override_var(), css)
+        })
+    });
+    let own_sx = radius_sx.map(|radius_sx| with_own(Some(radius_sx), &props.sx));
+    let user_sx = own_sx.as_ref().unwrap_or(&props.sx);
 
     let src = own_src;
     let failed = src.is_some() && errored_src.read().as_deref() == src.as_deref();
@@ -235,15 +302,25 @@ pub fn Avatar(props: AvatarProps) -> Element {
     // where it fails to load (todo 884).
     let layered = !platform::fires_image_errors() && src.is_some();
 
-    let variables: Input<Variables> =
-        avatar_variables(Some(&color), variant, props.radius.as_ref()).into();
-    let states: Input<States> = props
+    let variables: Input<Variables> = avatar_variables(Some(&color), variant, plain_radius).into();
+    let states = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with(variant.state_name(), true)
-        .with(LAYERED, layered)
-        .into();
+        .responsive(&sizes, |size| size.state_name())
+        .responsive(&variants, Variant::state_name);
+    let states = match &radius_steps {
+        Some(steps) => states.responsive(steps, |size| size.radius_state_name()),
+        None => states,
+    };
+    let states: Input<States> = states.with(LAYERED, layered).into();
+
+    // Only the ranges this instance uses; a plain one registers nothing.
+    let mut copies = sizes.range_copies(|size| size.state_name(), AvatarDefaults::size_sx);
+    if let Some(steps) = &radius_steps {
+        copies.extend(steps.range_copies(|size| size.radius_state_name(), avatar_radius_sx));
+    }
+    copies.extend(variants.range_copies(Variant::state_name, variant_sx));
+    use_range_css(&AVATAR_BASE_SX, copies);
 
     let fallback = match (props.children, props.initials) {
         (Some(children), _) => children,
@@ -306,7 +383,8 @@ pub fn Avatar(props: AvatarProps) -> Element {
     use_box()
         .framework_sx(&AVATAR_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(user_sx)
+        .visibility(&props.hidden_from, &props.visible_from)
         .parts(&props.parts)
         .states(&states)
         .variables(&variables)

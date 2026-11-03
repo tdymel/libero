@@ -53,12 +53,16 @@ pub fn PaperPage() -> Element {
             markdown: "/md/paper.md",
             properties: vec![
                 props("Paper", vec![
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.paper.radius.as_str())
-                        .doc("Corner radius, a step on the shared radius scale, or any CSS, e.g. `radius: \"0\"`."),
-                    prop("shadow", "ThemeAwareValue")
+                        .doc("Corner radius, a step on the shared radius scale, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                    prop("shadow", "Responsive<ThemeAwareValue>")
                         .default(theme.paper.shadow.as_str())
-                        .doc("Elevation, a step on the shared shadow scale, `\"none\"` for a flat surface, or any CSS `box-shadow`."),
+                        .doc("Elevation, a step on the shared shadow scale, `\"none\"` for a flat surface, or any CSS `box-shadow`. Or one per breakpoint, `shadow: responsive(Size::Sm).md(Size::Lg)`."),
+                    prop("hidden_from", "Size")
+                        .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                    prop("visible_from", "Size")
+                        .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                     prop("bordered", "bool")
                         .default("false")
                         .doc("A hairline border in the theme's surface border colour. Works together with a shadow."),

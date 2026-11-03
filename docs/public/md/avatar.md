@@ -37,9 +37,11 @@ fn Demo() -> Element {
 | `src` | `Option<String>` | `None` | The picture. Falls back to the rest of the chain when it fails to load, or for a `javascript:` or `vbscript:` URL, which also warns in debug builds. |
 | `initials` | `Option<String>` | `None` | Drawn when there is no picture. Nothing is derived from `name`. |
 | `alt` | `Option<String>` | `None` | Replaces the announced name. `alt: ""` marks the avatar decorative. |
-| `size` | `Size` | `md` | The side of the square, which also sets the placeholder's font size. |
-| `radius` | `ThemeAwareValue` | `xxl` | A step on the avatar's own radius scale, `2px` to `32px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is a circle. |
-| `variant` | `Variant` | `tonal` | The placeholder's look. Hidden once a picture loads. |
+| `size` | `Responsive<Size>` | `md` | The side of the square, which also sets the placeholder's font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `xxl` | A step on the avatar's own radius scale, `2px` to `32px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is a circle. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xxl)`. |
+| `variant` | `Responsive<Variant>` | `tonal` | The placeholder's look. Hidden once a picture loads. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
+| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
+| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `color` | `ThemeAwareValue` | `primary` | The placeholder's tint. |
 | `parts` | `Parts<AvatarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Option<Element>` | `None` | Anything in place of the initials, such as an icon. |
@@ -52,7 +54,7 @@ fn Demo() -> Element {
 | `max` | `Option<usize>` | `None` | How many circles in total, the `+N` chip included, so the chip always stands for at least two people. `0` counts as `1`. |
 | `total` | `Option<usize>` | `None` | The full headcount when `people` lists only some, so the `+N` chip counts the rest. A value below `people.len()` is ignored. The chip lists only the hidden people it knows, and is no tab stop when there are none. |
 | `surplus` | `Callback<usize, Element>` | `None` | Draws the `+N` chip's content from the hidden count. The chip keeps its look, tooltip and accessible name. |
-| `spacing` | `ThemeAwareValue` | `sm` | How far each circle overlaps the one before it, or any CSS, e.g. `spacing: "0"`. |
+| `spacing` | `Responsive<ThemeAwareValue>` | `sm` | How far each circle overlaps the one before it, or any CSS, e.g. `spacing: "0"`. Or one per breakpoint, `spacing: responsive(Size::Xs).md(Size::Md)`. |
 | `size` | `Size` | `md` | For every member and the chip. |
 | `radius` | `ThemeAwareValue` | `xxl` | For every member and the chip, or any CSS, e.g. `radius: "0"`. |
 | `variant` | `Variant` | `tonal` | For every member and the chip. `standard` has no edge, so it suits a single avatar: in a group its members read as loose initials. |

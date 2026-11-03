@@ -110,15 +110,19 @@ pub fn AvatarPage() -> Element {
                     prop("alt", "Option<String>")
                         .default("None")
                         .doc("Replaces the announced name. `alt: \"\"` marks the avatar decorative."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.avatar.size.as_str())
-                        .doc("The side of the square, which also sets the placeholder's font size."),
-                    prop("radius", "ThemeAwareValue")
+                        .doc("The side of the square, which also sets the placeholder's font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.avatar.radius.as_str())
-                        .doc("A step on the avatar's own radius scale, `2px` to `32px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is a circle."),
-                    prop("variant", "Variant")
+                        .doc("A step on the avatar's own radius scale, `2px` to `32px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is a circle. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xxl)`."),
+                    prop("variant", "Responsive<Variant>")
                         .default(theme.avatar.variant.as_str())
-                        .doc("The placeholder's look. Hidden once a picture loads."),
+                        .doc("The placeholder's look. Hidden once a picture loads. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
+                    prop("hidden_from", "Size")
+                        .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                    prop("visible_from", "Size")
+                        .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.avatar.color.as_str())
                         .doc("The placeholder's tint."),
@@ -144,9 +148,9 @@ pub fn AvatarPage() -> Element {
                     prop("surplus", "Callback<usize, Element>")
                         .default("None")
                         .doc("Draws the `+N` chip's content from the hidden count. The chip keeps its look, tooltip and accessible name."),
-                    prop("spacing", "ThemeAwareValue")
+                    prop("spacing", "Responsive<ThemeAwareValue>")
                         .default("sm")
-                        .doc("How far each circle overlaps the one before it, or any CSS, e.g. `spacing: \"0\"`."),
+                        .doc("How far each circle overlaps the one before it, or any CSS, e.g. `spacing: \"0\"`. Or one per breakpoint, `spacing: responsive(Size::Xs).md(Size::Md)`."),
                     prop("size", "Size")
                         .default(theme.avatar.size.as_str())
                         .doc("For every member and the chip."),

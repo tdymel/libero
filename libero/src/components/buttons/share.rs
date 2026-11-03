@@ -4,7 +4,7 @@ use pictogram_icons_lucide as lucide;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        buttons::{ActionIcon, Button},
+        buttons::{ActionIcon, Button, size_words},
         common::{Glyph, Input, States, Variant, base_props},
         data_display::Icon,
     },
@@ -12,6 +12,7 @@ use crate::{
     hooks::{listener, use_id, use_localization, use_share, use_silent_focus_out},
     platform::{ShareData, ShareFile, ShareOutcome},
     sx::ThemeAwareValue,
+    theme::{Responsive, Size},
 };
 
 base_props! {
@@ -29,15 +30,23 @@ base_props! {
         #[props(default)]
         files: Vec<ShareFile>,
         /// Unset with `color` also unset, no chrome of its own.
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// With `children`, only a size word applies.
+        /// With `children`, only size words apply. Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
+        /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Replaces the localized name, e.g. "Share this article".
         #[props(default, into)]
         aria_label: Option<String>,
@@ -126,11 +135,10 @@ pub fn Share(props: ShareProps) -> Element {
                 Button {
                     variant: props.variant.clone(),
                     color: props.color.clone(),
-                    size: match props.size.as_ref() {
-                        Some(ThemeAwareValue::Size(size)) => Input::Value(*size),
-                        _ => Input::None,
-                    },
+                    size: props.size.as_ref().and_then(size_words).map_or(Input::None, Input::Value),
                     radius: props.radius.clone(),
+                    hidden_from: props.hidden_from,
+                    visible_from: props.visible_from,
                     disabled: props.disabled,
                     aria_label,
                     aria_describedby: described,
@@ -154,6 +162,8 @@ pub fn Share(props: ShareProps) -> Element {
                     color: props.color.clone(),
                     size: props.size.clone(),
                     radius: props.radius.clone(),
+                    hidden_from: props.hidden_from,
+                    visible_from: props.visible_from,
                     disabled: props.disabled,
                     aria_describedby: described,
                     class: props.class.clone(),

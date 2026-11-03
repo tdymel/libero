@@ -8,23 +8,29 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VISUALLY_HIDDEN_SX,
+        buttons::variant_var,
         common::{
             ACTIVE, COARSE_POINTER, Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variant,
             VariantColors, VariantVars, aria_label_of, attr, base_color_or, base_props,
             coarse_hit_area_sx, contrast_color, contrast_shade_color, disabled_look_sx, fill_color,
             focus_ring_sx, interactive_variant_sx, label_color, on_ring_sx, on_state_sx,
-            parts_enum, parts_under_sx, ring_overlay, ring_overlay_sx, shade_color, text_color,
-            variables, variant_colors,
+            parts_enum, parts_under_sx, responsive_sx, ring_overlay, ring_overlay_sx, shade_color,
+            text_color, variables, variant_colors, with_own, with_visibility,
         },
         form::{Activation, use_bound},
         layout::{InternalAnchor, use_box},
         navigation::{NewTabHint, wants_new_tab_hint},
     },
     context::IconSlot,
-    hooks::{ElementHandle, listener, use_cache, use_css, use_element, use_id, use_theme},
+    hooks::{
+        ElementHandle, listener, use_cache, use_css, use_element, use_id, use_range_css, use_theme,
+    },
     platform::reads_click_targets,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ChipDefaults, ColorShade, CssVar, ICON_DEFAULT_SIZE, ICON_SIZE, Size, SizeCss},
+    theme::{
+        ButtonDefaults, ChipDefaults, ColorShade, CssVar, ICON_DEFAULT_SIZE, ICON_SIZE, Responsive,
+        Size, SizeCss,
+    },
     utils::warn,
 };
 
@@ -74,30 +80,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().width("1.125em").height("1.125em"),
         )
         // An unsized `Icon` in either slot takes an icon step under the label's height (4128).
-        .per_size(|size| {
-            sx().selector(
-                format!(
-                    "{}, {}",
-                    ChipPart::Icon.selector(),
-                    ChipPart::Trailing.selector()
-                ),
-                sx().var(ICON_DEFAULT_SIZE, ICON_SIZE.value(chip_icon_size(size))),
-            )
-        });
+        .per_size(icon_size_sx);
 
     Variant::ALL
         .iter()
         .fold(base, |base, &variant| {
-            base.when(
-                variant.state_name(),
-                interactive_variant_sx(
-                    variant,
-                    &CHIP_VARS,
-                    &CHIP_HOVER_VAR,
-                    &CHIP_SELECTED_VAR,
-                    &CHIP_ON_STATE_VAR,
-                ),
-            )
+            base.when(variant.state_name(), variant_sx(variant))
         })
         // After the variants so it wins on source order. Selected is M3's
         // secondary-container tint; `Tonal` also drops the outline.
@@ -137,6 +125,76 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // The `<button>`/`<a>` root focuses itself.
         .focus_visible(focus_ring_sx())
 });
+
+fn icon_size_sx(size: Size) -> Sx {
+    sx().selector(
+        format!(
+            "{}, {}",
+            ChipPart::Icon.selector(),
+            ChipPart::Trailing.selector()
+        ),
+        sx().var(ICON_DEFAULT_SIZE, ICON_SIZE.value(chip_icon_size(size))),
+    )
+}
+
+fn variant_sx(variant: Variant) -> Sx {
+    interactive_variant_sx(
+        variant,
+        &CHIP_VARS,
+        &CHIP_HOVER_VAR,
+        &CHIP_SELECTED_VAR,
+        &CHIP_ON_STATE_VAR,
+    )
+}
+
+/// A range copy of one size: the plain word's two blocks in one.
+fn size_copy_sx(size: Size) -> Sx {
+    ChipDefaults::size_sx(size).and(icon_size_sx(size))
+}
+
+/// The colour vars [`chip_variables`] writes, named per variant under a responsive one.
+const VARIANT_VARS: [CssVar; 8] = [
+    CHIP_COLOR_VAR,
+    CHIP_FILL_VAR,
+    CHIP_CONTRAST_VAR,
+    CHIP_HOVER_VAR,
+    CHIP_SELECTED_VAR,
+    CHIP_ON_STATE_VAR,
+    CHIP_CONTAINER_VAR,
+    CHIP_ON_CONTAINER_VAR,
+];
+
+/// A range copy of one variant: its block, reading the instance's vars for that variant.
+fn variant_copy_sx(variant: Variant) -> Sx {
+    VARIANT_VARS
+        .into_iter()
+        .fold(variant_sx(variant), |sx, var| {
+            let value = variant_var(&var, variant).value();
+            sx.var(var, value)
+        })
+}
+
+/// Every variant a responsive `variant` takes, each under its own names.
+fn responsive_chip_variables(
+    variant: &Responsive<Variant>,
+    checked: bool,
+    base: &ThemeAwareValue,
+    disabled: bool,
+) -> String {
+    let mut seen: Vec<Variant> = Vec::new();
+    for (_, _, value) in variant.runs() {
+        if !seen.contains(&value) {
+            seen.push(value);
+        }
+    }
+    seen.into_iter()
+        .map(|value| {
+            named_chip_variables(value, checked, base, disabled, |var| {
+                variant_var(&var, value)
+            })
+        })
+        .collect()
+}
 
 const fn chip_icon_size(size: Size) -> Size {
     match size {
@@ -197,6 +255,16 @@ fn chip_variables(
     base: &ThemeAwareValue,
     disabled: bool,
 ) -> String {
+    named_chip_variables(variant, checked, base, disabled, |var| var)
+}
+
+fn named_chip_variables(
+    variant: Variant,
+    checked: bool,
+    base: &ThemeAwareValue,
+    disabled: bool,
+    name: impl Fn(CssVar) -> CssVar,
+) -> String {
     // One step past `Tonal`'s resting tint, or selecting a tonal chip would
     // change nothing visible.
     let colors = if checked {
@@ -213,22 +281,22 @@ fn chip_variables(
 
     variables()
         .with(
-            CHIP_COLOR_VAR,
+            name(CHIP_COLOR_VAR),
             match disabled {
                 true => text_color(base),
                 false => label_color(base),
             },
         )
-        .with(CHIP_FILL_VAR, fill_color(base))
+        .with(name(CHIP_FILL_VAR), fill_color(base))
         .with(
-            CHIP_CONTRAST_VAR,
+            name(CHIP_CONTRAST_VAR),
             contrast_color(base).and_then(|color| color.resolve(None)),
         )
-        .with(CHIP_HOVER_VAR, colors.hover)
-        .with(CHIP_SELECTED_VAR, colors.selected)
-        .with(CHIP_ON_STATE_VAR, colors.on_state)
-        .with(CHIP_CONTAINER_VAR, colors.container)
-        .with(CHIP_ON_CONTAINER_VAR, colors.on_container)
+        .with(name(CHIP_HOVER_VAR), colors.hover)
+        .with(name(CHIP_SELECTED_VAR), colors.selected)
+        .with(name(CHIP_ON_STATE_VAR), colors.on_state)
+        .with(name(CHIP_CONTAINER_VAR), colors.container)
+        .with(name(CHIP_ON_CONTAINER_VAR), colors.on_container)
         .render()
 }
 
@@ -251,13 +319,22 @@ base_props! {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// The *unselected* look; a checked chip is always filled.
+        /// Per breakpoint too: `responsive(Variant::Outlined).md(Variant::Filled)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Corner radius, independent of `size`: a size word or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Pair it with `onchange`; left out, a named chip keeps its own state.
         /// On an `onclick` chip it is the toggle's state, read out as `aria-pressed`.
         #[props(default)]
@@ -320,7 +397,7 @@ base_props! {
 #[component]
 pub fn Chip(props: ChipProps) -> Element {
     let theme = use_theme();
-    let variant = props.variant.copied_or(theme.chip.variant);
+    let variants = props.variant.copied_or(theme.chip.variant.into());
     let color = base_color_or("Chip", props.color.as_ref(), theme.chip.color);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let checked = bound
@@ -329,8 +406,26 @@ pub fn Chip(props: ChipProps) -> Element {
         .or(bound.entered())
         .unwrap_or(false);
 
-    let size = props.size.copied_or(theme.chip.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.chip.radius);
+    let sizes = props.size.copied_or(theme.chip.size.into());
+    let radius = ScaleOrCss::new(
+        props.radius.as_ref().map(Responsive::base_ref),
+        theme.chip.radius,
+    );
+    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
+    let radius_steps = match radii {
+        Some(radii) => radii.map(|value| ScaleOrCss::new(Some(&value), theme.chip.radius).size),
+        None => radius.size.into(),
+    };
+    // Custom CSS per breakpoint rides the override var in the user layer, under `sx`.
+    let radius_sx = radii.and_then(|radii| {
+        responsive_sx(radii, |sx, value| {
+            let css = ScaleOrCss::new(Some(&value), theme.chip.radius)
+                .custom_css(SizeCss::RADIUS)
+                .unwrap_or_else(|| "initial".into());
+            sx.var(SizeCss::RADIUS.override_var(), css)
+        })
+    });
+    let own_sx = radius_sx.map(|radius_sx| with_own(Some(radius_sx), &props.sx));
 
     // A `name` alone makes it a checkbox too: it has something to post.
     let selectable = props.onchange.is_some() || !props.name.is_empty();
@@ -360,27 +455,42 @@ pub fn Chip(props: ChipProps) -> Element {
     }
 
     let style = use_cache(
-        (variant, checked, color, disabled),
-        |(variant, checked, color, disabled)| chip_variables(*variant, *checked, color, *disabled),
+        (variants, checked, color, disabled),
+        |(variants, checked, color, disabled)| match variants.is_plain() {
+            true => chip_variables(variants.base(), *checked, color, *disabled),
+            false => responsive_chip_variables(variants, *checked, color, *disabled),
+        },
     );
-    let style = format!(
-        "{style}{}",
-        radius.override_variables(SizeCss::RADIUS).render()
-    );
+    let style = match radii {
+        Some(_) => style,
+        None => format!(
+            "{style}{}",
+            radius.override_variables(SizeCss::RADIUS).render()
+        ),
+    };
     let style = Some(style).filter(|style| !style.is_empty());
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(variant.state_name(), true)
-        .with(size.state_name(), true)
-        .with(radius.size.radius_state_name(), true)
+        .responsive(&variants, Variant::state_name)
+        .responsive(&sizes, |size| size.state_name())
+        .responsive(&radius_steps, |size| size.radius_state_name())
         .with("checked", checked)
         .with("selectable", selectable)
         .with("readonly", selectable && props.readonly.unwrap_or(false))
         .with("disabled", disabled)
         .with("clickable", clickable && !selectable)
         .into();
+
+    // Only the ranges this instance uses; a plain one registers nothing.
+    let mut copies = sizes.range_copies(|size| size.state_name(), size_copy_sx);
+    copies.extend(
+        radius_steps.range_copies(|size| size.radius_state_name(), ButtonDefaults::radius_sx),
+    );
+    copies.extend(variants.range_copies(Variant::state_name, variant_copy_sx));
+    use_range_css(&CHIP_BASE_SX, copies);
+    let user_sx = own_sx.as_ref().unwrap_or(&props.sx);
 
     let id = use_id();
     let element = use_element();
@@ -389,7 +499,8 @@ pub fn Chip(props: ChipProps) -> Element {
     let root = use_box()
         .framework_sx(&CHIP_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(user_sx)
+        .visibility(&props.hidden_from, &props.visible_from)
         .parts(&props.parts)
         .states(&states)
         .style(style.clone())
@@ -470,12 +581,15 @@ pub fn Chip(props: ChipProps) -> Element {
 
             // After the children, so a caller's ellipsis span never cuts it.
             let hint = wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint);
+            let states =
+                with_visibility(&states, &props.hidden_from, &props.visible_from).unwrap_or(states);
+            let sx = own_sx.unwrap_or(props.sx);
             return rsx! {
                 InternalAnchor {
                     to,
                     target: props.target,
                     class: props.class,
-                    sx: parts_under_sx(&props.parts, props.sx),
+                    sx: parts_under_sx(&props.parts, sx),
                     framework_sx: &CHIP_BASE_SX,
                     states,
                     style,

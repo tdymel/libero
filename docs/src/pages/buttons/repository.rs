@@ -23,12 +23,16 @@ pub fn RepositoryPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("muted")
                     .doc("Accent color. A theme color name or any CSS color. Unset, a `gradient` takes the theme's gradient, as no label reads on a muted one."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default("md")
-                    .doc("Button size. The icon takes half of it."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("Button size. The icon takes half of it. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default("sm")
-                    .doc("Corner radius, independent of `size`."),
+                    .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("aria_label", "String")
                     .doc("Replaces the name's subject, the host and repository; the star count and new-tab cue still follow. A raw `\"aria-label\"` attribute replaces the whole name."),
                 prop("new_tab_icon", "bool")

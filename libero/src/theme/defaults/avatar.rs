@@ -42,7 +42,7 @@ impl AvatarDefaults {
         radii: Sizes::new("2px", "4px", "8px", "16px", "32px", "9999px"),
     };
 
-    fn size_sx(size: Size) -> Sx {
+    pub(crate) fn size_sx(size: Size) -> Sx {
         sx().width(AVATAR_SIZE.value(size))
             // A flex parent (`AvatarGroup`) squashes a width-only square into an ellipse.
             .min_width(AVATAR_SIZE.value(size))

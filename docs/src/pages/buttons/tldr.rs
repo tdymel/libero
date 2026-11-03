@@ -4,6 +4,8 @@ use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Input, Text, Tldr},
     hooks::use_localization,
+    sx::ThemeAwareValue,
+    theme::Responsive,
     use_theme,
 };
 
@@ -31,15 +33,19 @@ pub fn TldrPage() -> Element {
                     .doc("Draws only the sparkles, named by `aria_label`."),
                 prop("aria_label", "String")
                     .doc("Names the icon-only trigger. Unset, `TldrLabels::icon_only` (\"Summarize with AI\")."),
-                prop("variant", "Variant")
+                prop("variant", "Responsive<Variant>")
                     .default(theme.tldr.variant.as_str())
-                    .doc("The trigger's visual style. Unset, `theme.tldr.variant`."),
-                prop("size", "Size")
+                    .doc("The trigger's visual style. Unset, `theme.tldr.variant`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
+                prop("size", "Responsive<Size>")
                     .default(theme.tldr.size.as_str())
-                    .doc("The trigger's size step, the icon-only one too."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("The trigger's size step, the icon-only one too. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(radius.unwrap_or("the trigger's own"))
-                    .doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`. The trigger's own is `xl` on the labelled chip, `sm` icon-only."),
+                    .doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`. The trigger's own is `xl` on the labelled chip, `sm` icon-only. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("color", "ThemeAwareValue")
                     .default("neutral")
                     .doc("The trigger's accent color. A theme color name or any CSS color. Unset, `theme.tldr.color`."),
@@ -124,7 +130,7 @@ pub fn TldrPage() -> Element {
                                 },
                                 size: values.str("size"),
                                 radius: match values.str("radius").as_str() {
-                                    "auto" => Input::None,
+                                    "auto" => Input::<Responsive<ThemeAwareValue>>::None,
                                     radius => Input::from(radius),
                                 },
                             }

@@ -341,6 +341,13 @@ pub(crate) struct RangeCopy<'a> {
     block: Box<dyn FnOnce() -> Sx + 'a>,
 }
 
+impl RangeCopy<'_> {
+    /// The run word, as `md-:size-xl`: lets a caller drop a run whose block is empty.
+    pub(crate) fn word(&self) -> &'static str {
+        self.word
+    }
+}
+
 impl<T: Clone + PartialEq> crate::tokens::Responsive<T> {
     /// The copies a responsive axis value needs, one per run; none for a plain value.
     pub(crate) fn range_copies<'a>(

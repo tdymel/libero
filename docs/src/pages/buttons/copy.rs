@@ -17,16 +17,20 @@ pub fn CopyPage() -> Element {
             properties: vec![props("Copy", vec![
                 prop("value", "String").default("required")
                     .doc("The text a press writes to the clipboard. On the web the browser allows it only over HTTPS or on localhost, inside a user action; natively it needs the `native` feature. A control of your own builds on `use_clipboard()`: `copy(text)` starts the write, `copied()` or `failed()` rises once the platform answers, and `reset()` clears both. Say the result in a status region that is already mounted."),
-                prop("variant", "Variant")
-                    .doc("Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own."),
+                prop("variant", "Responsive<Variant>")
+                    .doc("Visual style, as on `ActionIcon`. With `color` also unset, the button draws no chrome of its own. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color. A theme color name or any CSS color."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.size.as_str())
-                    .doc("Button size."),
-                prop("radius", "ThemeAwareValue")
+                    .doc("Button size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.radius.as_str())
-                    .doc("Corner radius, independent of `size`."),
+                    .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("aria_label", "String")
                     .default("\"Copy\"")
                     .doc("The button's name, such as \"Copy link\". Unset, the localization's."),

@@ -1,6 +1,7 @@
 use dioxus::{core::AttributeValue, prelude::*};
 use pictogram_icons_lucide as lucide;
 
+use super::button::variant_var;
 use crate::{
     components::{
         common::{
@@ -8,6 +9,7 @@ use crate::{
             borderless_on_state_sx, coarse_hit_area_sx, contrast_color, disabled_look_sx,
             fill_color, focus_ring_sx, interactive_variant_sx, literal_contrast, min_hit_area_sx,
             names_itself, text_color, use_name_warning, variant_colors, variant_selected_sx,
+            with_own, with_visibility,
         },
         common::{ButtonGroupContext, Glyph, use_button_group},
         common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
@@ -23,13 +25,13 @@ use crate::{
     context::IconSlot,
     hooks::{
         Chord, aria_keyshortcuts, child_ripple_sx, current_localization, use_gradient_style,
-        use_ripple, use_theme,
+        use_range_css, use_ripple, use_theme,
     },
     platform::{click_stopped, mod_is_meta},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         ACTION_ICON_GLYPH, ACTION_ICON_RADIUS, ACTION_ICON_SIZE, BUTTON_HEIGHT, CssVar, Gradient,
-        ICON_SIZE, LOADER_SIZE, Size, SizeCss,
+        ICON_SIZE, LOADER_SIZE, Responsive, Size, SizeCss,
     },
     utils::use_warn_once,
 };
@@ -137,13 +139,7 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         // 44x44 on a coarse pointer.
         .and(min_hit_area_sx("::before"))
         .when(ACTION_ICON_COMPACT, coarse_hit_area_sx("::before"))
-        .when(
-            ACTION_ICON_GROWS,
-            sx().media(
-                COARSE_POINTER,
-                sx().min_width(COARSE_TARGET).min_height(COARSE_TARGET),
-            ),
-        )
+        .when(ACTION_ICON_GROWS, Touch::Grows.sx())
         // A chromeless toggle's pressed look; the variants repeat it over their fill.
         .when(
             "checked",
@@ -151,29 +147,7 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         );
 
     let base = Variant::ALL.iter().fold(base, |base, &variant| {
-        base.when(
-            variant.state_name(),
-            // The ungated base is `border: none`, so the variants add the border here.
-            interactive_variant_sx(
-                variant,
-                &ACTION_ICON_VARS,
-                &ACTION_ICON_HOVER_VAR,
-                &ACTION_ICON_SELECTED_VAR,
-                &ACTION_ICON_ON_STATE_VAR,
-            )
-            .border_style("solid")
-            .border_width("1px")
-            // After the variant's `:hover`, which it ties on specificity.
-            .when(
-                "checked",
-                variant_selected_sx(
-                    variant,
-                    &ACTION_ICON_VARS,
-                    &ACTION_ICON_SELECTED_VAR,
-                    &ACTION_ICON_ON_STATE_VAR,
-                ),
-            ),
-        )
+        base.when(variant.state_name(), variant_sx(variant))
     });
 
     // Last, as on `Button`: the elevated variant's shadow ties the ring's on specificity.
@@ -181,6 +155,119 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("loading", loading_sx())
         .focus_visible(focus_ring_sx())
 });
+
+fn variant_sx(variant: Variant) -> Sx {
+    // The ungated base is `border: none`, so the variants add the border here.
+    interactive_variant_sx(
+        variant,
+        &ACTION_ICON_VARS,
+        &ACTION_ICON_HOVER_VAR,
+        &ACTION_ICON_SELECTED_VAR,
+        &ACTION_ICON_ON_STATE_VAR,
+    )
+    .border_style("solid")
+    .border_width("1px")
+    // After the variant's `:hover`, which it ties on specificity.
+    .when(
+        "checked",
+        variant_selected_sx(
+            variant,
+            &ACTION_ICON_VARS,
+            &ACTION_ICON_SELECTED_VAR,
+            &ACTION_ICON_ON_STATE_VAR,
+        ),
+    )
+}
+
+/// The colour vars that differ per variant, named per variant under a responsive one.
+const VARIANT_VARS: [CssVar; 5] = [
+    ACTION_ICON_HOVER_VAR,
+    ACTION_ICON_ON_STATE_VAR,
+    ACTION_ICON_CONTAINER_VAR,
+    ACTION_ICON_ON_CONTAINER_VAR,
+    ACTION_ICON_SELECTED_VAR,
+];
+
+/// A range copy of one variant: its block, reading the instance's vars for that variant.
+fn variant_copy_sx(variant: Variant) -> Sx {
+    VARIANT_VARS
+        .into_iter()
+        .fold(variant_sx(variant), |sx, var| {
+            let value = variant_var(&var, variant).value();
+            sx.var(var, value)
+        })
+}
+
+/// How the box answers a finger, from its size: one axis per breakpoint under a responsive size.
+#[derive(Clone, Copy, PartialEq)]
+enum Touch {
+    Compact,
+    Grows,
+    /// A `calc` the icon cannot read: neither.
+    Fixed,
+}
+
+impl Touch {
+    fn of(size: Option<&ThemeAwareValue>, themed: Size) -> Self {
+        if is_compact(size) {
+            Self::Compact
+        } else if grows_on_touch(size, themed) {
+            Self::Grows
+        } else {
+            Self::Fixed
+        }
+    }
+
+    fn word(self) -> &'static str {
+        match self {
+            Self::Compact => ACTION_ICON_COMPACT,
+            Self::Grows => ACTION_ICON_GROWS,
+            Self::Fixed => "touch-fixed",
+        }
+    }
+
+    fn sx(self) -> Sx {
+        match self {
+            Self::Compact => coarse_hit_area_sx("::before"),
+            Self::Grows => sx().media(
+                COARSE_POINTER,
+                sx().min_width(COARSE_TARGET).min_height(COARSE_TARGET),
+            ),
+            Self::Fixed => sx(),
+        }
+    }
+}
+
+/// The size and glyph override vars of one size value.
+fn size_vars(sx: Sx, size: &ThemeAwareValue) -> Sx {
+    // A size word is `Button`'s height round `Icon`'s glyph; a length is both.
+    let glyph = match size {
+        ThemeAwareValue::Size(size) => ICON_SIZE.value(*size),
+        _ => "100%".to_string(),
+    };
+    let sx = sx.var(ACTION_ICON_GLYPH.override_var(), glyph);
+    match size.resolve(Some(BUTTON_HEIGHT)) {
+        Some(css) => sx.var(ACTION_ICON_SIZE.override_var(), css),
+        None => sx,
+    }
+}
+
+fn radius_vars(sx: Sx, radius: &ThemeAwareValue) -> Sx {
+    match radius.resolve(Some(SizeCss::RADIUS)) {
+        Some(css) => sx.var(ACTION_ICON_RADIUS.override_var(), css),
+        None => sx,
+    }
+}
+
+/// Every range of a responsive value as a rule in the user layer, the base one included,
+/// since the inline override vars of a plain value are not written then.
+fn per_range_sx(value: &Responsive<ThemeAwareValue>, apply: fn(Sx, &ThemeAwareValue) -> Sx) -> Sx {
+    value
+        .breakpoints()
+        .fold(apply(sx(), value.base_ref()), |rules, (size, value)| {
+            rules.breakpoint(size, apply(sx(), &value))
+        })
+}
 
 /// `Button`'s loading shape; the loader takes a share of the box, not of a line height.
 /// By slot, not position: a press appends a ripple span after the loader.
@@ -209,27 +296,53 @@ fn loading_sx() -> Sx {
         )
 }
 
+/// The size words of a size-or-length value, for a `Button`; unset if any range holds a length.
+pub(crate) fn size_words(value: &Responsive<ThemeAwareValue>) -> Option<Responsive<Size>> {
+    let word = |value: &ThemeAwareValue| match value {
+        ThemeAwareValue::Size(size) => Some(*size),
+        _ => None,
+    };
+    let base = word(value.base_ref())?;
+    value
+        .breakpoints()
+        .try_fold(Responsive::new(base), |words, (size, value)| {
+            Some(words.with(size, word(&value)?))
+        })
+}
+
+/// A plain value only: a responsive one is per range in the user layer ([`per_range_sx`]).
+fn plain(value: &Input<Responsive<ThemeAwareValue>>) -> Option<&ThemeAwareValue> {
+    value
+        .as_ref()
+        .filter(|value| value.is_plain())
+        .map(Responsive::base_ref)
+}
+
 fn action_icon_variables(
     props: &ActionIconProps,
-    variant: Variant,
+    variant: &Responsive<Variant>,
     has_variant_styling: bool,
 ) -> Variables {
-    // A size word is `Button`'s height round `Icon`'s glyph; a length is both.
-    let glyph = match props.size.as_ref() {
-        Some(ThemeAwareValue::Size(size)) => Some(ICON_SIZE.value(*size)),
-        Some(_) => Some("100%".to_string()),
-        None => None,
-    };
-    let result = variables()
-        .with(
-            ACTION_ICON_SIZE.override_var(),
-            props.size.resolve(Some(BUTTON_HEIGHT)),
-        )
-        .with(ACTION_ICON_GLYPH.override_var(), glyph)
-        .with(
-            ACTION_ICON_RADIUS.override_var(),
-            props.radius.resolve(Some(SizeCss::RADIUS)),
-        );
+    let result = match plain(&props.size) {
+        Some(size) => {
+            // A size word is `Button`'s height round `Icon`'s glyph; a length is both.
+            let glyph = match size {
+                ThemeAwareValue::Size(size) => ICON_SIZE.value(*size),
+                _ => "100%".to_string(),
+            };
+            variables()
+                .with(
+                    ACTION_ICON_SIZE.override_var(),
+                    size.resolve(Some(BUTTON_HEIGHT)),
+                )
+                .with(ACTION_ICON_GLYPH.override_var(), Some(glyph))
+        }
+        None => variables(),
+    }
+    .with(
+        ACTION_ICON_RADIUS.override_var(),
+        plain(&props.radius).and_then(|radius| radius.resolve(Some(SizeCss::RADIUS))),
+    );
 
     if !has_variant_styling {
         return result;
@@ -237,9 +350,7 @@ fn action_icon_variables(
 
     let base = base_color("ActionIcon", props.color.as_ref());
     let contrast = contrast_color(&base);
-    let colors = variant_colors(variant, &base);
-
-    result
+    let result = result
         .with(ACTION_ICON_COLOR_VAR, text_color(&base))
         .with(ACTION_ICON_FILL_VAR, fill_color(&base))
         .with(
@@ -247,12 +358,34 @@ fn action_icon_variables(
             contrast
                 .and_then(|c| c.resolve(None))
                 .or_else(|| literal_contrast(&base)),
-        )
-        .with(ACTION_ICON_HOVER_VAR, colors.hover)
-        .with(ACTION_ICON_ON_STATE_VAR, colors.on_state)
-        .with(ACTION_ICON_CONTAINER_VAR, colors.container)
-        .with(ACTION_ICON_ON_CONTAINER_VAR, colors.on_container)
-        .with(ACTION_ICON_SELECTED_VAR, colors.selected)
+        );
+    if variant.is_plain() {
+        return variant_colour_vars(result, variant.base(), &base, |var| var);
+    }
+    let mut seen: Vec<Variant> = Vec::new();
+    for (_, _, value) in variant.runs() {
+        if !seen.contains(&value) {
+            seen.push(value);
+        }
+    }
+    seen.into_iter().fold(result, |result, value| {
+        variant_colour_vars(result, value, &base, |var| variant_var(&var, value))
+    })
+}
+
+fn variant_colour_vars(
+    result: Variables,
+    variant: Variant,
+    base: &ThemeAwareValue,
+    name: impl Fn(CssVar) -> CssVar,
+) -> Variables {
+    let colors = variant_colors(variant, base);
+    result
+        .with(name(ACTION_ICON_HOVER_VAR), colors.hover)
+        .with(name(ACTION_ICON_ON_STATE_VAR), colors.on_state)
+        .with(name(ACTION_ICON_CONTAINER_VAR), colors.container)
+        .with(name(ACTION_ICON_ON_CONTAINER_VAR), colors.on_container)
+        .with(name(ACTION_ICON_SELECTED_VAR), colors.selected)
 }
 
 /// The enclosing `ButtonGroup`'s defaults, where the caller left a prop unset.
@@ -262,9 +395,12 @@ fn fill_from_group(props: &mut ActionIconProps, group: &ButtonGroupContext) {
             *prop = Input::Value(value);
         }
     }
-    fill(&mut props.size, group.size.map(ThemeAwareValue::Size));
-    fill(&mut props.radius, group.radius.clone());
-    fill(&mut props.variant, group.variant);
+    fill(
+        &mut props.size,
+        group.size.map(|size| ThemeAwareValue::Size(size).into()),
+    );
+    fill(&mut props.radius, group.radius.clone().map(Into::into));
+    fill(&mut props.variant, group.variant.map(Into::into));
     fill(&mut props.color, group.color.clone());
     props.selected = props
         .selected
@@ -277,8 +413,9 @@ fn fill_from_group(props: &mut ActionIconProps, group: &ButtonGroupContext) {
 
 base_props! {
     pub struct ActionIconProps {
+        /// Per breakpoint too: `responsive(Variant::Outlined).md(Variant::Filled)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         /// Second stop and angle of the `gradient` variant, whose first stop is `color`:
         /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
         #[props(default, into)]
@@ -287,11 +424,19 @@ base_props! {
         color: Input<ThemeAwareValue>,
         /// A size word takes `Button`'s height, the glyph `Icon`'s size; a length
         /// sizes both. Below 24px the press target stays 24x24 (WCAG 2.5.8), 44x44 under a finger at `xs` and `sm`
-        /// (in a `Toolbar`, up to half its gap along the bar).
+        /// (in a `Toolbar`, up to half its gap along the bar). Per breakpoint too:
+        /// `responsive(Size::Sm.into()).md(Size::Lg.into())`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
+        /// Per breakpoint too, as `size`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// Required: an icon-only button has no text to announce.
         aria_label: String,
         /// Shows `aria_label` in a `Tooltip` on hover and keyboard focus, except while
@@ -468,14 +613,18 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
 
     let has_variant_styling = props.variant.as_ref().is_some() || props.color.as_ref().is_some();
     let theme = use_theme();
-    let variant = props.variant.copied_or(theme.action_icon.variant);
+    let variants = props.variant.copied_or(theme.action_icon.variant.into());
     let new_tab_icon = props.new_tab_icon.unwrap_or(theme.anchor.new_tab_icon);
     let variables: Input<Variables> =
-        action_icon_variables(&props, variant, has_variant_styling).into();
+        action_icon_variables(&props, &variants, has_variant_styling).into();
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
         props.color.as_ref(),
-        has_variant_styling && variant == Variant::Gradient,
+        has_variant_styling
+            && (variants.base() == Variant::Gradient
+                || variants
+                    .breakpoints()
+                    .any(|(_, variant)| variant == Variant::Gradient)),
         false,
     );
 
@@ -493,24 +642,66 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
         .unwrap_or_default()
         .with("disabled", disabled)
         .with("loading", loading)
-        .with("checked", selected)
-        .with(variant.state_name(), has_variant_styling);
-    // Unless a wrapper (`Burger`) set it for a size it computes.
-    let states = if is_compact(props.size.as_ref()) {
-        states.with(ACTION_ICON_COMPACT, true)
-    } else {
-        states
+        .with("checked", selected);
+    let states = match (has_variant_styling, variants.is_plain()) {
+        (false, _) => states.with(variants.base().state_name(), false),
+        (true, true) => states.with(variants.base().state_name(), true),
+        (true, false) => states.responsive(&variants, Variant::state_name),
     };
-    let states = if grows_on_touch(props.size.as_ref(), theme.action_icon.size) {
-        states.with(ACTION_ICON_GROWS, true)
-    } else {
-        states
+    let sizes = props.size.as_ref().filter(|sizes| !sizes.is_plain());
+    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
+    // Unless a wrapper (`Burger`) set it for a size it computes.
+    let states = match sizes {
+        Some(sizes) => {
+            let themed = theme.action_icon.size;
+            states.responsive(
+                &sizes.map(|size| Touch::of(Some(&size), themed)),
+                Touch::word,
+            )
+        }
+        None => {
+            let size = plain(&props.size);
+            let states = if is_compact(size) {
+                states.with(ACTION_ICON_COMPACT, true)
+            } else {
+                states
+            };
+            if grows_on_touch(size, theme.action_icon.size) {
+                states.with(ACTION_ICON_GROWS, true)
+            } else {
+                states
+            }
+        }
     };
     let states: Input<States> = match showing.as_ref() {
         Some(ripple) => states.with(ripple.state(), true),
         None => states,
     }
     .into();
+    // Only the ranges this instance uses; a plain one registers nothing.
+    let mut copies = match sizes {
+        Some(sizes) => {
+            let themed = theme.action_icon.size;
+            let touch = sizes.map(|size| Touch::of(Some(&size), themed));
+            touch.range_copies(Touch::word, Touch::sx)
+        }
+        None => Vec::new(),
+    };
+    copies.retain(|copy| !copy.word().ends_with(Touch::Fixed.word()));
+    if has_variant_styling {
+        copies.extend(variants.range_copies(Variant::state_name, variant_copy_sx));
+    }
+    use_range_css(&ACTION_ICON_BASE_SX, copies);
+    let mut own_sx = sizes.map(|sizes| per_range_sx(sizes, size_vars));
+    if let Some(radii) = radii {
+        let radius_sx = per_range_sx(radii, radius_vars);
+        own_sx = Some(match own_sx {
+            Some(own) => own.and(radius_sx),
+            None => radius_sx,
+        });
+    }
+    let own_sx = own_sx.map(|own| with_own(Some(own), &props.sx));
+    let user_sx = own_sx.as_ref().unwrap_or(&props.sx);
 
     // `value` is also the `<button>`'s own attribute, which the prop shadows.
     let native_value = props.value.clone();
@@ -543,7 +734,8 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
     let boxed = use_box()
         .framework_sx(&ACTION_ICON_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(user_sx)
+        .visibility(&props.hidden_from, &props.visible_from)
         .states(&states)
         .variables(&variables)
         // Only a button that has been clicked pays for the ripple.
@@ -583,12 +775,15 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
         attributes.extend(item.into_iter().flat_map(ToolbarItem::attributes));
         // An explicit `None` would strip a spread `aria-label` in the DOM (a blank own label).
         attributes.extend(aria_label.map(|label| Attribute::new("aria-label", label, None, false)));
+        let states =
+            with_visibility(&states, &props.hidden_from, &props.visible_from).unwrap_or(states);
+        let sx = own_sx.unwrap_or(props.sx);
         return rsx! {
             InternalAnchor {
                 to,
                 target: props.target,
                 class: props.class,
-                sx: props.sx,
+                sx,
                 framework_sx: &ACTION_ICON_BASE_SX,
                 states,
                 variables,
@@ -662,6 +857,8 @@ mod tests {
             color,
             size: Size::Md.into(),
             radius: Input::None,
+            hidden_from: Input::None,
+            visible_from: Input::None,
             aria_label: "test".to_string(),
             tooltip: None,
             shortcut: None,
@@ -731,7 +928,7 @@ mod tests {
     #[test]
     fn without_variant_styling_only_the_size_variables_are_set() {
         let props = action_icon_props(Color::Primary.into());
-        let variables = action_icon_variables(&props, Variant::Filled, false).to_string();
+        let variables = action_icon_variables(&props, &Variant::Filled.into(), false).to_string();
 
         assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
         assert!(!variables.contains(ACTION_ICON_COLOR_VAR.name()));
@@ -740,8 +937,12 @@ mod tests {
     /// Todo 1069: a size word is `Button`'s height round `Icon`'s glyph; a length fills.
     #[test]
     fn a_size_word_takes_the_button_height_and_a_length_fills() {
-        let word = action_icon_variables(&action_icon_props(Input::None), Variant::Filled, false)
-            .to_string();
+        let word = action_icon_variables(
+            &action_icon_props(Input::None),
+            &Variant::Filled.into(),
+            false,
+        )
+        .to_string();
         assert!(word.contains(&BUTTON_HEIGHT.value(Size::Md)), "{word}");
         assert!(word.contains(&ICON_SIZE.value(Size::Md)), "{word}");
 
@@ -749,7 +950,7 @@ mod tests {
             size: "20px".into(),
             ..action_icon_props(Input::None)
         };
-        let length = action_icon_variables(&length, Variant::Filled, false).to_string();
+        let length = action_icon_variables(&length, &Variant::Filled.into(), false).to_string();
         assert!(length.contains("-size-override:20px;"), "{length}");
         assert!(length.contains("-glyph-override:100%;"), "{length}");
     }
@@ -757,7 +958,7 @@ mod tests {
     #[test]
     fn with_variant_styling_the_colour_variables_are_added() {
         let props = action_icon_props(Color::Primary.into());
-        let variables = action_icon_variables(&props, Variant::Filled, true).to_string();
+        let variables = action_icon_variables(&props, &Variant::Filled.into(), true).to_string();
 
         assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
         assert!(variables.contains(ACTION_ICON_COLOR_VAR.name()));
