@@ -77,8 +77,8 @@ pub struct TableLabels {
     pub select_row: fn(&str) -> String,
     /// Announced after a selection change. A fn, for plural forms.
     ///
-    /// The shipped fns write the numbers in the active `Formats`; an override gets them
-    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
+    /// The shipped fns write the numbers as spoken, without group separators ("1234 rows", a screen
+    /// reader reads it whole), in the active decimal separator; an override gets them plain.
     ///
     /// ```
     /// use libero::localization::TableLabels;
@@ -132,8 +132,8 @@ pub struct TableLabels {
     pub no_results: &'static str,
     /// Announced once typing in the quick filter settles. A fn, for plural forms.
     ///
-    /// The shipped fns write the numbers in the active `Formats`; an override gets them
-    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
+    /// The shipped fns write the numbers as spoken, without group separators ("1234 rows", a screen
+    /// reader reads it whole), in the active decimal separator; an override gets them plain.
     ///
     /// ```
     /// use libero::localization::TableLabels;
@@ -158,8 +158,8 @@ pub struct TableLabels {
     pub reset_column_width: &'static str,
     /// Announced after a menu Widen or Narrow step: the header and the new width in px.
     ///
-    /// The shipped fns write the numbers in the active `Formats`; an override gets them
-    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
+    /// The shipped fns write the numbers as spoken, without group separators ("1234 rows", a screen
+    /// reader reads it whole), in the active decimal separator; an override gets them plain.
     ///
     /// ```
     /// use libero::localization::TableLabels;
@@ -331,8 +331,8 @@ pub struct TableLabels {
     pub export: &'static str,
     /// Announced after an export, from the rows it holds. A fn, for plural forms.
     ///
-    /// The shipped fns write the numbers in the active `Formats`; an override gets them
-    /// plain and can call [`Formats::write_number`](crate::localization::Formats::write_number).
+    /// The shipped fns write the numbers as spoken, without group separators ("1234 rows", a screen
+    /// reader reads it whole), in the active decimal separator; an override gets them plain.
     ///
     /// ```
     /// use libero::localization::TableLabels;
@@ -522,7 +522,7 @@ fn english_selected(count: usize) -> String {
     match count {
         0 => "No rows selected".to_string(),
         1 => "1 row selected".to_string(),
-        _ => format!("{} rows selected", grouped(count)),
+        _ => format!("{} rows selected", spoken(count)),
     }
 }
 
@@ -531,22 +531,28 @@ fn german_selected(count: usize) -> String {
     match count {
         0 => "Keine Zeilen ausgewählt".to_string(),
         1 => "1 Zeile ausgewählt".to_string(),
-        _ => format!("{} Zeilen ausgewählt", grouped(count)),
+        _ => format!("{} Zeilen ausgewählt", spoken(count)),
     }
 }
 
 fn english_results(count: usize) -> String {
     match count {
         1 => "1 row".to_string(),
-        _ => format!("{} rows", grouped(count)),
+        _ => format!("{} rows", spoken(count)),
     }
 }
 
 fn german_results(count: usize) -> String {
     match count {
         1 => "1 Zeile".to_string(),
-        _ => format!("{} Zeilen", grouped(count)),
+        _ => format!("{} Zeilen", spoken(count)),
     }
+}
+
+/// A number as a screen reader reads it: no group separators, the active decimal one: `1234`, `1240,5`.
+fn spoken(number: impl ToString) -> String {
+    let decimal = active_formats().decimal_separator;
+    number.to_string().replace('.', decimal)
 }
 
 /// A number in the active formats' separators: `1,234`, `1.234`.
@@ -584,7 +590,7 @@ fn german_column_menu(column: &str) -> String {
 }
 
 fn column_width(column: &str, width: f64) -> String {
-    format!("{column}: {} px", grouped(width))
+    format!("{column}: {} px", spoken(width))
 }
 
 fn english_column_width_reset(column: &str) -> String {
@@ -702,14 +708,14 @@ fn german_density_name(size: Size) -> &'static str {
 fn english_exported(count: usize) -> String {
     match count {
         1 => "Exported 1 row".to_string(),
-        _ => format!("Exported {} rows", grouped(count)),
+        _ => format!("Exported {} rows", spoken(count)),
     }
 }
 
 fn german_exported(count: usize) -> String {
     match count {
         1 => "1 Zeile exportiert".to_string(),
-        _ => format!("{} Zeilen exportiert", grouped(count)),
+        _ => format!("{} Zeilen exportiert", spoken(count)),
     }
 }
 
@@ -1084,8 +1090,8 @@ mod tests {
         let html = dioxus_ssr::render(&dom);
         assert!(
             html.contains(
-                "\u{2066}1.001–1.025\u{2069} von 12.345|1.234 Zeilen|2.000 Zeilen ausgewählt|\
-                 1.500 Zeilen exportiert|Name: 1.240,5 px"
+                "\u{2066}1.001–1.025\u{2069} von 12.345|1234 Zeilen|2000 Zeilen ausgewählt|\
+                 1500 Zeilen exportiert|Name: 1240,5 px"
             ),
             "{html}"
         );

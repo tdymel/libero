@@ -54,7 +54,8 @@ fn a_finger_opens_the_sheet_and_types_in_it() {
         let page = &fixture.page;
         let field = input("stay");
         // Short while unfocused (3904).
-        let short = format!("document.querySelector({field:?}).value === '14–16 Sep'");
+        let short =
+            format!("document.querySelector({field:?}).value === '\u{2066}14–16\u{2069} Sep'");
         wait::for_js_true(page, &short, "the short range")
             .await
             .unwrap();

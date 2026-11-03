@@ -1,5 +1,5 @@
 use super::crop::{CropRect, Grip};
-use super::image_cropper::{min_side, press_message, slider_zoom, value_text};
+use super::image_cropper::{min_side, press_message, slider_zoom, spoken_percent, value_text};
 use crate::localization::{Formats, ImageCropperLabels};
 
 fn rect(x: f64, y: f64, width: f64, height: f64) -> CropRect {
@@ -291,6 +291,13 @@ fn the_box_text_follows_the_formats_percent() {
     let crop = rect(0.05, 0.1, 0.4, 0.5);
     let german = value_text(&ImageCropperLabels::GERMAN, &Formats::GERMAN, false, crop);
     assert_eq!(german, "40\u{a0}% mal 50\u{a0}%, bei 5\u{a0}%, 10\u{a0}%");
+}
+
+/// Todo 5579: a spoken percent has no group separator.
+#[test]
+fn a_spoken_percent_has_no_group_separator() {
+    assert_eq!(spoken_percent(&Formats::AMERICAN, 1591.2), "1591%");
+    assert_eq!(spoken_percent(&Formats::GERMAN, 1591.0), "1591\u{a0}%");
 }
 
 /// The region is there before any press: one inserted with its text is not read.

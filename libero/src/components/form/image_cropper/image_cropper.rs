@@ -148,6 +148,11 @@ pub(super) fn min_side(min_size: Option<f64>) -> f64 {
         .clamp(MIN_SIZE_FLOOR, 1.0)
 }
 
+/// A whole percentage as spoken: no group separator, so a zoom of 1591% is not "1.591 %".
+pub(super) fn spoken_percent(formats: &Formats, value: f64) -> String {
+    formats.percent.replace("{n}", &value.round().to_string())
+}
+
 /// The box's `aria-valuetext`, which the move and resize buttons say too (4322).
 pub(super) fn value_text(
     words: &ImageCropperLabels,
@@ -155,7 +160,7 @@ pub(super) fn value_text(
     pan: bool,
     rect: CropRect,
 ) -> String {
-    let percent = |fraction: f64| formats.write_percent(&(fraction * 100.0).round().to_string());
+    let percent = |fraction: f64| spoken_percent(formats, fraction * 100.0);
     let (width, height, x, y) = (
         percent(rect.width),
         percent(rect.height),
@@ -1050,7 +1055,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     exact_zoom.set(scale);
     let zoom_text = use_callback(move |zoom: f64| {
         let zoom = slider_zoom(zoom, *exact_zoom.peek());
-        let zoom = formats.write_percent(&percent(zoom).to_string());
+        let zoom = spoken_percent(formats, percent(zoom));
         fill(words.zoom_value, &[("zoom", &zoom)])
     });
     let keys = if pan { words.pan_keys } else { words.keys };

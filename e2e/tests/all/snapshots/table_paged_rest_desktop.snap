@@ -34,7 +34,7 @@ LabelText
 combobox "Rows per page" = 3 [expanded=false] [haspopup=listbox]
   StaticText "3"
 status [atomic] [live=polite]
-StaticText "1–3 of 7"
+StaticText "⁦1–3⁩ of 7"
 status [atomic] [live=polite]
 navigation "Pages of Fruit"
   list

@@ -13,14 +13,14 @@ use e2e::{Fixture, Viewport, wait};
 async fn the_quick_filter_narrows_the_rows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     const RANGE: &str = "[data-slot=range]";
     const LIVE: &str = "table + [role=status]";
-    eventually_text(d, RANGE, "1–3 of 7", "the first page").await?;
+    eventually_text(d, RANGE, "\u{2066}1–3\u{2069} of 7", "the first page").await?;
     d.click("button[aria-label=\"Go to next page\"]").await?;
     eventually_text(d, "#page", "2", "Next").await?;
     d.click("input[type=search]").await?;
     eventually_focused(d, "input[type=search]", "a click").await?;
     d.type_text("ap").await?;
     eventually_text(d, "#query", "ap", "typing ap").await?;
-    eventually_text(d, RANGE, "1–2 of 2", "the filter").await?;
+    eventually_text(d, RANGE, "\u{2066}1–2\u{2069} of 2", "the filter").await?;
     eventually_text(d, "tbody th", "Apple", "the filter").await?;
     eventually_text(d, "#page", "1", "the filter's page reset").await?;
     eventually_text(d, LIVE, "2 rows", "the settled count").await?;

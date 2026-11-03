@@ -385,23 +385,29 @@ async fn the_pages_turn_sort_and_resize<D: Driver>(d: &mut D, _route: &str) -> R
         eventually_text(d, RANGE, range, after).await?;
         eventually_text(d, FIRST, first, after).await
     };
-    shows(d, "1–3 of 7", "Fig", "the first page").await?;
+    shows(d, "\u{2066}1–3\u{2069} of 7", "Fig", "the first page").await?;
     d.click("button[aria-label=\"Go to next page\"]").await?;
-    shows(d, "4–6 of 7", "Cherry", "Next").await?;
+    shows(d, "\u{2066}4–6\u{2069} of 7", "Cherry", "Next").await?;
     eventually_text(d, "#page", "2", "onpagechange").await?;
-    eventually_text(d, LIVE, "4–6 of 7", "the page turn's announcement").await?;
+    eventually_text(
+        d,
+        LIVE,
+        "\u{2066}4–6\u{2069} of 7",
+        "the page turn's announcement",
+    )
+    .await?;
     d.click(SORT).await?;
-    shows(d, "1–3 of 7", "Apple", "a sort").await?;
+    shows(d, "\u{2066}1–3\u{2069} of 7", "Apple", "a sort").await?;
     eventually_text(d, "#page", "1", "a sort's page reset").await?;
     d.click("button[aria-label=\"Go to page 3\"]").await?;
-    shows(d, "7–7 of 7", "Grape", "page 3").await?;
+    shows(d, "\u{2066}7–7\u{2069} of 7", "Grape", "page 3").await?;
     d.click("[role=combobox]").await?;
     eventually(d, "the page sizes", async |d| {
         d.exists("[role=listbox]").await
     })
     .await?;
     d.click("[role=option]:nth-child(2)").await?;
-    shows(d, "6–7 of 7", "Fig", "5 a page").await
+    shows(d, "\u{2066}6–7\u{2069} of 7", "Fig", "5 a page").await
 }
 
 e2e::scenario!(

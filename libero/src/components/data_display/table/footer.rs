@@ -171,7 +171,8 @@ pub(super) fn footer_row(
                     aria_colindex: colindex.map(|indices| indices[index].to_string()),
                     if let Some((name, text)) = cell {
                         span { "data-footer-name": true, "{name}" }
-                        "{text}"
+                        // Isolated, so "7,8 %" and "-5" keep their order in an RTL cell.
+                        bdi { dir: "ltr", "{text}" }
                     }
                 }
             }

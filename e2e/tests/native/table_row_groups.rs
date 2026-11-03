@@ -112,7 +112,7 @@ fn a_windowed_grouped_table_moves_on_a_wheel() {
     let (_, _, _, height) = page.rect(&format!("{group} td:last-child"));
     assert!((height - 32.0).abs() <= 1.0, "a group row is {height}px");
     // Shut and open again: a click focuses the toggle, where `focus()` fires no `focusin` here.
-    let sales = "button[aria-label=\"Sales, 2,500 rows\"]";
+    let sales = "button[aria-label=\"Sales, 2500 rows\"]";
     page.click(sales);
     page.click(sales);
     assert_eq!(page.attr(sales, "aria-expanded").as_deref(), Some("true"));

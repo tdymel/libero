@@ -1000,8 +1000,13 @@ pub(super) fn render_cells(
                         "data-pin-edge": pin.as_ref().filter(|pin| pin.edge).map(|_| true),
                         style: pin.as_ref().map(CellPin::style),
                         ..attributes,
-                        // Text inline: a nested node per cell costs ~1 us a sort.
-                        "{text}"
+                        // Text inline: a nested node per cell costs ~1 us a sort, so only an
+                        // end-aligned (numeric) cell isolates its text, to keep "7,8 %" in order in RTL.
+                        if headers[column].align == CellAlign::End && !text.is_empty() {
+                            bdi { dir: "ltr", "{text}" }
+                        } else {
+                            "{text}"
+                        }
                         {body}
                     }
                 }
