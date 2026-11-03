@@ -94,8 +94,14 @@ fn TextFieldShell(
     let trailing = trailing.map(|content| rsx! { LiveSlot { content } });
     let theme = use_theme();
 
-    let size = props.size.copied_or(theme.text_field.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.text_field.radius);
+    let sizes = props.size.copied_or(theme.text_field.size.into());
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.text_field.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
 
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -133,8 +139,9 @@ fn TextFieldShell(
         .empty(empty)
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.text_field.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

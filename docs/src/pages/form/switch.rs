@@ -34,10 +34,10 @@ pub fn SwitchPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default(theme.switch.color.as_str())
                     .doc("Track color when on. A theme color name or any CSS color; `theme.switch.color` when unset."),
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(theme.switch.size.as_str())
                     .doc("Size of the track, the thumb and the label."),
-                prop("radius", "ThemeAwareValue")
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.switch.radius.as_str())
                     .doc("Track corner radius. The thumb stays a circle. Or any CSS, e.g. `radius: \"0\"`."),
                 prop("checked", "bool")
@@ -62,7 +62,7 @@ pub fn SwitchPage() -> Element {
                 readonly_prop("switch").also("It looks like an editable one, and Chromium does not announce read-only on a switch, so say it in the label or description where it matters."),
                 prop("aria_label", "String")
                     .doc("Names the switch when it has no `label`."),
-                prop("variant", "ChoiceVariant")
+                prop("variant", "Responsive<ChoiceVariant>")
                     .default(theme.switch.variant.as_str())
                     .doc("`card` draws the switch as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
             ])

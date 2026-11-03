@@ -111,7 +111,7 @@ pub fn SwitchGroupPage() -> Element {
                         .doc("Renames an option. Runs during render, so it can read a locale from context."),
                     prop("option_description", "Callback<T, String>")
                         .doc("A line under each option's label. An empty string renders none."),
-                    prop("variant", "ChoiceVariant")
+                    prop("variant", "Responsive<ChoiceVariant>")
                         .default(theme.switch.variant.as_str())
                         .doc("`card` draws every option as a bordered surface you can click anywhere."),
                     prop("orientation", "Orientation")
@@ -120,7 +120,7 @@ pub fn SwitchGroupPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default(theme.switch.color.as_str())
                         .doc("Track color of the switches that are on; `theme.switch.color` when unset."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.switch.size.as_str())
                         .doc("Size of the tracks, the thumbs and their labels."),
                     prop("label", "Caption")

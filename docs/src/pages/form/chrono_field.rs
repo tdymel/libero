@@ -76,8 +76,8 @@ pub fn ChronoFieldPage() -> Element {
             markdown: "/md/chrono_field.md",
             properties: vec![
                 props("ChronoField<V: DateValue>", vec![
-                    prop("size", "Size").default(theme.chrono_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
-                    prop("radius", "ThemeAwareValue").default(theme.chrono_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
+                    prop("size", "Responsive<Size>").default(theme.chrono_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
+                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.chrono_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<V>").doc("The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`. A `TimeDelta` shows as `1 h 30 min` in the `DateLocale`'s units and is typed so, or as `1h30`, `1:30` or minutes; a fraction such as `1.5 h` is refused, not rounded. Below `sm`, a range shows short, `14–16 Sep`, until the field takes focus."),
                     prop("onchange", "EventHandler<Option<V>>")
                         .doc("Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`."),

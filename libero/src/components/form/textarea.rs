@@ -141,8 +141,14 @@ fn near_limit(left: usize, max: usize) -> bool {
 pub fn Textarea(props: TextareaProps) -> Element {
     let theme = use_theme();
 
-    let size = props.size.copied_or(theme.textarea.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.textarea.radius);
+    let sizes = props.size.copied_or(theme.textarea.size.into());
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.textarea.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
 
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -178,8 +184,9 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .empty(bound.is_empty(required, || value.clone(), String::is_empty))
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.textarea.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

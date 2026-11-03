@@ -55,8 +55,8 @@ fn Demo() -> Element {
 | `orientation` | `Orientation` | `horizontal` | A row or a column. |
 | `variant` | `Variant` | `filled` | The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset. |
-| `size` | `Size` | `md` | Size of the segments and the captions. |
-| `radius` | `ThemeAwareValue` | `md` | Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Size of the segments and the captions. |
+| `radius` | `Responsive<ThemeAwareValue>` | `md` | Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: "0"`. |
 | `gap` | `ThemeAwareValue` | - | Space between the segments, or any CSS, e.g. `gap: "0"`. Set, each segment gets its own border and radius. Unset, a wrapped second line keeps the joined look, so set it where the row may wrap. |
 | `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way. |
 | `selected_check` | `bool` | `true` | A check before the selected segment's label. Unset follows `theme.segmented_control.selected_check`. `false` keeps the segment's width; the selected segment keeps its ring and fill. |

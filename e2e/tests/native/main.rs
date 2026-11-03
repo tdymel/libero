@@ -64,6 +64,7 @@ mod progress_bar;
 mod qr_code;
 mod repository;
 mod responsive;
+mod responsive_form;
 mod responsive_layout;
 mod rich_text_view;
 mod rtl_text;

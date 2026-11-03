@@ -114,10 +114,10 @@ pub fn AutocompletePage() -> Element {
             markdown: "/md/autocomplete.md",
             properties: vec![
                 props("Autocomplete", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.autocomplete.size.as_str())
                         .doc("Height, padding and font size of the field and its rows."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.autocomplete.radius.as_str())
                         .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "String")

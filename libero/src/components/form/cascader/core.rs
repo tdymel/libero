@@ -16,7 +16,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_theme},
     str_enum::str_enum,
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 mod engine;
@@ -142,8 +142,15 @@ field_props! {
 #[component]
 pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.cascader.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.cascader.radius);
+    let sizes = props.size.copied_or(theme.cascader.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.cascader.radius,
+    );
     let disabled = props.disabled.unwrap_or(false);
     // As `SelectCore`: read-only stays focusable and posting, but never opens.
     let readonly = props.readonly.unwrap_or(false);
@@ -164,7 +171,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         &props,
         state,
         trigger_element,
-        size,
+        sizes,
         &radius,
         disabled,
         readonly,
@@ -334,13 +341,14 @@ fn use_cascader_field(
     props: &CascaderCoreProps,
     state: ComboboxState,
     trigger: ElementHandle,
-    size: Size,
+    sizes: Responsive<Size>,
     radius: &ScaleOrCss,
     disabled: bool,
     readonly: bool,
 ) -> CascaderField {
     // From the posted value: one no option holds still posts, so it fills the field (todo 4235).
     let empty = props.form_value.is_none();
+    let size = sizes.base();
     let field = use_field()
         .labelled_by()
         .label(&props.label)
@@ -356,8 +364,9 @@ fn use_cascader_field(
         .asks(Asks::Select)
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), use_theme().cascader.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -383,6 +392,7 @@ fn use_cascader_field(
         .prepare();
 
     // The frame draws the ring.
+    crate::components::form::use_state_ranges(&CASCADER_TRIGGER_SX, Some(field.states()));
     let control = use_box()
         .framework_sx(&CASCADER_TRIGGER_SX)
         .focus_ring(false)

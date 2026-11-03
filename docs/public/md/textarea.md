@@ -38,8 +38,8 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Padding and font size. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Padding and font size. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `rows` | `u32` | `3` | Visible lines, which set the starting height. The user can still drag it taller. |
 | `value` | `Option<String>` | - | The text in the field. Leave it out and the textarea keeps its own text. |
 | `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the text the field should hold next. |

@@ -108,8 +108,8 @@ pub fn NumberFieldPage() -> Element {
             markdown: "/md/number_field.md",
             properties: vec![
                 props("NumberField", vec![
-                    prop("size", "Size").default(theme.number_field.size.as_str()).doc("Height, padding and font size."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("size", "Responsive<Size>").default(theme.number_field.size.as_str()).doc("Height, padding and font size."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.number_field.radius.as_str())
                         .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")

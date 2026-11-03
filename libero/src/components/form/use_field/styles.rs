@@ -8,6 +8,7 @@ use crate::{
 };
 
 input_from_str!(ChoiceVariant);
+crate::sx::input::input_from_responsive!(str ChoiceVariant);
 input_from_str!(DescriptionPosition);
 
 /// The wrapper styles all four text slots by `data-slot`, saving four

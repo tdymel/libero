@@ -111,7 +111,7 @@ pub fn CheckboxGroupPage() -> Element {
                         .doc("Renames an option. Runs during render, so it can read a locale from context."),
                     prop("option_description", "Callback<T, String>")
                         .doc("A line under each option's label. An empty string renders none."),
-                    prop("variant", "ChoiceVariant")
+                    prop("variant", "Responsive<ChoiceVariant>")
                         .default(theme.checkbox.variant.as_str())
                         .doc("`card` draws every option as a bordered surface you can click anywhere."),
                     prop("orientation", "Orientation")
@@ -120,7 +120,7 @@ pub fn CheckboxGroupPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default(theme.checkbox.color.as_str())
                         .doc("Box color of the checked options; `theme.checkbox.color` when unset."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.checkbox.size.as_str())
                         .doc("Size of the boxes and their labels."),
                     prop("label", "Caption")

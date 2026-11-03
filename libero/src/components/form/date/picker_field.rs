@@ -39,7 +39,7 @@ use crate::{
     localization::Localization,
     platform::is_tab,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{DescriptionPosition, Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{DescriptionPosition, Responsive, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
 /// The text is `dir="auto"`; an all-digit date, read `ltr`, still sits at an RTL page's start.
@@ -112,8 +112,8 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub description_position: &'a Input<DescriptionPosition>,
     pub helper: &'a Caption,
     pub status: &'a Input<FieldStatus>,
-    pub size: Input<Size>,
-    pub radius: Input<ThemeAwareValue>,
+    pub size: Input<Responsive<Size>>,
+    pub radius: Input<Responsive<ThemeAwareValue>>,
     pub required: Option<bool>,
     pub disabled: Option<bool>,
     pub readonly: Option<bool>,
@@ -188,8 +188,12 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let theme = use_theme();
     let names = &use_localization().date;
     let defaults = &theme.chrono_field;
-    let size = field.size.copied_or(defaults.size);
-    let radius = ScaleOrCss::new(field.radius.as_ref(), defaults.radius);
+    let sizes = field.size.copied_or(defaults.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        field.radius.as_ref().map(Responsive::base_ref),
+        defaults.radius,
+    );
     let required = crate::components::form::fieldset_required(field.required);
     let bound = use_bound(field.name, field.onchange.is_some());
     let disabled = bound.disabled(field.disabled);
@@ -362,8 +366,9 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .empty(!value.is_some_and(|value| value.is_complete()))
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(field.radius.as_ref(), defaults.radius)
         .class(field.class)
         .sx(field.sx)
         .parts(field.parts)

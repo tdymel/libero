@@ -133,6 +133,7 @@ mod rating;
 mod refused;
 mod repository;
 mod responsive;
+mod responsive_form;
 mod responsive_layout;
 mod rich_text_editor;
 mod rich_text_editor_blocks;

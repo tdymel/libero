@@ -201,7 +201,7 @@ pub fn Rating(props: RatingProps) -> Element {
     let clearable = props.clearable.unwrap_or(false);
     let readonly = props.readonly.unwrap_or(false);
     let display = props.focusable == Some(false);
-    let size = props.size.copied_or(theme.rating.size);
+    let sizes = props.size.copied_or(theme.rating.size.into());
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
@@ -311,7 +311,7 @@ pub fn Rating(props: RatingProps) -> Element {
         .readonly(readonly)
         .required_in_name(words.rating.required)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -331,7 +331,7 @@ pub fn Rating(props: RatingProps) -> Element {
     let edge = warning_edge(&color);
     let dragging = (drag.dragging)();
     let states: Input<States> = States::default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with("editable", editable)
         .with("dragging", dragging)
         .with("disabled", disabled)
@@ -342,6 +342,7 @@ pub fn Rating(props: RatingProps) -> Element {
         .with(RATING_COLOR, color.resolve(None))
         .with(RATING_EDGE, edge)
         .into();
+    crate::components::form::use_state_ranges(&RATING_SX, Some(&states));
     let style = use_box()
         .framework_sx(&RATING_SX)
         .states(&states)

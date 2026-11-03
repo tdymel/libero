@@ -354,8 +354,15 @@ fn NumberFieldShell<T: NumberValue>(
     let caller_trailing = trailing.map(|content| rsx! { LiveSlot { content } });
     let theme = use_theme();
 
-    let size = props.size.copied_or(theme.number_field.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.number_field.radius);
+    let sizes = props.size.copied_or(theme.number_field.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.number_field.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -590,8 +597,9 @@ fn NumberFieldShell<T: NumberValue>(
         ))
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.number_field.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

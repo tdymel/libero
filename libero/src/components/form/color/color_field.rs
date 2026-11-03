@@ -190,8 +190,15 @@ field_props! {
 pub fn ColorField(props: ColorFieldProps) -> Element {
     let theme = use_theme();
     let defaults = &theme.color_field;
-    let size = props.size.copied_or(defaults.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
+    let sizes = props.size.copied_or(defaults.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        defaults.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
     let with_alpha = props.with_alpha.unwrap_or(false);
     let with_preview = props.with_preview.unwrap_or(defaults.with_preview);
@@ -330,8 +337,9 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .empty(cleared)
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), defaults.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

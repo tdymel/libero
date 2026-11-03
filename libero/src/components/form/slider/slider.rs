@@ -161,7 +161,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         .required_in_name(required_word)
         .readonly(props.readonly.unwrap_or(false))
         .disabled(disabled)
-        .size(props.size.copied_or(theme.slider.size))
+        .size(props.size.copied_or(theme.slider.size.into()))
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

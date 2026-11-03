@@ -137,8 +137,14 @@ pub fn PinField(props: PinFieldProps) -> Element {
     let root = use_element();
     let buffer = use_signal(String::new);
 
-    let size = props.size.copied_or(theme.pin_field.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.pin_field.radius);
+    let sizes = props.size.copied_or(theme.pin_field.size.into());
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.pin_field.radius,
+    );
     let kind = props.kind.copied_or(theme.pin_field.kind);
     // A field with no cells has no reachable state, and every index below
     // would be out of bounds.
@@ -176,8 +182,9 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .empty(cells.iter().any(Option::is_none))
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.pin_field.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -198,6 +205,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .with(kind.state_name(), true)
         .into();
 
+    crate::components::form::use_state_ranges(&PIN_FIELD_ROW_SX, Some(&states));
     let row = use_box()
         .framework_sx(&PIN_FIELD_ROW_SX)
         .states(&states)

@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Button, Code, Text, TextField};
+use libero::theme::{Size, responsive};
 use libero::{hooks::use_element, platform::ElementApi, sx::sx, use_theme};
 
 struct UsernameCopy;
@@ -30,6 +31,11 @@ fn locked(values: &DemoValues) -> bool {
     values.str("disabled") == "true" || values.str("readonly") == "true"
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn TextFieldPage() -> Element {
     let mut value = use_signal(String::new);
@@ -43,12 +49,12 @@ pub fn TextFieldPage() -> Element {
             markdown: "/md/text_field.md",
             properties: vec![
                 props("TextField", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.text_field.size.as_str())
-                        .doc("Height, padding and font size."),
-                    prop("radius", "ThemeAwareValue")
+                        .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent; the slot buttons and the clear button keep the base size."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.text_field.radius.as_str())
-                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Option<String>")
                         .doc("The text in the field. Leave it out and the input keeps its own text."),
                     prop("oninput", "EventHandler<String>")
@@ -151,7 +157,17 @@ pub fn TextFieldPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default(theme.text_field.size.as_str()),
+                        .default(theme.text_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.text_field.radius.as_str()),
@@ -207,7 +223,10 @@ pub fn TextFieldPage() -> Element {
                     TextField {
                         // Sized by content, it is narrower than the card on a phone.
                         sx: sx().width("100%").max_width("320px"),
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, size) => responsive(Size::Sm).md(size),
+                            (false, size) => size.into(),
+                        },
                         radius: values.str("radius"),
                         label: field.label,
                         label_trailing: label_trailing_on(&values).then(|| rsx! {

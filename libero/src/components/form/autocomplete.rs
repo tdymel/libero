@@ -123,8 +123,15 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let theme = use_theme();
     let localization = use_localization();
     let nothing_found = localization.combobox.nothing_found;
-    let size = props.size.copied_or(theme.autocomplete.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.autocomplete.radius);
+    let sizes = props.size.copied_or(theme.autocomplete.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.autocomplete.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
     let prefiltered = props.prefiltered.unwrap_or(false);
 
@@ -194,8 +201,9 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .empty(text.is_empty())
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.autocomplete.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

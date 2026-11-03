@@ -54,8 +54,8 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Height, padding and font size of the field and its rows. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`. A bare `None` names no `T`: write `None::<T>`. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the option to select next, or `None` from the clear button. |
 | `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name: for a derived enum the variant's name, never the label. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |

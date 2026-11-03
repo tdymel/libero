@@ -73,7 +73,7 @@ pub fn RatingPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default(theme.rating.color.as_str())
                     .doc("The filled stars' colour; `theme.rating.color` when unset. Empty stars are `muted`."),
-                prop("size", "Size").default(theme.rating.size.as_str()).doc("Star size and the gap between stars."),
+                prop("size", "Responsive<Size>").default(theme.rating.size.as_str()).doc("Star size and the gap between stars."),
                 prop("format", "Callback<f64, String>")
                     .doc("What a screen reader says for the value. Runs during render, so it can translate. The localization's `rating.value` (\"3.5 of 5\") when unset."),
                 prop("focusable", "bool")

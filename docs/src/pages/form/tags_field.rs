@@ -249,10 +249,10 @@ pub fn TagsFieldPage() -> Element {
             markdown: "/md/tags_field.md",
             properties: vec![
                 props("TagsField", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.tags_field.size.as_str())
                         .doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.tags_field.radius.as_str())
                         .doc("Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Vec<String>")

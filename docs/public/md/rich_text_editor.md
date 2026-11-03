@@ -195,8 +195,8 @@ the Bold button reads as pressed.
 | `active_descendant` | `String` | - | The id of the overlay's highlighted option. While `overlay` is `Some` the text carries it as `aria-activedescendant`, with `aria-controls` naming the overlay and `aria-autocomplete="list"`. |
 | `overlay_results` | `usize` | - | How many options the overlay lists. While `overlay` is `Some`, a change is announced through the editor's polite live region ("2 results", or "No results" at 0; `RichTextEditorLabels::results` and `nothing_found`). |
 | `tools` | `Vec<RichTextTool>` | `vec![]` | Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu. |
-| `size` | `Size` | `md` | Padding and font size. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Padding and font size. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `label` | `Caption` | - | The field's caption, above the toolbar. It names the text. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |

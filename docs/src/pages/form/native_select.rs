@@ -57,10 +57,10 @@ pub fn NativeSelectPage() -> Element {
             markdown: "/md/native_select.md",
             properties: vec![
                 props("NativeSelect", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.native_select.size.as_str())
                         .doc("Height, padding and font size."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.native_select.radius.as_str())
                         .doc("Corner radius. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")

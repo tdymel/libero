@@ -316,6 +316,7 @@ impl<'a> FieldFrameBuilder<'a> {
         // Whether the press under way began on the padding. A press a slot's
         // own handler took (the multi-select chevron) must not be forwarded.
         let pending = use_hook(|| Rc::new(Cell::new(false)));
+        super::use_state_ranges(&FIELD_FRAME_SX, self.states);
         let mut frame = use_box().framework_sx(&FIELD_FRAME_SX);
         if let Some(states) = self.states {
             frame = frame.states(states);
@@ -523,14 +524,20 @@ fn PlaceholderCell(
 }
 
 /// The loader at a slot icon's size, so the frame keeps its height. Silent: the control is `aria-busy`.
+/// A responsive size takes its base run's (`base-md:size-sm`).
 fn pending_loader(states: Option<&States>) -> Element {
+    let base = |word: &'static str| {
+        word.strip_prefix("base-")
+            .and_then(|run| run.split_once(':'))
+            .map_or(word, |(_, token)| token)
+    };
     let size = Size::ALL
         .into_iter()
         .find(|size| {
             states.is_some_and(|states| {
                 states
                     .iter()
-                    .any(|state| state == (size.state_name(), true))
+                    .any(|(state, active)| active && base(state) == size.state_name())
             })
         })
         .unwrap_or(Size::Md);

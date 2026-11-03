@@ -1,15 +1,16 @@
 use dioxus::{core::Runtime, prelude::*};
 
 use super::{
-    builder::FieldBuilder,
+    builder::{FieldBuilder, card_word},
     hook::FieldHook,
     nodes::{attribute_text, join_ids, label_node, label_row, slot_node, status_node},
     prepared::PreparedField,
+    ranges::use_state_ranges,
     styles::FIELD_SX,
 };
 use crate::{
     components::{
-        common::{Input, Part, States, Variables, variables},
+        common::{Input, Part, ScaleOrCss, States, Variables, responsive_sx, variables, with_own},
         form::{Caption, FieldEntry, FieldPart, FieldStatus, Parse, worst},
         layout::use_box,
     },
@@ -148,18 +149,27 @@ impl FieldBuilder<'_> {
             && helper.is_none()
             && status.and_then(FieldStatus::message).is_none();
 
+        let radius_steps = match self.radii {
+            Some((radii, fallback)) => {
+                radii.map(|value| ScaleOrCss::new(Some(&value), fallback).size)
+            }
+            None => self.radius.size.into(),
+        };
         let mut states = self
             .states
             .and_then(Input::as_ref)
             .cloned()
             .unwrap_or_default()
-            .with(self.size.state_name(), true)
-            .with(self.radius.size.radius_state_name(), true)
+            .responsive(&self.size, |size| size.state_name())
+            .responsive(&radius_steps, |size| size.radius_state_name())
             .with("disabled", self.disabled)
             .with("required", self.required)
             .with("inline", self.inline)
             .with("solo", solo)
-            .with("card", self.card);
+            .with("card", self.card && self.cards.is_none());
+        if let Some(cards) = &self.cards {
+            states = states.responsive(cards, card_word);
+        }
         if let Some(state) = status_state {
             states = states.active(state);
         }
@@ -200,12 +210,27 @@ impl FieldBuilder<'_> {
         let describedby = join_ids(&id_value, described);
 
         // The frame and controls inherit it past their own `per_radius` reset.
-        let radius: Input<Variables> = variables()
-            .with(
-                SizeCss::RADIUS.override_var(),
-                self.radius.custom_css(SizeCss::RADIUS),
-            )
-            .into();
+        // Custom CSS per breakpoint rides the override var in the user layer, under `sx`.
+        let radius_sx = self.radii.and_then(|(radii, fallback)| {
+            responsive_sx(radii, |sx, value| {
+                let css = ScaleOrCss::new(Some(&value), fallback)
+                    .custom_css(SizeCss::RADIUS)
+                    .unwrap_or_else(|| "initial".into());
+                sx.var(SizeCss::RADIUS.override_var(), css)
+            })
+        });
+        let radius: Input<Variables> = match self.radii {
+            Some(_) => Input::None,
+            None => variables()
+                .with(
+                    SizeCss::RADIUS.override_var(),
+                    self.radius.custom_css(SizeCss::RADIUS),
+                )
+                .into(),
+        };
+        use_state_ranges(&FIELD_SX, Some(&states));
+        let own_sx =
+            radius_sx.map(|radius_sx| with_own(Some(radius_sx), self.sx.unwrap_or(&Input::None)));
         let mut wrapper = use_box()
             .framework_sx(&FIELD_SX)
             .states(&states)
@@ -213,7 +238,7 @@ impl FieldBuilder<'_> {
         if let Some(class) = self.class {
             wrapper = wrapper.class(class);
         }
-        if let Some(sx) = self.sx {
+        if let Some(sx) = own_sx.as_ref().or(self.sx) {
             wrapper = wrapper.sx(sx);
         }
         let mut wrapper = wrapper.parts_source(self.parts).prepare();

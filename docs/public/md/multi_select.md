@@ -52,8 +52,8 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Height, padding and font size of the field and its rows. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Vec<T>` | - | The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`. |
 | `onchange` | `EventHandler<Vec<T>>` | - | Called with the whole next selection. |
 | `name` | `FieldName<Vec<T>>` | - | Posts each selected option's `Options::value()` under this name, as a native `<select multiple>` does. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |

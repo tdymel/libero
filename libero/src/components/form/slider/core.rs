@@ -13,7 +13,7 @@ use crate::{
             base_color, coarse_hit_area_sx, disabled_look_within_sx, has_shortcut_modifier,
             print_exact_sx, shadow_sx, text_color, variables,
         },
-        form::field_parts_enum,
+        form::{field_parts_enum, use_state_ranges},
         layout::use_box,
         overlay::{PressFocus, Tooltip, TooltipClear, TooltipPinned, clear_reach},
     },
@@ -27,8 +27,8 @@ use crate::{
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
     theme::{
-        Color, ColorShade, ColorValue, CssVar, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK, Side, Size,
-        SliderDefaults,
+        Color, ColorShade, ColorValue, CssVar, OWN_SHADOW, Responsive, SLIDER_THUMB, SLIDER_TRACK,
+        Side, Size, SliderDefaults,
     },
     utils::warn,
 };
@@ -679,7 +679,7 @@ pub(in crate::components::form) struct SliderCoreProps {
     sx: Input<Sx>,
     #[props(default)]
     states: Input<States>,
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     color: Input<ThemeAwareValue>,
     disabled: Option<bool>,
     /// Focusable and posted, but no key or drag moves a thumb.
@@ -1386,7 +1386,9 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         step: props.step.max(0.0),
         min_range: props.min_range.max(0.0),
     };
-    let size = props.size.copied_or(theme.slider.size);
+    let sizes = props.size.copied_or(theme.slider.size.into());
+    // The bubbles take the base size; the track and thumbs follow the breakpoints in CSS.
+    let size = sizes.base();
     let color = props
         .color
         .as_ref()
@@ -1512,7 +1514,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with("dragging", (drag.dragging)())
         .with("disabled", disabled)
         .with("readonly", props.readonly)
@@ -1523,6 +1525,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .with("segments", !segments.is_empty())
         .into();
 
+    use_state_ranges(&SLIDER_ROOT_SX, Some(&states));
     let root_variables: Input<Variables> = slider_variables(&color).into();
     let track_class = use_css(Some(&SLIDER_TRACK_SX), CssLayer::Framework);
     let track_style = props

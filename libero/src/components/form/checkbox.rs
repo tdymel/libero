@@ -145,7 +145,7 @@ field_props! {
         aria_label: Option<String>,
         /// `Card` draws a bordered surface that is all hit area.
         #[props(default, into)]
-        variant: Input<ChoiceVariant>,
+        variant: Input<crate::theme::Responsive<ChoiceVariant>>,
     }
 }
 
@@ -172,8 +172,14 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     let theme = use_theme();
     let color = base_color_or("Checkbox", props.color.as_ref(), theme.checkbox.color);
 
-    let size = props.size.copied_or(theme.checkbox.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.checkbox.radius);
+    let sizes = props.size.copied_or(theme.checkbox.size.into());
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.checkbox.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
@@ -186,7 +192,8 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     // HTML `readonly` does not apply to a checkbox: refused here, announced
     // with `aria-readonly`.
     let readonly = props.readonly.unwrap_or(false);
-    let card = props.variant.copied_or(theme.checkbox.variant) == ChoiceVariant::Card;
+    let variants = props.variant.copied_or(theme.checkbox.variant.into());
+    let card = super::use_field::is_card(&variants);
 
     if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Checkbox: `checked` without `onchange` can never change.");
@@ -216,7 +223,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     let aria_label = choice::aria_label(&props.aria_label);
     let field = use_field()
         .inline()
-        .card(card)
+        .card(variants)
         .activates(element, toggle.clone())
         .label(&props.label)
         .label_trailing(&props.label_trailing)
@@ -231,8 +238,9 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .asks(Asks::Check)
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.checkbox.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

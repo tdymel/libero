@@ -63,8 +63,8 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
 | `value` | `Vec<String>` | `[]` | The tags, in order. Controlled with `onchange`; a path `name` binds the list to the `Form` instead. With neither, the field starts from it and keeps its own edits until a form reset. |
 | `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |
 | `suggestions` | `OptionSource<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. A `Vec<String>` converts, an `OptionList<String>` adds groups and disabled rows, and a `Resource<Vec<String>>` or an `Option<OptionList<String>>` that is `None` while you fetch shows the loader and says `loading_label`, never "No results" for an answer that has not arrived. Upgrading from an `Option<Vec<String>>`: pass the `Vec` itself, and leave the prop out for none, since `None` now means a list still on its way. |

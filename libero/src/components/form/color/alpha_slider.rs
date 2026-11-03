@@ -164,7 +164,7 @@ fn alpha_slider(
             class: props.class,
             sx,
             states: props.states,
-            size: Input::Value(size),
+            size: Input::Value(size.into()),
             color: Input::None,
             disabled: Some(disabled),
             readonly,

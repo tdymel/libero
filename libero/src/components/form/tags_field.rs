@@ -162,8 +162,15 @@ field_props! {
 #[component]
 pub fn TagsField(props: TagsFieldProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.tags_field.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.tags_field.radius);
+    let sizes = props.size.copied_or(theme.tags_field.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.tags_field.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -242,8 +249,9 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .empty(held.is_empty())
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.tags_field.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

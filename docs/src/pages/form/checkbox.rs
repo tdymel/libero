@@ -35,10 +35,10 @@ pub fn CheckboxPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default(theme.checkbox.color.as_str())
                         .doc("The box's color when checked. A theme color name or any CSS color; `theme.checkbox.color` when unset."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.checkbox.size.as_str())
                         .doc("Size of the box, the label and the captions."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.checkbox.radius.as_str())
                         .doc("Corner radius of the box. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("checked", "bool")
@@ -66,7 +66,7 @@ pub fn CheckboxPage() -> Element {
                     readonly_prop("checkbox").also("It looks like an editable one, and Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters."),
                     prop("aria_label", "String")
                         .doc("Names the checkbox when it has no `label`."),
-                    prop("variant", "ChoiceVariant")
+                    prop("variant", "Responsive<ChoiceVariant>")
                         .default(theme.checkbox.variant.as_str())
                         .doc("`card` draws the checkbox as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
                 ])

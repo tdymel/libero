@@ -29,10 +29,10 @@ pub fn TextareaPage() -> Element {
             markdown: "/md/textarea.md",
             properties: vec![
                 props("Textarea", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.textarea.size.as_str())
                         .doc("Padding and font size."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.textarea.radius.as_str())
                         .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("rows", "u32")

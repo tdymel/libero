@@ -104,8 +104,10 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
         .clone()
         .unwrap_or_else(|| labels.show.to_string());
     // Sized off the field's own size, theme default included, as the clear button is.
-    let size: Input<ThemeAwareValue> =
-        ThemeAwareValue::Size(slot_icon_size(props.size.copied_or(theme.text_field.size))).into();
+    let size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(
+        props.size.copied_or(theme.text_field.size.into()).base(),
+    ))
+    .into();
 
     rsx! {
         TextField {

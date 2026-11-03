@@ -39,8 +39,8 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | The box's color when checked. A theme color name or any CSS color; `theme.checkbox.color` when unset. |
-| `size` | `Size` | `md` | Size of the box, the label and the captions. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the box. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Size of the box, the label and the captions. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the box. Or any CSS, e.g. `radius: "0"`. |
 | `checked` | `bool` | - | Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it. |
 | `indeterminate` | `bool` | `false` | Draws a dash and reads as mixed. It wins over `checked`, and toggling from it gives `true`. Use it on a parent whose children are partly checked. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. |
@@ -56,7 +56,7 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Disables and dims the checkbox. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the checkbox from the tab order and the post instead. It looks like an editable one, and Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters. |
 | `aria_label` | `String` | - | Names the checkbox when it has no `label`. |
-| `variant` | `ChoiceVariant` | `plain` | `card` draws the checkbox as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles. |
+| `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws the checkbox as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes, `value` among them, since the props

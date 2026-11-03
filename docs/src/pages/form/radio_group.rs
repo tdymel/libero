@@ -104,7 +104,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Renames an option. Runs during render, so it can read a locale from context."),
                     prop("option_description", "Callback<T, String>")
                         .doc("A line under each option's label. An empty string renders none."),
-                    prop("variant", "ChoiceVariant")
+                    prop("variant", "Responsive<ChoiceVariant>")
                         .default(theme.radio.variant.as_str())
                         .doc("`card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height."),
                     prop("orientation", "Orientation")
@@ -113,7 +113,7 @@ pub fn RadioGroupPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default(theme.radio.color.as_str())
                         .doc("Ring and dot color of the selected option; `theme.radio.color` when unset."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.radio.size.as_str())
                         .doc("Size of the circles and their labels."),
                     prop("label", "Caption")
@@ -161,7 +161,7 @@ pub fn RadioGroupPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default(theme.radio.color.as_str())
                         .doc("Ring and dot color when selected; `theme.radio.color` when unset."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.radio.size.as_str())
                         .doc("Size of the circle and its label."),
                     prop("label", "Caption").doc("The text beside the circle, and the radio's name."),
@@ -179,7 +179,7 @@ pub fn RadioGroupPage() -> Element {
                     prop("readonly", "bool")
                         .default("false")
                         .doc("Refuses the pick. ARIA has no read-only radio, so only `RadioGroup` can announce it."),
-                    prop("variant", "ChoiceVariant")
+                    prop("variant", "Responsive<ChoiceVariant>")
                         .default(theme.radio.variant.as_str())
                         .doc("`card` draws the radio as a bordered surface you can click anywhere."),
                 ])

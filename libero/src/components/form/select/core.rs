@@ -472,8 +472,15 @@ field_props! {
 pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let theme = use_theme();
     let nothing_found = use_localization().combobox.nothing_found;
-    let size = props.size.copied_or(theme.select.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.select.radius);
+    let sizes = props.size.copied_or(theme.select.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.select.radius,
+    );
     let disabled = props.disabled.unwrap_or(false);
     // Read-only stays focusable and posting, but never opens; chip keys and clear go too.
     let readonly = props.readonly.unwrap_or(false);
@@ -555,8 +562,9 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .asks(Asks::Select)
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.select.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -591,11 +599,13 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let multiple = props.multiple;
 
     // Hooks, so prepared either way.
+    crate::components::form::use_state_ranges(&MULTI_VALUE_SX, Some(field.states()));
     let value_slot = use_box()
         .framework_sx(&MULTI_VALUE_SX)
         .focus_ring(false)
         .states(field.states())
         .prepare();
+    crate::components::form::use_state_ranges(&MULTI_CHEVRON_SX, Some(field.states()));
     let chevron_box = use_box()
         .framework_sx(&MULTI_CHEVRON_SX)
         .states(field.states())
@@ -637,6 +647,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .with("multiple", props.multiple)
         .into();
     // The frame draws the ring.
+    crate::components::form::use_state_ranges(&SELECT_TRIGGER_SX, Some(&trigger_states));
     let control = use_box()
         .framework_sx(&SELECT_TRIGGER_SX)
         .focus_ring(false)

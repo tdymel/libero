@@ -1,3 +1,4 @@
+mod axis_block;
 mod breakpoint_value;
 // The four `pub(crate)` modules are public through `components`.
 pub(crate) mod class_list;

@@ -233,8 +233,15 @@ field_props! {
 #[component]
 pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.phone_field.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.phone_field.radius);
+    let sizes = props.size.copied_or(theme.phone_field.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.phone_field.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
 
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -308,8 +315,9 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .empty(typed.is_empty())
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.phone_field.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -410,6 +418,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         &pick,
     );
 
+    crate::components::form::use_state_ranges(&PICKER_SX, Some(field.states()));
     let picker_box = use_box()
         .framework_sx(&PICKER_SX)
         .states(field.states())

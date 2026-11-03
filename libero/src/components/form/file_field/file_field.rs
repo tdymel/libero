@@ -211,8 +211,15 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let list_element = use_element();
     let opening = use_hook(|| Rc::new(Cell::new(false)));
 
-    let size = props.size.copied_or(theme.file_field.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.file_field.radius);
+    let sizes = props.size.copied_or(theme.file_field.size.into());
+    let size = sizes.base();
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.file_field.radius,
+    );
     let variant = props.variant.copied_or(theme.file_field.variant);
     let clearable = props.clearable.unwrap_or(theme.file_field.clearable);
     let required = crate::components::form::fieldset_required(props.required);
@@ -299,8 +306,9 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .empty(value.is_empty())
         .readonly(props.readonly.unwrap_or(false))
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.file_field.radius)
         .class(&props.class)
         .sx(&field_sx)
         .parts(&props.parts)
@@ -338,6 +346,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     // Prepared unconditionally, the way every `use_box` must be, and used
     // only by the dropzone variant.
+    crate::components::form::use_state_ranges(&FILE_CARD_LIST_SX, Some(field.states()));
     let card_list_style = use_box()
         .framework_sx(&FILE_CARD_LIST_SX)
         .states(field.states())

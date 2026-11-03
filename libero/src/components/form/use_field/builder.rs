@@ -13,8 +13,8 @@ use crate::{
     },
     hooks::{ElementHandle, SxSource},
     localization::FormLabels,
-    sx::Sx,
-    theme::{DescriptionPosition, Size},
+    sx::{Sx, ThemeAwareValue},
+    theme::{ChoiceVariant, DescriptionPosition, Responsive, Size},
 };
 
 /// The chrome every field stacks around its control, and its a11y wiring.
@@ -48,6 +48,7 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) disabled: bool,
     pub(super) inline: bool,
     pub(super) card: bool,
+    pub(super) cards: Option<Responsive<ChoiceVariant>>,
     pub(super) labelled_by: bool,
     pub(super) group: bool,
     pub(super) label_with_id: bool,
@@ -56,8 +57,9 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) activation: Option<Activation>,
     /// Applied in `prepare`, so it holds whichever of it and `activates` comes first.
     pub(super) enter: bool,
-    pub(super) size: Size,
+    pub(super) size: Responsive<Size>,
     pub(super) radius: ScaleOrCss,
+    pub(super) radii: Option<(&'a Responsive<ThemeAwareValue>, Size)>,
     pub(super) class: Option<&'a Input<ClassList>>,
     pub(super) sx: Option<&'a Input<Sx>>,
     pub(super) parts: Option<SxSource<'a>>,
@@ -89,6 +91,7 @@ impl Default for FieldBuilder<'_> {
             disabled: false,
             inline: false,
             card: false,
+            cards: None,
             labelled_by: false,
             group: false,
             label_with_id: false,
@@ -96,8 +99,9 @@ impl Default for FieldBuilder<'_> {
             text_slots: [false; 2],
             activation: None,
             enter: false,
-            size: Size::Md,
+            size: Responsive::new(Size::Md),
             radius: ScaleOrCss::new(None, Size::Sm),
+            radii: None,
             class: None,
             sx: None,
             parts: None,
@@ -272,9 +276,11 @@ impl<'a> FieldBuilder<'a> {
 
     /// Draws the inline layout as a card whose every click activates the
     /// control. Needs [`inline`](Self::inline) and [`activates`](Self::activates).
+    /// Per breakpoint, the look follows the runs; the card's click is taken at every width.
     #[inline]
-    pub fn card(mut self, card: bool) -> Self {
-        self.card = card;
+    pub fn card(mut self, variants: Responsive<ChoiceVariant>) -> Self {
+        self.card = is_card(&variants);
+        self.cards = Some(variants).filter(|variants| !variants.is_plain());
         self
     }
 
@@ -334,9 +340,10 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
+    /// Per breakpoint too: run words on the field's states, and their range copies.
     #[inline]
-    pub fn size(mut self, size: Size) -> Self {
-        self.size = size;
+    pub fn size(mut self, size: impl Into<Responsive<Size>>) -> Self {
+        self.size = size.into();
         self
     }
 
@@ -344,6 +351,15 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn radius(mut self, radius: ScaleOrCss) -> Self {
         self.radius = radius;
+        self
+    }
+
+    /// The `radius` prop when it varies per breakpoint; `fallback` is the step under custom CSS.
+    #[inline]
+    pub fn radii(mut self, radii: Option<&'a Responsive<ThemeAwareValue>>, fallback: Size) -> Self {
+        self.radii = radii
+            .filter(|radii| !radii.is_plain())
+            .map(|radii| (radii, fallback));
         self
     }
 
@@ -377,5 +393,21 @@ impl<'a> FieldBuilder<'a> {
     pub fn attributes(mut self, attributes: &'a [Attribute]) -> Self {
         self.attributes = attributes;
         self
+    }
+}
+
+/// Whether any width draws `variants` as a card.
+pub(crate) fn is_card(variants: &Responsive<ChoiceVariant>) -> bool {
+    variants.base() == ChoiceVariant::Card
+        || variants
+            .breakpoints()
+            .any(|(_, variant)| variant == ChoiceVariant::Card)
+}
+
+/// The `data-state` word of a choice look: `card`, or `plain` for a run that has none.
+pub(crate) fn card_word(variant: ChoiceVariant) -> &'static str {
+    match variant {
+        ChoiceVariant::Card => "card",
+        ChoiceVariant::Plain => "plain",
     }
 }

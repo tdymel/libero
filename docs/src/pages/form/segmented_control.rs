@@ -108,8 +108,8 @@ pub fn SegmentedControlPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default(theme.segmented_control.color.as_str())
                         .doc("Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset."),
-                    prop("size", "Size").default(theme.button.size.as_str()).doc("Size of the segments and the captions."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("size", "Responsive<Size>").default(theme.button.size.as_str()).doc("Size of the segments and the captions."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.button.radius.as_str())
                         .doc("Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("gap", "ThemeAwareValue")

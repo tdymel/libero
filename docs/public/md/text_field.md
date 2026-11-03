@@ -41,8 +41,8 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Height, padding and font size. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent; the slot buttons and the clear button keep the base size. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `value` | `Option<String>` | - | The text in the field. Leave it out and the input keeps its own text. |
 | `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the text the field should hold next. |
 | `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |

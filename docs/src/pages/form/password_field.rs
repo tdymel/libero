@@ -29,10 +29,10 @@ pub fn PasswordFieldPage() -> Element {
             markdown: "/md/password_field.md",
             properties: vec![
                 props("PasswordField", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.text_field.size.as_str())
                         .doc("Height, padding and font size."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.text_field.radius.as_str())
                         .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<String>")

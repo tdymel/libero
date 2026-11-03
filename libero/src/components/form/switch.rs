@@ -175,7 +175,7 @@ field_props! {
         aria_label: Option<String>,
         /// `Card` draws a bordered surface that is all hit area.
         #[props(default, into)]
-        variant: Input<ChoiceVariant>,
+        variant: Input<crate::theme::Responsive<ChoiceVariant>>,
     }
 }
 
@@ -202,8 +202,14 @@ pub fn Switch(props: SwitchProps) -> Element {
     let theme = use_theme();
     let color = base_color_or("Switch", props.color.as_ref(), theme.switch.color);
 
-    let size = props.size.copied_or(theme.switch.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.switch.radius);
+    let sizes = props.size.copied_or(theme.switch.size.into());
+    let radius = ScaleOrCss::new(
+        props
+            .radius
+            .as_ref()
+            .map(crate::theme::Responsive::base_ref),
+        theme.switch.radius,
+    );
     let required = crate::components::form::fieldset_required(props.required);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
@@ -216,7 +222,8 @@ pub fn Switch(props: SwitchProps) -> Element {
     // HTML `readonly` does not apply to a checkbox: refused here, announced
     // with `aria-readonly`.
     let readonly = props.readonly.unwrap_or(false);
-    let card = props.variant.copied_or(theme.switch.variant) == ChoiceVariant::Card;
+    let variants = props.variant.copied_or(theme.switch.variant.into());
+    let card = super::use_field::is_card(&variants);
 
     if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Switch: `checked` without `onchange` can never change.");
@@ -245,7 +252,7 @@ pub fn Switch(props: SwitchProps) -> Element {
     let aria_label = choice::aria_label(&props.aria_label);
     let field = use_field()
         .inline()
-        .card(card)
+        .card(variants)
         .activates(element, toggle.clone())
         .enter_activates(!in_form)
         .label(&props.label)
@@ -261,8 +268,9 @@ pub fn Switch(props: SwitchProps) -> Element {
         .asks(Asks::Check)
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .radius(radius.clone())
+        .radii(props.radius.as_ref(), theme.switch.radius)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

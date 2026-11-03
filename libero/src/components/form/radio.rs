@@ -123,7 +123,7 @@ field_props! {
         aria_label: Option<String>,
         /// `Card` draws a bordered surface that is all hit area.
         #[props(default, into)]
-        variant: Input<ChoiceVariant>,
+        variant: Input<crate::theme::Responsive<ChoiceVariant>>,
     }
 }
 
@@ -153,7 +153,7 @@ pub fn Radio(props: RadioProps) -> Element {
     let theme = use_theme();
     let color = base_color_or("Radio", props.color.as_ref(), theme.radio.color);
 
-    let size = props.size.copied_or(theme.radio.size);
+    let sizes = props.size.copied_or(theme.radio.size.into());
     // A disabled `Fieldset` disables the input, but not the circle and label that pick it.
     let group = use_fieldset_disabled();
     let disabled = props.disabled.unwrap_or(false) || group;
@@ -162,7 +162,8 @@ pub fn Radio(props: RadioProps) -> Element {
     // HTML's `readonly` does not apply to a radio, so the activation is refused
     // here. ARIA has no `aria-readonly` on `radio` either: the radiogroup says it.
     let readonly = props.readonly.unwrap_or(false);
-    let card = props.variant.copied_or(theme.radio.variant) == ChoiceVariant::Card;
+    let variants = props.variant.copied_or(theme.radio.variant.into());
+    let card = super::use_field::is_card(&variants);
 
     if props.checked.is_some() && props.onselect.is_none() {
         warn("Radio: `checked` without `onselect` can never change.");
@@ -187,7 +188,7 @@ pub fn Radio(props: RadioProps) -> Element {
     let aria_label = choice::aria_label(&props.aria_label);
     let field = use_field()
         .inline()
-        .card(card)
+        .card(variants)
         .activates(element, select)
         .label(&props.label)
         .label_trailing(&props.label_trailing)
@@ -198,7 +199,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .required(required)
         .readonly(readonly)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)

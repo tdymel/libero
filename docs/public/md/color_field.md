@@ -71,8 +71,8 @@ fn Demo() -> Element {
 | `close_on_swatch_click` | `bool` | `false` | Picking a swatch closes the dropdown. |
 | `name` | `FieldName<ColorCode>` | - | What the field posts as: its color in `format`, from a hidden input as `ColorPicker` posts it, never the text being typed. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the text is empty. |
-| `size` | `Size` | `md` | Control height, font size and the dropdown's picker. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Control height, font size and the dropdown's picker. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. |
 | `label` | `Caption` | - | The field's caption. |
 | `description` | `Caption` | - | Between the label and the control. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |

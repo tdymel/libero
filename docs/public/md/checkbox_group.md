@@ -55,10 +55,10 @@ fn Demo() -> Element {
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single options. Named groups are drawn flat, without headings. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Runs during render, so it can read a locale from context. |
 | `option_description` | `Callback<T, String>` | - | A line under each option's label. An empty string renders none. |
-| `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface you can click anywhere. |
+| `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws every option as a bordered surface you can click anywhere. |
 | `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
 | `color` | `ThemeAwareValue` | `primary` | Box color of the checked options; `theme.checkbox.color` when unset. |
-| `size` | `Size` | `md` | Size of the boxes and their labels. |
+| `size` | `Responsive<Size>` | `md` | Size of the boxes and their labels. |
 | `label` | `Caption` | - | The question, and the group's name. |
 | `description` | `Caption` | - | Between the question and the options. How to choose. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |

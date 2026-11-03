@@ -237,6 +237,7 @@ fn FileInputControl(
         .ondrag(Some(control.frame_drag()))
         .prepare();
     // The frame draws the ring, so neither box may draw a second.
+    crate::components::form::use_state_ranges(&FILE_CONTROL_SX, Some(&states));
     let group = use_box()
         .framework_sx(&FILE_CONTROL_SX)
         .focus_ring(false)
@@ -259,6 +260,7 @@ fn FileDropzoneControl(
     children: Element,
 ) -> Element {
     // The surface draws the ring, around the whole of itself.
+    crate::components::form::use_state_ranges(&FILE_DROPZONE_SX, Some(&states));
     let group = use_box()
         .framework_sx(&FILE_DROPZONE_SX)
         .focus_ring(false)

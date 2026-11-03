@@ -14,7 +14,7 @@ use crate::{
         ElementApi, PlatformError, focus_selector, focused_attribute, logical_key, next_task,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ChoiceVariant, FIELD_GAP, Size},
+    theme::{ChoiceVariant, FIELD_GAP, Responsive, Size},
     utils::warn,
 };
 
@@ -106,7 +106,7 @@ field_props! {
         option_description: Option<Callback<T, String>>,
         /// `Card` draws every option as a bordered surface that is its hit area.
         #[props(default, into)]
-        variant: Input<ChoiceVariant>,
+        variant: Input<Responsive<ChoiceVariant>>,
         /// Lays the options out in a row instead of a column.
         #[props(default, into)]
         orientation: Input<Orientation>,
@@ -142,10 +142,10 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let theme = use_theme();
     let root = use_element();
 
-    let size = props.size.copied_or(theme.radio.size);
+    let sizes = props.size.copied_or(theme.radio.size.into());
     let required = crate::components::form::fieldset_required(props.required);
     let horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
-    let variant = props.variant.copied_or(theme.radio.variant);
+    let variant = props.variant.copied_or(theme.radio.variant.into());
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
@@ -180,7 +180,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .readonly(readonly)
         .asks(Asks::Option)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -193,15 +193,26 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
          name and its question is never read.",
     );
 
-    let states: Input<States> = field
+    let states = field
         .states()
         .as_ref()
         .cloned()
         .unwrap_or_default()
         .with("horizontal", horizontal)
-        .with("cards", variant == ChoiceVariant::Card)
-        .into();
+        .with(
+            "cards",
+            variant.is_plain() && variant.base() == ChoiceVariant::Card,
+        );
+    let states: Input<States> = match variant.is_plain() {
+        true => states,
+        false => states.responsive(&variant, |variant| match variant {
+            ChoiceVariant::Card => "cards",
+            ChoiceVariant::Plain => "plain",
+        }),
+    }
+    .into();
 
+    crate::components::form::use_state_ranges(&RADIO_GROUP_SX, Some(&states));
     let group = use_box()
         .framework_sx(&RADIO_GROUP_SX)
         .states(&states)
@@ -316,7 +327,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 label,
                 description,
                 name: name.clone(),
-                size,
+                size: sizes,
                 variant,
                 color: color.clone(),
                 checked: selected == Some(index),
@@ -379,8 +390,8 @@ struct GroupRadioProps {
     label: String,
     description: Option<String>,
     name: String,
-    size: Size,
-    variant: ChoiceVariant,
+    size: Responsive<Size>,
+    variant: Responsive<ChoiceVariant>,
     color: Input<ThemeAwareValue>,
     checked: bool,
     disabled: bool,

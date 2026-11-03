@@ -132,7 +132,8 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             emit(next)
         }
     });
-    let size = props.size.copied_or(theme.multi_select.size);
+    let sizes = props.size.copied_or(theme.multi_select.size.into());
+    let size = sizes.base();
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
 
@@ -297,7 +298,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                     .radius
                     .as_ref()
                     .cloned()
-                    .unwrap_or_else(|| theme.multi_select.radius.into()),
+                    .unwrap_or_else(|| crate::sx::ThemeAwareValue::from(theme.multi_select.radius).into()),
             ),
             disabled: Some(disabled),
             readonly: props.readonly,

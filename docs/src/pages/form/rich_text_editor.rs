@@ -189,8 +189,8 @@ pub fn RichTextEditorPage() -> Element {
                     prop("tools", "Vec<RichTextTool>")
                         .default("vec![]")
                         .doc("Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu."),
-                    prop("size", "Size").default(theme.textarea.size.as_str()).doc("Padding and font size."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("size", "Responsive<Size>").default(theme.textarea.size.as_str()).doc("Padding and font size."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.textarea.radius.as_str())
                         .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("label", "Caption")

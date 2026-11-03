@@ -16,7 +16,9 @@ use crate::{
     hooks::{use_localization, use_theme},
     localization::fill,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ChoiceVariant, DescriptionPosition, FIELD_CAPTION_FONT_SIZE, FIELD_GAP, Size},
+    theme::{
+        ChoiceVariant, DescriptionPosition, FIELD_CAPTION_FONT_SIZE, FIELD_GAP, Responsive, Size,
+    },
     utils::warn,
 };
 
@@ -107,7 +109,7 @@ macro_rules! check_group_props {
                 max_checked: Option<usize>,
                 /// `Card` draws every option as a bordered surface that is its hit area.
                 #[props(default, into)]
-                variant: Input<ChoiceVariant>,
+                variant: Input<Responsive<ChoiceVariant>>,
                 /// Lays the options out in a row instead of a column.
                 #[props(default, into)]
                 orientation: Input<Orientation>,
@@ -153,7 +155,7 @@ struct Group<T: Options, P: Part> {
     option_label: Option<Callback<T, String>>,
     option_description: Option<Callback<T, String>>,
     max_checked: Option<usize>,
-    variant: Input<ChoiceVariant>,
+    variant: Input<Responsive<ChoiceVariant>>,
     orientation: Input<Orientation>,
     color: Input<ThemeAwareValue>,
     label: Caption,
@@ -162,7 +164,7 @@ struct Group<T: Options, P: Part> {
     description_position: Input<DescriptionPosition>,
     helper: Caption,
     status: Input<FieldStatus>,
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     disabled: Option<bool>,
     required: Option<bool>,
     readonly: Option<bool>,
@@ -269,7 +271,8 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         #[cfg(feature = "switch-group")]
         Kind::Switch => (theme.switch.size, theme.switch.variant),
     };
-    let size = props.size.copied_or(size);
+    let sizes = props.size.copied_or(size.into());
+    let size = sizes.base();
     let required = crate::components::form::fieldset_required(props.required);
     let horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
 
@@ -336,7 +339,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .readonly(readonly)
         .asks(Asks::Option)
         .disabled(disabled)
-        .size(size)
+        .size(sizes)
         .class(&props.class)
         .sx(&props.sx)
         .parts(&props.parts)
@@ -366,6 +369,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .unwrap_or_default()
         .with("horizontal", horizontal)
         .into();
+    crate::components::form::use_state_ranges(&CHECK_GROUP_SX, Some(&states));
     let group = use_box()
         .framework_sx(&CHECK_GROUP_SX)
         .states(&states)
@@ -447,7 +451,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
     };
 
     let option_disabled = list.disabled();
-    let variant = props.variant.copied_or(theme_variant);
+    let variant = props.variant.copied_or(theme_variant.into());
     let error = field.invalid();
     // By value, so a reordered source keeps each option's scope; by position when values repeat (5082).
     let mut keys: Vec<String> = values
@@ -478,7 +482,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
                 error,
                 label,
                 description,
-                size,
+                size: sizes,
                 variant,
                 color: props.color.clone(),
                 checked: checked[index],
@@ -535,8 +539,8 @@ struct GroupOptionProps {
     error: bool,
     label: String,
     description: Option<String>,
-    size: Size,
-    variant: ChoiceVariant,
+    size: Responsive<Size>,
+    variant: Responsive<ChoiceVariant>,
     color: Input<ThemeAwareValue>,
     checked: bool,
     disabled: bool,

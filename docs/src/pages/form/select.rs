@@ -304,8 +304,8 @@ pub fn SelectPage() -> Element {
             markdown: "/md/select.md",
             properties: vec![
                 props("Select", vec![
-                    prop("size", "Size").default(theme.select.size.as_str()).doc("Height, padding and font size of the field and its rows."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("size", "Responsive<Size>").default(theme.select.size.as_str()).doc("Height, padding and font size of the field and its rows."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.select.radius.as_str())
                         .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<T>")

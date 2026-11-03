@@ -55,10 +55,10 @@ pub fn PhoneFieldPage() -> Element {
             markdown: "/md/phone_field.md",
             properties: vec![
                 props("PhoneField", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.phone_field.size.as_str())
                         .doc("Height, padding and font size."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.phone_field.radius.as_str())
                         .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("value", "Option<String>")

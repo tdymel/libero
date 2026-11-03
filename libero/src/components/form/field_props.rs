@@ -51,12 +51,14 @@ macro_rules! field_props {
                 #[props(default, into)]
                 status: Input<crate::components::form::FieldStatus>,
                 /// Scales the control and the font of its label and captions.
+                /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
                 #[props(default, into)]
-                size: Input<crate::theme::Size>,
+                size: Input<crate::theme::Responsive<crate::theme::Size>>,
                 $(
                     /// Corner radius, independent of `size`: a size word or any CSS, as `radius: "0"`.
+                    /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xl)`.
                     #[props(default, into)]
-                    $radius: Input<crate::sx::ThemeAwareValue>,
+                    $radius: Input<crate::theme::Responsive<crate::sx::ThemeAwareValue>>,
                 )?
                 /// `None` is "not stated", so a `Fieldset` can cascade into it.
                 #[props(default)]

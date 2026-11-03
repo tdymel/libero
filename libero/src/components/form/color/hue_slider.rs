@@ -125,7 +125,7 @@ fn hue_slider(props: HueSliderProps, max: f64, slot: &'static str) -> Element {
             class: props.class,
             sx,
             states: props.states,
-            size: Input::Value(size),
+            size: Input::Value(size.into()),
             color: Input::None,
             disabled: Some(disabled),
             readonly,

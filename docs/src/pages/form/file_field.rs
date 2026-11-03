@@ -221,8 +221,8 @@ pub fn FileFieldPage() -> Element {
                         .doc("Rules over the files, shown once the field loses focus or its form is submitted."),
                     prop("children", "Element")
                         .doc("The dropzone's prompt. The `input` variant shows `placeholder` instead."),
-                    prop("size", "Size").default(theme.file_field.size.as_str()).doc("Control height, font size and the chips' size."),
-                    prop("radius", "ThemeAwareValue").default(theme.file_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
+                    prop("size", "Responsive<Size>").default(theme.file_field.size.as_str()).doc("Control height, font size and the chips' size."),
+                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.file_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("label", "Caption")
                         .doc("The field's caption. It names the field and its Browse button."),
                     prop("description", "Caption").doc("Between the label and the control. Which files are wanted."),

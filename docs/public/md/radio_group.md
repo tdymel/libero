@@ -54,10 +54,10 @@ fn Demo() -> Element {
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single options. Named groups are drawn flat, without headings. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Runs during render, so it can read a locale from context. |
 | `option_description` | `Callback<T, String>` | - | A line under each option's label. An empty string renders none. |
-| `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. |
+| `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. |
 | `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
 | `color` | `ThemeAwareValue` | `primary` | Ring and dot color of the selected option; `theme.radio.color` when unset. |
-| `size` | `Size` | `md` | Size of the circles and their labels. |
+| `size` | `Responsive<Size>` | `md` | Size of the circles and their labels. |
 | `label` | `Caption` | - | The question, and the group's name. |
 | `description` | `Caption` | - | Between the question and the options. How to choose. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |
@@ -83,7 +83,7 @@ fn Demo() -> Element {
 | `name` | `String` | - | Shared by every radio in one group, which makes them exclusive. `RadioGroup` sets it. |
 | `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
 | `color` | `ThemeAwareValue` | `primary` | Ring and dot color when selected; `theme.radio.color` when unset. |
-| `size` | `Size` | `md` | Size of the circle and its label. |
+| `size` | `Responsive<Size>` | `md` | Size of the circle and its label. |
 | `label` | `Caption` | - | The text beside the circle, and the radio's name. |
 | `description` | `Caption` | - | A second line under the label. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |
@@ -94,7 +94,7 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Cannot be picked, dimmed and out of the tab order. |
 | `aria_label` | `String` | - | Names the radio when it has no `label`. |
 | `readonly` | `bool` | `false` | Refuses the pick. ARIA has no read-only radio, so only `RadioGroup` can announce it. |
-| `variant` | `ChoiceVariant` | `plain` | `card` draws the radio as a bordered surface you can click anywhere. |
+| `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws the radio as a bordered surface you can click anywhere. |
 
 `Radio` also takes the field props `label`, `description`, `helper`, `status`,
 `size`, `disabled` and `required`. Both take the shared `sx`, `class`, `style`,

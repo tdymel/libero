@@ -58,6 +58,7 @@ pub(super) fn use_boxes(
     states: &Input<States>,
     style: String,
 ) -> (BoxStyle, BoxStyle) {
+    super::use_state_ranges(control_sx, Some(states));
     let control = use_box()
         .framework_sx(control_sx)
         .states(states)
