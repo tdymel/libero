@@ -157,11 +157,11 @@ fn the_shift_is_one_copy_plus_one_gap() {
 }
 
 /// Each guard is the selector it undoes, inside the media block: a bare
-/// `@media` rule would lose on specificity. What is left is one copy in a
-/// strip the reader scrolls, with no fade over it and no toggle for a
-/// motion that is not there.
+/// `@media` rule would lose on specificity. What is left is one
+/// copy that wraps to the box (5605: no scroller, so no tab stop), with no fade over it
+/// and no toggle for a motion that is not there.
 #[test]
-fn reduced_motion_leaves_one_scrollable_copy() {
+fn reduced_motion_leaves_one_wrapping_copy() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { Marquee { fade_edges: true, "x" } }
@@ -172,7 +172,6 @@ fn reduced_motion_leaves_one_scrollable_copy() {
     let class = marquee_class(&html);
     let media = "@media (prefers-reduced-motion: reduce){";
     for rule in [
-        format!(r#".{class}[data-state~="horizontal"]{{overflow-x:auto;}}"#),
         format!(".{class} > [data-slot='track']{{animation:none;}}"),
         format!(
             ".{class} > [data-slot='track'] > [data-slot='group']:not(:first-child){{display:none;}}"
@@ -184,6 +183,14 @@ fn reduced_motion_leaves_one_scrollable_copy() {
     ] {
         assert!(html.contains(&format!("{media}{rule}")), "{rule} in {html}");
     }
+    let wraps = format!(
+        r#"{media}.{class}[data-state~="horizontal"] > [data-slot='track'] > [data-slot='group']{{flex-shrink:1;flex-wrap:wrap;min-width:0;}}}}"#
+    );
+    assert!(html.contains(&wraps), "{wraps} in {html}");
+    assert!(
+        !html.contains(r#"{overflow-x:auto;}"#),
+        "a horizontal scroller in {html}"
+    );
 }
 
 /// Todo 2857: the opaque fade would cover a focused link and its ring.

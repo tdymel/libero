@@ -187,7 +187,7 @@ pub fn MarqueePage() -> Element {
                     "Every copy after the first is `aria-hidden` and `inert`, so the content is read and tabbed through once.",
                     "The pause toggle meets WCAG 2.2.2, which asks for a way to stop motion that runs longer than five seconds. It is named \"Pause\", and `aria-pressed` says whether it is paused.",
                     "While focus is on the content the toggle turns transparent, so it never covers a focused link.",
-                    "Under `prefers-reduced-motion: reduce` it does not move: one copy shows in a strip the reader scrolls, without the fade or the toggle.",
+                    "Under `prefers-reduced-motion: reduce` it does not move: one copy shows and wraps to the box, without the fade or the toggle.",
                 ])
                 .must([
                     "Put interactive children in the content knowing they work only in the first copy.",

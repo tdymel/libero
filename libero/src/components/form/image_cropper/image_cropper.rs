@@ -453,6 +453,14 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                     "& > [data-slot='mask'], & > [data-slot='frame'], & > [data-slot='frame'] > [data-slot='handle']",
                     sx().touch_action("auto"),
                 ),
+        )
+        // Until the image is measured the overlay has no size to sit on: it would jump on load.
+        .when(
+            "loading",
+            sx().selector(
+                "& > [data-slot='mask'], & > [data-slot='box'], & > [data-slot='frame'], & > [data-slot='zoom'], & > [data-slot='controls']",
+                sx().visibility("hidden"),
+            ),
         );
 
     [
@@ -1079,6 +1087,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         .unwrap_or_default()
         .with("circle", props.shape == CropShape::Circle)
         .with("disabled", props.disabled)
+        .with("loading", image_ratio().is_none() && !failed())
         .with("pan", pan)
         .with("hidden-controls", !props.controls)
         .into();

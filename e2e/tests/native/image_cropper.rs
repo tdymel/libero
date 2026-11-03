@@ -58,3 +58,17 @@ fn a_drag_and_the_wheel_beside_the_box_move_and_scale_it() {
     page.wheel_at_with(x, y, 100.0, Modifiers::CONTROL);
     reads(&mut page, "37,37,45,45");
 }
+
+/// The overlay is hidden only until the picture is measured (5604): under Blitz it comes back.
+#[test]
+fn the_overlay_shows_once_the_picture_is_measured() {
+    let mut page = mount(app);
+    let shown = page.wait_for(|page| {
+        page.rect("[data-slot=image]").3 > 0.0 && !page.exists("[data-state~=loading]")
+    });
+    assert!(
+        shown,
+        "the cropper is still loading after the picture laid out"
+    );
+    assert!(page.exists("[data-slot=box]"));
+}

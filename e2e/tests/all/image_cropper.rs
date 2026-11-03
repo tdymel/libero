@@ -789,7 +789,7 @@ e2e::scenario!(
     )
 );
 
-/// A `src` that fails calls `onerror` once, warns, and draws no box over the alt text (1265).
+/// A `src` that fails calls `onerror` once, warns, and draws no box over the alt text (1265), and ends the loading state (5604).
 #[test]
 fn a_broken_src_reports_and_draws_no_box() {
     block_on(async {
@@ -799,8 +799,8 @@ fn a_broken_src_reports_and_draws_no_box() {
         wait::for_js_true(
             &fixture.page,
             "document.getElementById('error').textContent === '1'
-              && !document.querySelector('[data-slot=box], [data-slot=frame]')",
-            "onerror, and no box",
+              && !document.querySelector('[data-slot=box], [data-slot=frame], [data-state~=loading]')",
+            "onerror, no box, and no loading state (5604)",
         )
         .await
         .unwrap();

@@ -1,7 +1,10 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use crate::samples::SAMPLE_IMAGE;
 use dioxus::prelude::*;
-use libero::components::{Code, CropRect, CropShape, Flex, ImageCropper, ImageCropperPart, Text};
+use libero::{
+    components::{Box, Code, CropRect, CropShape, Flex, ImageCropper, ImageCropperPart, Text},
+    sx::sx,
+};
 
 /// `SAMPLE_IMAGE` is 16:9.
 const SAMPLE_RATIO: f64 = 16.0 / 9.0;
@@ -201,6 +204,8 @@ fn ImageCropperDemo(values: DemoValues) -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "sm",
+            // Holds the 16:9 picture and the 38px controls row until it loads, so the page below does not jump.
+            Box { sx: sx().min_height("calc(min(360px, (100vw - 50px) * 9 / 16) + 38px)"),
             ImageCropper {
                 src: SAMPLE_IMAGE,
                 alt: "A sample landscape",
@@ -214,6 +219,7 @@ fn ImageCropperDemo(values: DemoValues) -> Element {
                 disabled: values.str("disabled") == "true",
                 value: rect,
                 onchange: move |next: CropRect| crop.set(Some((key.clone(), next))),
+            }
             }
             Text { size: "sm",
                 bdi { dir: "ltr",

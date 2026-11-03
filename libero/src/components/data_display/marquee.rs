@@ -131,10 +131,21 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
     let horizontal = cross_room(true)
         .overflow_x("clip")
         .min_width("0")
-        .media(REDUCED_MOTION, sx().overflow_x("auto"))
         .var(MARQUEE_SHIFT, shift("X", false))
         .rtl(sx().var(MARQUEE_SHIFT, shift("X", true)))
-        .selector(track, sx().width("max-content"))
+        // Reduced motion wraps the one copy: no scroller, so no missing tab stop.
+        .selector(
+            track,
+            sx().width("max-content")
+                .media(REDUCED_MOTION, sx().width("auto")),
+        )
+        .selector(
+            copies,
+            sx().media(
+                REDUCED_MOTION,
+                sx().flex_shrink("1").flex_wrap("wrap").min_width("0"),
+            ),
+        )
         .selector(
             format!("{track}:focus-within"),
             sx().width("auto")
