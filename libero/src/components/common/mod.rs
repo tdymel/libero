@@ -24,6 +24,7 @@ mod options;
 mod orientation;
 mod parts;
 mod polymorphic;
+mod print_exact;
 mod rail;
 mod responsive_sx;
 #[cfg(feature = "use-element")]
@@ -64,7 +65,7 @@ pub(crate) use focus_ring::{
 };
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
 #[cfg(any(feature = "text", feature = "title"))]
-pub(crate) use gradient_text::{gradient_text_sx, print_exact_sx};
+pub(crate) use gradient_text::gradient_text_sx;
 pub(crate) use hit_area::{
     ACTION_ICON_COMPACT, COARSE_INSET, COARSE_POINTER, COARSE_TARGET, coarse_hit_area_sx,
     coarse_reach_sx, min_hit_area_sx,
@@ -93,6 +94,7 @@ pub use parts::{Part, Parts, StaticParts};
 pub(crate) use parts::{parts_enum, parts_source, parts_under_sx, recast_parts};
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
+pub(crate) use print_exact::print_exact_sx;
 pub(crate) use rail::{Rail, RailInset};
 pub(crate) use responsive_sx::{ScaleOrCss, as_length, css_px, responsive_sx, with_own};
 #[cfg(all(feature = "use-element", feature = "table"))]
