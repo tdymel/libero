@@ -10,6 +10,7 @@ use libero::{
         Button, Code, Flex, Kbd, SpotlightAction, SpotlightOptions, SpotlightPart, Text,
         spotlight_filter, use_spotlight,
     },
+    hooks::use_localization,
     platform::{TimerSubscription, timer},
 };
 use std::time::Duration;
@@ -305,6 +306,7 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
         .position(|(name, ..)| *name == example)
         .unwrap_or(0);
     let handle = handles[picked];
+    let ctrl = use_localization().shortcut_help.ctrl;
 
     rsx! {
         Flex { direction: "column", align: "center", gap: "md",
@@ -312,7 +314,7 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
             if let Some(key) = shortcut {
                 Text { size: "sm",
                     span { dir: "ltr",
-                        Kbd { "Ctrl" }
+                        Kbd { "{ctrl}" }
                         " + "
                         Kbd { "{key.to_ascii_uppercase()}" }
                     }
