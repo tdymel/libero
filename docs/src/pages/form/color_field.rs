@@ -154,6 +154,7 @@ pub fn ColorFieldPage() -> Element {
             // snippet: let mut color = use_signal(|| ColorCode::hex(0x228be6));
             Demo {
                 component: "ColorField",
+                pinned_preview: true,
                 children_text: "",
                 fixed: vec![
                     "value: color()".to_string(),

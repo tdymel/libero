@@ -1,5 +1,6 @@
 //! `use_indexed_db`: a counter, a second handle on its key and what `is_loaded`
-//! showed. Each route has its own key: test pages share one browser profile.
+//! showed, and the docs demo's notes. Each route has its own key: test pages share one
+//! browser profile.
 
 use dioxus::prelude::*;
 use libero::hooks::use_indexed_db;
@@ -24,7 +25,12 @@ pub const ROUTES: Routes = &[
         "/use-indexed-db/blocked",
         || rsx! { Kept { prefix: "e2e-idb-blocked" } },
     ),
+    ("/use-indexed-db/notes", || rsx! { Notes {} }),
 ];
+
+// The docs demo itself, so the test covers the code readers copy.
+#[path = "../../../docs/src/pages/hooks/use_indexed_db/demo.rs"]
+mod kept_notes;
 
 /// Off the web, the run's directory (`E2E_STORAGE_DIR`), never the user's data dir.
 /// Android keeps the app's own files directory.
@@ -66,5 +72,21 @@ fn Twin(storage_key: String) -> Element {
     let twin = use_indexed_db(&storage_key, || 0_u32);
     rsx! {
         p { id: "twin", "{twin.get()}" }
+    }
+}
+
+/// The demo, unmounted by `#leave`; `#mark` writes another key behind it.
+#[component]
+fn Notes() -> Element {
+    use_hook(point_storage_dir);
+    let mut shown = use_signal(|| true);
+    let mut mark = use_indexed_db("e2e-idb-notes-mark", || 0_u32);
+    rsx! {
+        button { id: "leave", onclick: move |_| shown.set(false), "Leave" }
+        button { id: "back", onclick: move |_| shown.set(true), "Back" }
+        button { id: "mark", onclick: move |_| mark.update(|mark| *mark += 1), "Mark" }
+        if shown() {
+            kept_notes::KeptNotes {}
+        }
     }
 }

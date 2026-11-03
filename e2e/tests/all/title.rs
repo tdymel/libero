@@ -35,21 +35,28 @@ fn a_focused_link_in_a_cut_title_keeps_the_line_and_its_ring() {
         let fixture = Fixture::open("/title/cut", Viewport::Mobile).await.unwrap();
         let page = &fixture.page;
         for cut in ["start", "end"] {
+            wait::for_visible(page, &format!("#link-{cut}"))
+                .await
+                .unwrap();
+            // overflow: clip pins scrollLeft at 0, so the link's own box is what tells a scroll.
+            let rect = format!(
+                "(() => {{ const r = document.getElementById('link-{cut}').getBoundingClientRect(); \
+                 return [r.left, r.top]; }})()"
+            );
+            let before: (f64, f64) = js(page, rect.clone()).await;
             keyboard::tab_to(page, &format!("#link-{cut}"), 4)
                 .await
                 .unwrap();
-            let (overflow, scrolled, offset, shadow): (String, f64, f64, String) = js(
+            let after: (f64, f64) = js(page, rect).await;
+            let (offset, shadow): (f64, String) = js(
                 page,
                 format!(
-                    "(() => {{ const t = document.getElementById('cut-{cut}'), \
-                     s = getComputedStyle(document.getElementById('link-{cut}')); \
-                     return [getComputedStyle(t).overflowX, t.scrollLeft, \
-                       parseFloat(s.outlineOffset), s.boxShadow]; }})()"
+                    "(() => {{ const s = getComputedStyle(document.getElementById('link-{cut}')); \
+                     return [parseFloat(s.outlineOffset), s.boxShadow]; }})()"
                 ),
             )
             .await;
-            assert_eq!(overflow, "clip", "{cut}");
-            assert_eq!(scrolled, 0.0, "{cut}: focus scrolled the line");
+            assert_eq!(before, after, "{cut}: focus moved the link");
             assert!(offset < 0.0, "{cut}: outline offset {offset}");
             assert!(shadow.contains("inset"), "{cut}: {shadow}");
         }

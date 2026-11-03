@@ -137,6 +137,7 @@ pub fn TextFieldPage() -> Element {
             // snippet: let mut value = use_signal(String::new);
             Demo {
                 component: "TextField",
+                pinned_preview: true,
                 children_text: "",
                 fixed: vec![
                     "value: value()".to_string(),
@@ -151,6 +152,7 @@ pub fn TextFieldPage() -> Element {
                 ], field_controls::<UsernameCopy>(), vec![
                     // It shares the label's row, so it goes with the label.
                     Control::switch("label_trailing")
+                        .default("true")
                         .hidden_when(|values| values.str("label") != "true")
                         .code(|_, values| match label_trailing_on(values) {
                             true => vec![

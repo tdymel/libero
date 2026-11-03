@@ -255,6 +255,7 @@ pub fn NumberFieldPage() -> Element {
             // snippet: let mut share = use_signal(|| Some(12.5f64));
             Demo {
                 component: "NumberField",
+                pinned_preview: true,
                 children_text: "",
                 // The custom type's impl is what makes the `Cents` case short,
                 // so the snippet is a lie without it.

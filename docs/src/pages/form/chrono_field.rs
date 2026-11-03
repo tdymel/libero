@@ -199,6 +199,7 @@ pub fn ChronoFieldPage() -> Element {
             // snippet: let mut duration = use_signal(|| None::<TimeDelta>);
             Demo {
                 component: "ChronoField",
+                pinned_preview: true,
                 children_text: "",
                 wrap: Wrap(|values: &DemoValues, source: &str| match root_of(values) {
                     Some(root) => format!("// Given to the root: `LiberoProvider {{ {root}, .. }}`.\n{source}"),

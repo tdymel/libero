@@ -10,9 +10,13 @@ pub fn KeptNotes() -> Element {
     let mut notes = use_indexed_db("libero-docs-notes", String::new);
     // The field follows every key; the store gets the text once typing pauses.
     let mut typed = use_signal(|| None::<String>);
+    // Set by a key, cleared by a save: the store is written only for unsaved text.
+    let mut dirty = use_signal(|| false);
     let save = use_debounced_callback(
         move |()| {
-            if let Some(text) = typed.peek().clone() {
+            let unsaved = *dirty.peek();
+            if let (true, Some(text)) = (unsaved, typed.peek().clone()) {
+                dirty.set(false);
                 notes.set(text);
             }
         },
@@ -20,7 +24,10 @@ pub fn KeptNotes() -> Element {
     );
     // Leaving the page drops a pending save: keep the last keys typed too.
     use_drop(move || {
-        if let Ok(Some(text)) = typed.try_peek().map(|text| text.clone()) {
+        if let (Ok(true), Ok(Some(text))) = (
+            dirty.try_peek().map(|dirty| *dirty),
+            typed.try_peek().map(|text| text.clone()),
+        ) {
             notes.set(text);
         }
     });
@@ -50,6 +57,7 @@ pub fn KeptNotes() -> Element {
                 aria_busy: !notes.is_loaded(),
                 oninput: move |next| {
                     typed.set(Some(next));
+                    dirty.set(true);
                     save.call(());
                 },
             }
@@ -60,6 +68,7 @@ pub fn KeptNotes() -> Element {
                 focusable_when_disabled: true,
                 onclick: move |_| {
                     typed.set(None);
+                    dirty.set(false);
                     notes.remove();
                 },
                 "Forget notes"

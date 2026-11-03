@@ -99,6 +99,7 @@ pub fn PinFieldPage() -> Element {
             },
             Demo {
                 component: "PinField",
+                pinned_preview: true,
                 children_text: "",
                 controls: [vec![
                     // `length` is a `usize`, so it must not print quoted the

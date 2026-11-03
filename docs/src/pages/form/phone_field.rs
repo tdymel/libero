@@ -158,6 +158,7 @@ pub fn PhoneFieldPage() -> Element {
             // snippet: item #[component] fn Flag(iso: String) -> Element { rsx! {} }
             Demo {
                 component: "PhoneField",
+                pinned_preview: true,
                 children_text: "",
                 fixed: vec![
                     "value: phone()".to_string(),

@@ -7,7 +7,7 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_text};
-use e2e::passes::pointer;
+use e2e::passes::{keyboard, pointer};
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
 
@@ -234,6 +234,87 @@ fn blocked_indexed_db_reports_unavailable_and_keeps_the_value() {
             warned[0].contains("nothing to keep values in"),
             "{warned:?}"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Pushes the key of every `put` to `window.__puts`.
+const WATCH_PUTS: &str = r#"(() => {
+    const real = IDBObjectStore.prototype.put;
+    window.__puts = [];
+    IDBObjectStore.prototype.put = function (...args) {
+        window.__puts.push(args[1]);
+        return real.apply(this, args);
+    };
+})()"#;
+
+async fn notes_editable(page: &Page) {
+    let editable =
+        "(() => { const i = document.querySelector('input'); return !!i && !i.disabled; })()";
+    wait::for_js_true(page, editable, "the notes to load")
+        .await
+        .unwrap();
+}
+
+/// Todo 5526: the docs demo writes on leaving only text the debounce has not saved.
+#[test]
+fn the_notes_demo_writes_on_leave_only_unsaved_text() {
+    block_on(async {
+        let fixture = Fixture::open("/use-indexed-db/notes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        notes_editable(page).await;
+        click(page, "[role=status] + button").await;
+        stored_is(page, "libero-docs-notes", None).await;
+        page.evaluate_bounded(WATCH_PUTS).await.unwrap();
+
+        click(page, "input").await;
+        keyboard::type_text(page, "ada").await.unwrap();
+        stored_is(page, "libero-docs-notes", Some("\"ada\"")).await;
+        page.evaluate_bounded("window.__puts = []").await.unwrap();
+        click(page, "#leave").await;
+        wait::for_js_true(
+            page,
+            "!document.querySelector('input')",
+            "the demo to unmount",
+        )
+        .await
+        .unwrap();
+        // A later write on another key: a put from the leave would come before it.
+        click(page, "#mark").await;
+        wait::for_js_true(
+            page,
+            "window.__puts.includes('e2e-idb-notes-mark')",
+            "the mark write",
+        )
+        .await
+        .unwrap();
+        let puts: Vec<String> = page
+            .evaluate_bounded("window.__puts")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            puts,
+            ["e2e-idb-notes-mark"],
+            "leaving wrote saved text again"
+        );
+
+        // Text typed right before leaving is still kept, by the debounce or the leave.
+        click(page, "#back").await;
+        notes_editable(page).await;
+        click(page, "input").await;
+        keyboard::type_text(page, "x").await.unwrap();
+        click(page, "#leave").await;
+        stored_is(page, "libero-docs-notes", Some("\"adax\"")).await;
+
+        click(page, "#back").await;
+        notes_editable(page).await;
+        click(page, "[role=status] + button").await;
+        stored_is(page, "libero-docs-notes", None).await;
+        fixture.console.assert_clean("the notes demo").unwrap();
         fixture.close().await.unwrap();
     });
 }

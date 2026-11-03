@@ -102,6 +102,7 @@ pub fn PasswordFieldPage() -> Element {
             // snippet: let mut value = use_signal(String::new);
             Demo {
                 component: "PasswordField",
+                pinned_preview: true,
                 children_text: "",
                 fixed: vec![
                     "autocomplete: \"current-password\"".to_string(),
