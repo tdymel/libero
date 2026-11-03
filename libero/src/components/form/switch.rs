@@ -230,6 +230,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .activates(element, toggle.clone())
         .enter_activates(!in_form)
         .label(&props.label)
+        .label_trailing(&props.label_trailing)
         .description(&props.description)
         .description_position(&props.description_position)
         .helper(&props.helper)

@@ -32,6 +32,10 @@ macro_rules! field_props {
                 /// The field's caption, above the control. Its element id is `{id}-label`.
                 #[props(default, into)]
                 label: crate::components::form::Caption,
+                /// In the label's row, outside the `<label>`, at the row's end: an interactive
+                /// element such as a button cannot sit in the label itself.
+                #[props(default, into)]
+                label_trailing: crate::components::form::Caption,
                 /// What to enter: between the label and the control, or under it per `description_position`.
                 #[props(default, into)]
                 description: crate::components::form::Caption,
@@ -120,9 +124,9 @@ macro_rules! field_parts_enum {
             $(#[$meta])*
             $vis enum $name {
                 /// The label above the control.
-                Label = "label" => "& > [data-slot='label']",
+                Label = "label" => "& > [data-slot='label'], & > [data-slot='label-row'] > [data-slot='label']",
                 /// The required asterisk, in the label.
-                Required = "required" => "& > [data-slot='label'] > [data-slot='required']",
+                Required = "required" => "& > [data-slot='label'] > [data-slot='required'], & > [data-slot='label-row'] > [data-slot='label'] > [data-slot='required']",
                 /// The caption between the label and the control.
                 Description = "description" => "& > [data-slot='description']",
                 $($frame)*

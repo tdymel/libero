@@ -1,6 +1,7 @@
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, disabled_prop,
-    field_props, inline_field_controls, prop, props, readonly_prop, required_prop, status_prop,
+    field_props, inline_field_controls, label_trailing_prop, prop, props, readonly_prop,
+    required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::CheckboxPart;
@@ -55,6 +56,7 @@ pub fn CheckboxPage() -> Element {
                         .doc("The caption beside the box, and the checkbox's name."),
                     prop("description", "Caption")
                         .doc("Under the label. What checking it means."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the description, in the label's column."),

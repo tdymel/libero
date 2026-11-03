@@ -1,6 +1,7 @@
 use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
-    field_controls, field_props, indent, or_unset, prop, props, readonly_prop, status_prop,
+    field_controls, field_props, indent, label_trailing_prop, or_unset, prop, props, readonly_prop,
+    status_prop,
 };
 use libero::components::Pictogram;
 use libero::components::SegmentedControlPart;
@@ -123,6 +124,7 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("The question, and the group's name."),
                     prop("description", "Caption")
                         .doc("Between the label and the segments. How to choose."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the segments. What the choice changes."),

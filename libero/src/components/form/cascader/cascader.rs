@@ -211,6 +211,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             name: bound.name().map(str::to_string),
             rules,
             label: props.label,
+            label_trailing: props.label_trailing,
             description: props.description,
             description_position: props.description_position,
             helper: props.helper,

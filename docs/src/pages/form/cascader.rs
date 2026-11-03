@@ -1,7 +1,8 @@
 use super::dropdown_parts::{CASCADER_DROPDOWN, list_dropdown_parts};
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
-    field_controls, field_props, indent, prop, props, readonly_prop, required_prop, status_prop,
+    field_controls, field_props, indent, label_trailing_prop, prop, props, readonly_prop,
+    required_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::CascaderPart;
@@ -330,6 +331,7 @@ pub fn CascaderPage() -> Element {
                         .doc("Shows an x in place of the chevron while a value is selected."),
                     prop("label", "Caption").doc("The caption above the control, and the field's name."),
                     prop("description", "Caption").doc("Between the label and the control. What to pick."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption").doc("Under the control. What the choice changes."),
                     status_prop(),

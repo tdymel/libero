@@ -1,6 +1,7 @@
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
-    field_controls, field_props, prop, props, readonly_prop, required_prop, status_prop,
+    field_controls, field_props, label_trailing_prop, prop, props, readonly_prop, required_prop,
+    status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, OptionList, Options, RadioGroup, Text};
@@ -119,6 +120,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("The question, and the group's name."),
                     prop("description", "Caption")
                         .doc("Between the question and the options. How to choose."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the options. What the choice changes."),
@@ -162,6 +164,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Size of the circle and its label."),
                     prop("label", "Caption").doc("The text beside the circle, and the radio's name."),
                     prop("description", "Caption").doc("A second line under the label."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption").doc("A caption under the radio."),
                     status_prop(),

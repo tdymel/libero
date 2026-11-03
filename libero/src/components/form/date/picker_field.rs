@@ -100,6 +100,7 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub leading: Option<Element>,
     pub trailing: Option<Element>,
     pub label: &'a Caption,
+    pub label_trailing: &'a Caption,
     pub description: &'a Caption,
     pub description_position: &'a Input<DescriptionPosition>,
     pub helper: &'a Caption,
@@ -143,6 +144,7 @@ macro_rules! picker_field {
             leading: $props.leading.clone(),
             trailing: $props.trailing.clone(),
             label: &$props.label,
+            label_trailing: &$props.label_trailing,
             description: &$props.description,
             description_position: &$props.description_position,
             helper: &$props.helper,
@@ -337,6 +339,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let field_box = use_field()
         .label_only_focuses()
         .label(field.label)
+        .label_trailing(field.label_trailing)
         .description(field.description)
         .description_position(field.description_position)
         .helper(field.helper)

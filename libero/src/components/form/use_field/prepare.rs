@@ -3,7 +3,7 @@ use dioxus::{core::Runtime, prelude::*};
 use super::{
     builder::FieldBuilder,
     hook::FieldHook,
-    nodes::{attribute_text, join_ids, label_node, slot_node, status_node},
+    nodes::{attribute_text, join_ids, label_node, label_row, slot_node, status_node},
     prepared::PreparedField,
     styles::FIELD_SX,
 };
@@ -43,6 +43,7 @@ impl FieldBuilder<'_> {
                 .or_else(|| attribute_text(self.attributes, "name")),
         );
         let label = self.label.unwrap_or(&Caption::None);
+        let label_trailing = self.label_trailing.unwrap_or(&Caption::None);
         let explicit = self
             .status
             .and_then(Input::as_ref)
@@ -142,6 +143,7 @@ impl FieldBuilder<'_> {
         // An inline control with no visible text drops the empty label column and its gap (4173).
         let solo = self.inline
             && label.is_none()
+            && label_trailing.is_none()
             && description.is_none()
             && helper.is_none()
             && status.and_then(FieldStatus::message).is_none();
@@ -284,14 +286,17 @@ impl FieldBuilder<'_> {
         let only_focuses = root.filter(|_| self.label_only_focuses);
 
         PreparedField {
-            label: label_node(
-                &id_value,
-                label,
-                self.required.then_some(self.required_word),
-                self.labelled_by,
-                activation.clone(),
-                root.filter(|_| focuses),
-                only_focuses,
+            label: label_row(
+                label_node(
+                    &id_value,
+                    label,
+                    self.required.then_some(self.required_word),
+                    self.labelled_by,
+                    activation.clone(),
+                    root.filter(|_| focuses),
+                    only_focuses,
+                ),
+                label_trailing,
             ),
             labelled_by: (self.labelled_by || self.label_with_id) && !label.is_none(),
             description: slot_node(FieldPart::Description.slot(), &id_value, description),

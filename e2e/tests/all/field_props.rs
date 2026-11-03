@@ -1,5 +1,6 @@
 //! Shared field props and the removable chip (todo 449 review).
 
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::wait::PageBounded;
 use e2e::{Fixture, Viewport, wait};
@@ -123,6 +124,45 @@ fn removing_a_chip_is_announced() {
         )
         .await
         .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A `label_trailing` button is the label's sibling, not its child, and ends the label row at 375px.
+#[test]
+fn a_label_trailing_button_sits_beside_the_label_at_the_row_end() {
+    block_on(async {
+        let fixture = Fixture::open("/field-props/label-trailing", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(375, 780, 1.0, true))
+            .await
+            .unwrap();
+        wait::for_visible(page, "#text-add").await.unwrap();
+        let bad: Vec<String> = page
+            .evaluate_bounded(
+                "(() => { const bad = []; if (innerWidth !== 375) bad.push('viewport ' + innerWidth); \
+                 for (const id of ['text', 'area', 'select', 'check', 'bare']) { \
+                   const root = document.getElementById(id).firstElementChild, \
+                     button = document.getElementById(id + '-add'), \
+                     row = button.closest(\"[data-slot='label-row']\"), \
+                     label = row && row.querySelector(':scope > label'), \
+                     end = button.getBoundingClientRect(); \
+                   if (button.closest('label')) bad.push(id + ': in the label'); \
+                   if (!row || row.parentElement !== root) { bad.push(id + ': no label row in the field'); continue; } \
+                   if (id !== 'bare' && (!label || label.contains(button))) bad.push(id + ': no sibling label'); \
+                   if (Math.abs(end.right - root.getBoundingClientRect().right) > 1) bad.push(id + ': not at the end'); \
+                   if (label) { const l = label.getBoundingClientRect(); \
+                     if (end.left < l.right - 1) bad.push(id + ': overlaps the label'); \
+                     if (Math.abs((end.top + end.bottom) / 2 - (l.top + l.bottom) / 2) > 2) bad.push(id + ': off the label line'); } \
+                 } return bad; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(bad.is_empty(), "{bad:?}");
         fixture.close().await.unwrap();
     });
 }

@@ -5,7 +5,8 @@ use super::slider_demo::{
 };
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
-    field_controls, field_props, indent, prop, props, readonly_prop, status_prop,
+    field_controls, field_props, indent, label_trailing_prop, prop, props, readonly_prop,
+    status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::{SliderPart, SliderValue};
@@ -164,6 +165,7 @@ pub fn RangeSliderPage() -> Element {
                         .doc("The caption above the track. Both thumbs' names start with it."),
                     prop("description", "Caption")
                         .doc("Between the label and the track. What the range means."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the track, below the mark captions."),

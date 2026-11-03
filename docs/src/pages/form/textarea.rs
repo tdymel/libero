@@ -1,6 +1,6 @@
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, disabled_prop,
-    field_controls, field_props, prop, props, readonly_prop, status_prop,
+    field_controls, field_props, label_trailing_prop, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::TextareaPart;
@@ -55,6 +55,7 @@ pub fn TextareaPage() -> Element {
                         .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
                         .doc("Between the label and the control. What to enter."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the control. Formatting rules or limits."),

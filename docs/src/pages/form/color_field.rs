@@ -1,7 +1,7 @@
 use super::dropdown_parts::color_dropdown_parts;
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, field_controls,
-    field_props, prop, props, readonly_prop, status_prop,
+    field_props, label_trailing_prop, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -84,6 +84,7 @@ pub fn ColorFieldPage() -> Element {
                     prop("radius", "ThemeAwareValue").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
                     prop("label", "Caption").doc("The field's caption."),
                     prop("description", "Caption").doc("Between the label and the control."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption").doc("Under the control."),
                     status_prop(),

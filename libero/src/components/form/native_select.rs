@@ -197,6 +197,7 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
 
     let field = use_field()
         .label(&props.label)
+        .label_trailing(&props.label_trailing)
         .description(&props.description)
         .description_position(&props.description_position)
         .helper(&props.helper)
@@ -378,6 +379,7 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
             selection: option_label.is_some().then_some(selection),
             placeholder: props.placeholder,
             label: props.label,
+            label_trailing: props.label_trailing,
             description: props.description,
             helper: props.helper,
             status: props.status,

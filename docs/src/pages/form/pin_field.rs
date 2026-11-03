@@ -1,6 +1,6 @@
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, field_controls,
-    field_props, prop, props, readonly_prop, status_prop,
+    field_props, label_trailing_prop, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
@@ -49,6 +49,7 @@ pub fn PinFieldPage() -> Element {
                     prop("label", "Caption")
                         .doc("The field's caption, above the cells. It names the group of cells."),
                     prop("description", "Caption").doc("Between the label and the cells. Where the code came from."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption").doc("Under the cells. How long the code lasts, how to get another."),
                     status_prop(),

@@ -53,6 +53,7 @@ fn Demo() -> Element {
 | `validate` | `Validators<f64>` | - | Rules over the value, shown once the rating loses focus or its form is submitted. |
 | `label` | `Caption` | - | The caption above the stars, and the slider's name. |
 | `description` | `Caption` | - | Under the label. |
+| `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |
 | `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the stars. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |

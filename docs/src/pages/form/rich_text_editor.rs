@@ -1,6 +1,7 @@
 use crate::components::{
     Control, Demo, DemoFile, DemoValues, DocPage, FieldCopy, PageScroll, Wrap, a11y,
-    description_position_prop, field_controls, indent, prop, props, status_prop,
+    description_position_prop, field_controls, indent, label_trailing_prop, prop, props,
+    status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::rich_text::Doc;
@@ -196,6 +197,7 @@ pub fn RichTextEditorPage() -> Element {
                         .doc("The field's caption, above the toolbar. It names the text."),
                     prop("description", "Caption")
                         .doc("Between the label and the control. What to enter."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption")
                         .doc("Under the control. Formatting rules or limits."),

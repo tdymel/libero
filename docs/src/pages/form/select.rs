@@ -1,7 +1,8 @@
 use super::dropdown_parts::{SELECT_DROPDOWN, list_dropdown_parts};
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, Wrap, a11y, description_position_prop,
-    field_controls, field_props, prop, props, readonly_prop, required_prop, status_prop,
+    field_controls, field_props, label_trailing_prop, prop, props, readonly_prop, required_prop,
+    status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::SelectPart;
@@ -338,6 +339,7 @@ pub fn SelectPage() -> Element {
                     prop("label", "Caption")
                         .doc("The caption above the control, and the select's name."),
                     prop("description", "Caption").doc("Between the label and the control. What to pick."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption").doc("Under the control. Constraints, or what the choice changes."),
                     status_prop(),

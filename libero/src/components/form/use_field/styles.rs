@@ -39,6 +39,16 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
                 .margin_left("2px")
                 .rtl(sx().margin_left("0").margin_right("2px")),
         )
+        // The label and its `label_trailing`; the trailing slot takes the row's end.
+        .selector(
+            "& > [data-slot='label-row']",
+            sx().display("flex").align_items("center"),
+        )
+        .selector(
+            "& > [data-slot='label-row'] > [data-slot='label-trailing']",
+            sx().margin_left("auto")
+                .rtl(sx().margin_left("0").margin_right("auto")),
+        )
         // A full-width control fills only the wrapper, so the wrapper fills its parent.
         .when("full-width", sx().width("100%"))
         // A frameless control sits beside its label; captions line up under the label.
@@ -49,7 +59,7 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .column_gap(FIELD_FRAME_GAP.value())
                 .selector(
-                    format!("& > label, {FIELD_CAPTIONS}"),
+                    format!("& > label, & > [data-slot='label-row'], {FIELD_CAPTIONS}"),
                     sx().grid_column("2"),
                 )
                 // The control's 44px finger area stays in its own row, so a tap on a stacked

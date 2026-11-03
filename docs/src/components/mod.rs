@@ -20,7 +20,7 @@ pub use doc_section::{DocSection, SectionLink};
 pub use icon_catalogue::IconCatalogue;
 pub use pictogram_note::PictogramNote;
 pub use prop_doc::{
-    PartsPanel, PropGroup, PropertyTable, description_position_prop, disabled_prop, prop, props,
-    prose, readonly_prop, required_prop, status_prop,
+    PartsPanel, PropGroup, PropertyTable, description_position_prop, disabled_prop,
+    label_trailing_prop, prop, props, prose, readonly_prop, required_prop, status_prop,
 };
 pub use remount::Remount;

@@ -23,8 +23,7 @@ pub(crate) fn ios_text_floor_sx(font_size: impl std::fmt::Display) -> Sx {
 
 /// A field wrapper's caption slots, not the label, the frame or the control.
 /// `:where` keeps the specificity of a bare `[data-slot]`.
-pub(crate) const FIELD_CAPTIONS: &str =
-    "& > [data-slot]:where(:not([data-slot='label'], [data-slot='frame'], [data-slot='control']))";
+pub(crate) const FIELD_CAPTIONS: &str = "& > [data-slot]:where(:not([data-slot='label'], [data-slot='label-row'], [data-slot='frame'], [data-slot='control']))";
 
 str_enum! {
     /// How a checkable field draws its wrapper. `Card` makes the whole field a
@@ -142,7 +141,7 @@ impl FieldDefaults {
     /// cost four stylesheet registrations per field.
     fn size_sx(size: Size) -> Sx {
         sx().selector(
-            "& > label",
+            "& > label, & > [data-slot='label-row'] > label",
             sx().font_size(FIELD_LABEL_FONT_SIZE.value(size)),
         )
         .selector(

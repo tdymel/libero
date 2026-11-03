@@ -87,6 +87,7 @@ fn Demo() -> Element {
 | `tag` | `Callback<SelectionArgs<String>, Element>` | `removable_chip` | Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: "-1"`, and leave it out when `args.disabled` or `args.readonly` is set. |
 | `label` | `Caption` | - | The field's caption, above the control. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |
 | `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry affects. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |

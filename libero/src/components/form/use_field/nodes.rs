@@ -123,6 +123,21 @@ pub(super) fn label_node(
     })
 }
 
+/// The label with `trailing` after it in one row; the bare label when `trailing` is empty.
+pub(super) fn label_row(label: Option<Element>, trailing: &Caption) -> Option<Element> {
+    if trailing.is_none() {
+        return label;
+    }
+
+    let content = caption_content(trailing);
+    Some(rsx! {
+        div { "data-slot": "label-row",
+            {label}
+            span { "data-slot": "label-trailing", {content} }
+        }
+    })
+}
+
 /// The tab stop of a control that `label_id` names through `aria-labelledby`.
 pub(in crate::components::form) fn labelled_focus_selector(label_id: &str) -> String {
     let named = format!(

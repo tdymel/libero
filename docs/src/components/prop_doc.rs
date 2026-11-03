@@ -52,6 +52,11 @@ pub fn status_prop() -> PropDoc {
         .doc("Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`.")
 }
 
+pub fn label_trailing_prop() -> PropDoc {
+    prop("label_trailing", "Caption")
+        .doc("Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`.")
+}
+
 pub fn description_position_prop() -> PropDoc {
     prop("description_position", "DescriptionPosition")
         .default("Above")

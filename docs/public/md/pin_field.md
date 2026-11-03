@@ -50,6 +50,7 @@ fn Demo() -> Element {
 | `autofocus` | `bool` | `false` | Focuses the first cell on mount. |
 | `label` | `Caption` | - | The field's caption, above the cells. It names the group of cells. |
 | `description` | `Caption` | - | Between the label and the cells. Where the code came from. |
+| `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |
 | `description_position` | `DescriptionPosition` | `Above` | Where the description sits: `above` the control, or `below` it. `below` keeps the controls of side-by-side fields level when only some have a description; give the row `align: "flex-start"`. Unset, the theme's `field.description_position`. A checkbox, switch or radio draws its description under the label either way. |
 | `helper` | `Caption` | - | Under the cells. How long the code lasts, how to get another. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error; an empty one or `None` is `Valid`. |

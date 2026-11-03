@@ -28,6 +28,7 @@ pub(crate) type MappedState = (Option<FieldStatus>, Parse);
 
 pub(crate) struct FieldBuilder<'a> {
     pub(super) label: Option<&'a Caption>,
+    pub(super) label_trailing: Option<&'a Caption>,
     pub(super) description: Option<&'a Caption>,
     pub(super) description_position: Option<&'a Input<DescriptionPosition>>,
     pub(super) helper: Option<&'a Caption>,
@@ -69,6 +70,7 @@ impl Default for FieldBuilder<'_> {
     fn default() -> Self {
         Self {
             label: None,
+            label_trailing: None,
             description: None,
             description_position: None,
             helper: None,
@@ -133,6 +135,13 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn label(mut self, label: &'a Caption) -> Self {
         self.label = Some(label);
+        self
+    }
+
+    /// Content in the label row, outside the `<label>`, aligned to the row's end.
+    #[inline]
+    pub fn label_trailing(mut self, label_trailing: &'a Caption) -> Self {
+        self.label_trailing = Some(label_trailing);
         self
     }
 

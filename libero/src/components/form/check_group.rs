@@ -157,6 +157,7 @@ struct Group<T: Options, P: Part> {
     orientation: Input<Orientation>,
     color: Input<ThemeAwareValue>,
     label: Caption,
+    label_trailing: Caption,
     description: Caption,
     description_position: Input<DescriptionPosition>,
     helper: Caption,
@@ -187,6 +188,7 @@ macro_rules! group {
             orientation: $props.orientation,
             color: $props.color,
             label: $props.label,
+            label_trailing: $props.label_trailing,
             description: $props.description,
             description_position: $props.description_position,
             helper: $props.helper,
@@ -321,6 +323,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .labelled_by()
         .names_group()
         .label(&props.label)
+        .label_trailing(&props.label_trailing)
         .description(&props.description)
         .description_position(&props.description_position)
         .helper(&props.helper)

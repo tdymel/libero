@@ -111,6 +111,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
         TextField {
             r#type: if revealed() { "text" } else { "password" },
             label: props.label,
+            label_trailing: props.label_trailing,
             description: props.description,
             description_position: props.description_position,
             helper: props.helper,
@@ -199,6 +200,26 @@ mod tests {
         assert_eq!(texts(&attributes, "spellcheck"), ["false"]);
         assert_eq!(texts(&attributes, "autocorrect"), ["off"]);
         assert_eq!(texts(&attributes, "autocapitalize"), ["off"]);
+    }
+
+    /// Todo 5419: the slot sits beside the `<label>`, in a row, never inside it.
+    #[test]
+    fn label_trailing_renders_after_the_label_outside_it() {
+        let page = html(|| {
+            rsx! {
+                LiberoProvider {
+                    PasswordField { label: "Secret", label_trailing: rsx! { button { "Forgot" } } }
+                }
+            }
+        });
+        let row = page.find("data-slot=\"label-row\"").expect(&page);
+        let label_end = page.find("</label>").expect(&page);
+        let button = page.find("<button>Forgot").expect(&page);
+        assert!(row < label_end && label_end < button, "{page}");
+        assert!(page.contains("data-slot=\"label-trailing\""), "{page}");
+
+        let plain = html(|| rsx! { LiberoProvider { PasswordField { label: "Secret" } } });
+        assert!(!plain.contains("data-slot=\"label-row\""), "{plain}");
     }
 
     #[test]

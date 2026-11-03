@@ -137,6 +137,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         .labelled_by()
         .names_group()
         .label(&props.label)
+        .label_trailing(&props.label_trailing)
         .description(&props.description)
         .description_position(&props.description_position)
         .helper(&props.helper)

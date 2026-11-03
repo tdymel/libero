@@ -189,6 +189,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .card(card)
         .activates(element, select)
         .label(&props.label)
+        .label_trailing(&props.label_trailing)
         .description(&props.description)
         .description_position(&props.description_position)
         .helper(&props.helper)

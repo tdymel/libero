@@ -344,6 +344,7 @@ fn use_cascader_field(
     let field = use_field()
         .labelled_by()
         .label(&props.label)
+        .label_trailing(&props.label_trailing)
         .description(&props.description)
         .description_position(&props.description_position)
         .helper(&props.helper)

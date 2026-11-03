@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 use libero::chrono::NaiveDate;
 use libero::components::{
-    Cascader, CascaderOption, DateField, Flex, MultiSelect, PasswordField, RangeSlider, Rating,
+    Cascader, CascaderOption, Checkbox, DateField, Flex, MultiSelect, PasswordField, RangeSlider, Rating,
     Select, TagsField, TextField, Textarea,
 };
 
@@ -14,7 +14,24 @@ pub const ROUTES: Routes = &[
     ("/field-props/chips", || rsx! { ChipsPage {} }),
     ("/field-props/description", || rsx! { DescriptionPage {} }),
     ("/field-props/description-below", || rsx! { DescriptionBelowPage {} }),
+    ("/field-props/label-trailing", || rsx! { LabelTrailingPage {} }),
 ];
+
+#[component]
+fn LabelTrailingPage() -> Element {
+    let add = |id: &str| rsx! { button { id: "{id}", r#type: "button", "Add" } };
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            div { id: "text", TextField { label: "Name", label_trailing: add("text-add"), oninput: move |_| {} } }
+            div { id: "area", Textarea { label: "Notes", label_trailing: add("area-add"), oninput: move |_| {} } }
+            div { id: "select",
+                Select { label: "Pick", label_trailing: add("select-add"), options: vec!["Cheese".to_string()], onchange: move |_| {} }
+            }
+            div { id: "check", Checkbox { label: "Agree", label_trailing: add("check-add") } }
+            div { id: "bare", TextField { aria_label: "Bare", label_trailing: add("bare-add"), oninput: move |_| {} } }
+        }
+    }
+}
 
 #[component]
 fn DescriptionBelowPage() -> Element {

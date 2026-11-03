@@ -1,6 +1,6 @@
 use crate::components::{
     Control, Demo, DemoValues, DocPage, FieldCopy, a11y, description_position_prop, field_controls,
-    field_props, prop, props, readonly_prop, status_prop,
+    field_props, label_trailing_prop, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::FileFieldPart;
@@ -226,6 +226,7 @@ pub fn FileFieldPage() -> Element {
                     prop("label", "Caption")
                         .doc("The field's caption. It names the field and its Browse button."),
                     prop("description", "Caption").doc("Between the label and the control. Which files are wanted."),
+                    label_trailing_prop(),
                     description_position_prop(),
                     prop("helper", "Caption").doc("Under the control. Size limits, formats."),
                     status_prop(),
