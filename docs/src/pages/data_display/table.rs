@@ -173,7 +173,7 @@ const STICKY_OFFSET: &str = "0";
 const PINNED: &str =
     r#"default_pinned_columns: PinnedColumns::default().start(["Name"]).end(["Bonus"])"#;
 
-/// The `virtual_row_height` switch's cap: a dozen 40px rows.
+/// The `virtual_row_height` switch's cap: eight 40px rows, four body rows under the sticky head and foot.
 const WINDOW_HEIGHT: &str = "320px";
 
 /// The switches `virtual_row_height` hides: it sets the cap, the rest render every row.

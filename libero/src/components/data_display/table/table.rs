@@ -182,6 +182,8 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .font("inherit")
             .letter_spacing("inherit")
             .color("inherit")
+            // A wrapped label's later lines follow the cell's `data-align`, not the UA centre.
+            .text_align("inherit")
             .cursor("pointer"),
     )
     // Inset: the button fills its cell edge to edge.

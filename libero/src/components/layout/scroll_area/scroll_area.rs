@@ -271,12 +271,13 @@ impl EdgeState {
     };
 
     /// From one scroll position, the x offset counted from the inline start.
+    /// An axis without range rests at no far edge, so it fires once it gains one.
     fn at(x: f64, y: f64, max_x: f64, max_y: f64) -> Self {
         Self {
             top: y <= 0.0,
-            bottom: max_y <= 0.0 || y >= max_y - 1.0,
+            bottom: max_y > 0.0 && y >= max_y - 1.0,
             start: x <= 0.0,
-            end: max_x <= 0.0 || x >= max_x - 1.0,
+            end: max_x > 0.0 && x >= max_x - 1.0,
             max_x,
             max_y,
         }
@@ -1199,6 +1200,39 @@ mod tests {
         let shrunk = at(300.0, 300.0);
         assert!(!shrunk.reached_since(bottom).bottom, "content that shrank");
         assert!(!grown.reached_since(bottom).top);
+    }
+
+    /// A vertical scroll in an area as wide as its content reaches no end.
+    #[test]
+    fn an_axis_without_range_reaches_no_end() {
+        let first = EdgeState::at(0.0, 120.0, 0.0, 500.0).reached_since(EdgeState::AT_ORIGIN);
+        assert!(!first.end);
+        assert!(!first.start);
+
+        // Wider content later: the end fires once scrolled to.
+        let wide = EdgeState::at(0.0, 120.0, 300.0, 500.0);
+        assert!(!wide.reached_since(EdgeState::AT_ORIGIN).end);
+        assert!(
+            EdgeState::at(300.0, 120.0, 300.0, 500.0)
+                .reached_since(wide)
+                .end
+        );
+    }
+
+    /// A sideways swipe in an area as tall as its content reaches no bottom.
+    #[test]
+    fn an_axis_without_range_reaches_no_bottom() {
+        let first = EdgeState::at(171.0, 0.0, 400.0, 0.0).reached_since(EdgeState::AT_ORIGIN);
+        assert!(!first.bottom);
+        assert!(!first.top);
+
+        let tall = EdgeState::at(171.0, 0.0, 400.0, 200.0);
+        assert!(!tall.reached_since(first).bottom);
+        assert!(
+            EdgeState::at(171.0, 200.0, 400.0, 200.0)
+                .reached_since(tall)
+                .bottom
+        );
     }
 
     /// Content that fits scrolls nowhere - the percent would divide by zero.
