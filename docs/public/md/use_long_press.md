@@ -13,7 +13,9 @@ a pointer stays down for `options.ms` (400 by default). It moves no more than
 element: `onpointerdown`, `onpointermove`, `onpointerup`, `onpointerleave`,
 `onpointercancel`, `oncontextmenu` and `onclick`. Read `pressing` for a hold
 cue, shown beside the label rather than in it so a screen reader does not hear a
-rename, and give the element `user-select: none` so holding does not select text.
+rename, and give the element `user-select: none` and `-webkit-touch-callout: none`
+so holding does not select text, and iOS, which fires no context menu on a hold,
+shows no loupe or link callout.
 
 ## Usage
 
@@ -36,6 +38,8 @@ fn HoldToCount() -> Element {
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
             Button {
+                // iOS fires no contextmenu on a hold: this keeps its loupe and callout off.
+                style: "user-select: none; -webkit-touch-callout: none",
                 onpointerdown: move |event| press.onpointerdown.call(event),
                 onpointermove: move |event| press.onpointermove.call(event),
                 onpointerup: move |event| press.onpointerup.call(event),

@@ -53,7 +53,9 @@ pub fn UseLongPressPage() -> Element {
                     Code { source: "pressing" }
                     " for a hold cue, shown beside the label rather than in it so a screen reader does not hear a rename, and give the element "
                     Code { source: "user-select: none" }
-                    " so holding does not select text."
+                    " and "
+                    Code { source: "-webkit-touch-callout: none" }
+                    " so holding does not select text, and iOS, which fires no context menu on a hold, shows no loupe or link callout."
                 }
             },
 

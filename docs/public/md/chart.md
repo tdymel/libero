@@ -115,7 +115,7 @@ fn Demo() -> Element {
 | `default_hidden` | `Vec<String>` | `[]` | Seeds the hidden series once. Ignored when `hidden` is set. |
 | `onhiddenchange` | `Option<EventHandler<Vec<String>>>` | | The hidden series a legend button asks for. The last shown series stays. |
 | `zoom` | `Option<bool>` | `false` | Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`. |
-| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it. |
+| `onrange` | `Option<EventHandler<Option<ChartRange>>>` | | Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it. On `horizontal` bars a touch swipe stays the page's scroll, so brush there with Shift and ArrowDown or ArrowUp. |
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it. |
 
 ### `FunnelChart`

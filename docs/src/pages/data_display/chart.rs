@@ -641,7 +641,7 @@ pub fn ChartPage() -> Element {
                     prop("default_hidden", "Vec<String>").default("[]").doc("Seeds the hidden series once. Ignored when `hidden` is set."),
                     prop("onhiddenchange", "Option<EventHandler<Vec<String>>>").doc("The hidden series a legend button asks for. The last shown series stays."),
                     prop("zoom", "Option<bool>").default(on(theme.chart.zoom)).doc("Zoom and pan along the categories: Ctrl or Cmd with the wheel, a pinch, a drag (Shift or Alt with it once `onrange` is set), the keys. Reset it from code with the `handle`."),
-                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it."),
+                    prop("onrange", "Option<EventHandler<Option<ChartRange>>>").doc("Set, a drag or Shift with an arrow brushes a band of categories; Shift or Alt with a drag pans instead. `None` when Escape, or a tap or click that does not drag, clears it. On `horizontal` bars a touch swipe stays the page's scroll, so brush there with Shift and ArrowDown or ArrowUp."),
                     prop("handle", "Option<ChartHandle>").doc("From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android), resets the zoom and says whether it is zoomed. `is_zoomed()` re-runs the component that reads it."),
                 ]),
                 props("FunnelChart", vec![

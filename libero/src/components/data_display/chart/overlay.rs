@@ -218,9 +218,11 @@ enum Gesture {
         from: f64,
         window: (usize, usize),
     },
+    /// `before` is the band to restore when the browser cancels the press.
     Brush {
         id: i32,
         anchor: usize,
+        before: Option<(usize, usize)>,
     },
     /// Two fingers: their spread and middle at the start, along the x axis.
     Pinch {
@@ -672,8 +674,8 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                                 window: zoom.peek(),
                             }),
                             _ => index_under(from).map(|anchor| {
-                                selection.set(Some((anchor, anchor)));
-                                Gesture::Brush { id, anchor }
+                                let before = selection.replace(Some((anchor, anchor)));
+                                Gesture::Brush { id, anchor, before }
                             }),
                         };
                         gesture.set(next);
@@ -699,6 +701,7 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                     Some(Gesture::Brush {
                         id: brushing,
                         anchor,
+                        ..
                     }) if brushing == id => {
                         if let Some(head) = index_under(along(point))
                             && *selection.peek() != Some((anchor, head))
@@ -782,9 +785,16 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
             touches.write().retain(|touch| touch.0 != id);
             let current = *gesture.peek();
             match current {
-                Some(Gesture::Brush { id: brushing, .. }) if brushing == id => {
+                // A cancel is the browser taking the press as its scroll: undo, commit nothing (5609).
+                Some(Gesture::Brush {
+                    id: brushing,
+                    before,
+                    ..
+                }) if brushing == id => {
                     gesture.set(None);
-                    if let Some(band) = *selection.peek() {
+                    if !lifted {
+                        selection.set(before);
+                    } else if let Some(band) = *selection.peek() {
                         select(band);
                     }
                 }
@@ -795,7 +805,16 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
                         clear_selection();
                     }
                 }
-                Some(Gesture::Pan { id: pressed, .. }) if pressed == id => gesture.set(None),
+                Some(Gesture::Pan {
+                    id: pressed,
+                    window,
+                    ..
+                }) if pressed == id => {
+                    gesture.set(None);
+                    if !lifted && let Some(zoom) = zoom {
+                        zoom.set(window);
+                    }
+                }
                 Some(Gesture::Pinch { .. }) => gesture.set(None),
                 _ => {}
             }

@@ -65,6 +65,9 @@ fn blocks_context_menu(fired: bool, press: Option<Press>) -> bool {
 /// lands. A tap that ends first runs no callback and keeps its click.
 /// `pressing` is `true` while a press is held and not yet fired, for a hold cue.
 ///
+/// iOS Safari fires no `contextmenu` on a hold and shows its text loupe or link
+/// callout instead: give the target `user-select: none; -webkit-touch-callout: none`.
+///
 /// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::hooks::{LongPressOptions, use_long_press};
@@ -77,6 +80,7 @@ fn blocks_context_menu(fired: bool, press: Option<Press>) -> bool {
 ///
 /// rsx! {
 ///     button {
+///         style: "user-select: none; -webkit-touch-callout: none",
 ///         onpointerdown: move |event| press.onpointerdown.call(event),
 ///         onpointermove: move |event| press.onpointermove.call(event),
 ///         onpointerup: move |event| press.onpointerup.call(event),

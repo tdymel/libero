@@ -509,3 +509,63 @@ e2e::scenario!(
     "/bar-chart/zoom",
     zooms_down
 );
+
+/// The brush band's top and height, or `""` with no band.
+const BRUSH: &str = "(() => { const b = document.querySelector('#chart [data-chart-brush]'); \
+     if (!b) return ''; const r = b.getBoundingClientRect(); \
+     return Math.round(r.top) + ' ' + Math.round(r.height); })()";
+
+/// A touch that slides down the lying bars from their top, as a page scroll starts.
+const TOUCH_SLIDE: &str = "(() => { const l = document.querySelector('#chart [data-chart-layer]'); \
+     const r = l.getBoundingClientRect(); \
+     window.__touchAt = y => ({ bubbles: true, cancelable: true, pointerId: 41, \
+       pointerType: 'touch', isPrimary: true, clientX: r.left + r.width / 2, \
+       clientY: r.top + r.height * 0.1 + y }); \
+     l.dispatchEvent(new PointerEvent('pointerdown', __touchAt(4))); \
+     for (const y of [8, 14, 24, 40]) l.dispatchEvent(new PointerEvent('pointermove', __touchAt(y))); })()";
+
+const TOUCH_CANCEL: &str = "document.querySelector('#chart [data-chart-layer]')\
+     .dispatchEvent(new PointerEvent('pointercancel', __touchAt(40)))";
+
+async fn brush<D: Driver>(d: &mut D) -> Result<String> {
+    Ok(d.evaluate(BRUSH)
+        .await?
+        .as_str()
+        .unwrap_or_default()
+        .to_string())
+}
+
+/// 5609: a touch the browser takes as its scroll (`pointercancel`) puts the earlier band back
+/// and reports no range.
+async fn a_cancelled_touch_keeps_the_band<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let plot = d.rect(LAYER).await?;
+    d.drag(LAYER, 0.0, plot.height * 0.3).await?;
+    eventually(d, "a brushed range", async |d| {
+        Ok(!d.text("#range").await?.is_empty())
+    })
+    .await?;
+    let range = d.text("#range").await?;
+    let band = brush(d).await?;
+    d.evaluate(TOUCH_SLIDE).await?;
+    eventually(d, "the touch to brush from the top", async |d| {
+        Ok(brush(d).await? != band)
+    })
+    .await?;
+    d.evaluate(TOUCH_CANCEL).await?;
+    eventually(d, "the cancel to put the band back", async |d| {
+        Ok(brush(d).await? == band)
+    })
+    .await?;
+    let now = d.text("#range").await?;
+    ensure!(
+        now == range,
+        "a cancelled touch reported {now:?}, was {range:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_cancelled_touch_on_lying_bars_keeps_the_earlier_band,
+    "/bar-chart/zoom",
+    a_cancelled_touch_keeps_the_band
+);

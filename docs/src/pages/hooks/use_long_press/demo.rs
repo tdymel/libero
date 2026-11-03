@@ -16,6 +16,8 @@ pub fn HoldToCount() -> Element {
     rsx! {
         Flex { direction: "column", align: "flex-start", gap: "sm",
             Button {
+                // iOS fires no contextmenu on a hold: this keeps its loupe and callout off.
+                style: "user-select: none; -webkit-touch-callout: none",
                 onpointerdown: move |event| press.onpointerdown.call(event),
                 onpointermove: move |event| press.onpointermove.call(event),
                 onpointerup: move |event| press.onpointerup.call(event),
