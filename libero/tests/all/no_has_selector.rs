@@ -32,7 +32,11 @@ fn scan(dir: &Path, root: &Path, hits: &mut Vec<String>) {
             if code.starts_with("//") {
                 continue;
             }
-            if code.contains(":has(") {
+            // `::has(` is a Rust path (`Reflect::has(..)`), not the selector (todo 5658).
+            let selector = code
+                .match_indices(":has(")
+                .any(|(at, _)| !code[..at].ends_with(':'));
+            if selector {
                 hits.push(format!("{relative}:{}: {code}", index + 1));
             }
         }
