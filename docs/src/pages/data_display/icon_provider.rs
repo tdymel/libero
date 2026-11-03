@@ -171,7 +171,7 @@ pub fn IconProviderPage() -> Element {
                     " maps slots to "
                     Code { source: "SvgData" }
                     ". Slots you leave empty keep lucide, libero's default. Nested providers merge: the inner one wins per slot. More on "
-                    Anchor { to: Route::ProvidersPage {}, "providers" }
+                    Anchor { to: Route::ProvidersPage {}, underline: "always", "providers" }
                     " in one page."
                 }
             },

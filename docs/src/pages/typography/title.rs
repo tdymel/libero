@@ -168,7 +168,7 @@ pub fn TitlePage() -> Element {
                             gradient: (values.str("gradient") == "true").then(|| gradient_value(&values)),
                             if values.str("link") == "true" {
                                 {TEXT.split_once(LINK_WORDS).map(|(head, _)| head)}
-                                Anchor { to: LINK_TO, {LINK_WORDS} }
+                                Anchor { to: LINK_TO, underline: "always", {LINK_WORDS} }
                                 {TEXT.split_once(LINK_WORDS).map(|(_, tail)| tail)}
                             } else {
                                 {TEXT}

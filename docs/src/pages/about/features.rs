@@ -306,7 +306,8 @@ pub(crate) fn FeatureNote(route: String) -> Element {
         return rsx! {};
     };
     // Anchor sizes itself, not from the Text around it.
-    let link = rsx! { Anchor { to: Route::FeaturesPage {}, size: "sm", "Features" } };
+    let link =
+        rsx! { Anchor { to: Route::FeaturesPage {}, size: "sm", underline: "always", "Features" } };
     let turns_on = match page {
         PageFeature::Feature(feature) if !feature.turns_on.is_empty() => {
             format!(". Turns on {}", feature.turns_on.join(", "))

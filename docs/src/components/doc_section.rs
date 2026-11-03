@@ -56,7 +56,7 @@ pub fn SectionLink(to: Route, section: String, children: Element) -> Element {
                     pending.set(Some(section.clone()));
                 }
             },
-            Anchor { to, {children} }
+            Anchor { to, underline: "always", {children} }
         }
     }
 }

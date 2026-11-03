@@ -152,7 +152,7 @@ pub fn VideoPage() -> Element {
                     " with libero's own controls: play, seek, time, mute, volume, speed, captions and fullscreen, in a bar over the picture as YouTube's, in the theme's look on every platform that plays media. "
                     Code { source: "use_media()" }
                     " drives the same engine for a layout of your own. The demo plays \"Big Buck Bunny\", (c) 2008 Blender Foundation, "
-                    Anchor { to: "https://peach.blender.org", target: "_blank", "peach.blender.org" }
+                    Anchor { to: "https://peach.blender.org", target: "_blank", underline: "always", "peach.blender.org" }
                     ", CC BY 3.0, streamed from Wikimedia Commons, so only online."
                 }
             },

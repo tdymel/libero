@@ -180,7 +180,7 @@ fn OrePicker() -> Element {
             },
             Button {
                 radius: "xl",
-                variant: "light",
+                variant: "tonal",
                 icon: rsx! { Icon { size: "sm", color: "inherit", svg: lucide::pickaxe::outlined } },
                 // A combobox takes no name from its content; the name starts with the visible text.
                 attributes: [
@@ -245,7 +245,7 @@ fn OrePicker() -> Element {
             },
             Button {
                 radius: "xl",
-                variant: "light",
+                variant: "tonal",
                 icon: rsx! {
                     Icon { size: "sm", color: "inherit", svg: lucide::pickaxe::outlined }
                 },

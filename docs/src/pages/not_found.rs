@@ -16,7 +16,7 @@ pub fn NotFound(segments: Vec<String>) -> Element {
                     "There is no page at "
                     Code { source: path }
                     ". Start again from the "
-                    Anchor { to: Route::Home {}, "home page" }
+                    Anchor { to: Route::Home {}, underline: "always", "home page" }
                     ", pick one in the navigation, or search the docs with the Search button or "
                     Kbd { "Ctrl K" }
                     " ("

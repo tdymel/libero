@@ -64,7 +64,7 @@ pub fn UseStylesheetPage() -> Element {
                     " layer, above every other libero layer. Give it an "
                     Code { source: "sx" }
                     " and it returns the class to put on your element. "
-                    Anchor { to: Route::StylingPage {}, "Styling" }
+                    Anchor { to: Route::StylingPage {}, underline: "always", "Styling" }
                     " explains the layers. Raw CSS as a "
                     Code { source: "&str" }
                     " works too and returns "

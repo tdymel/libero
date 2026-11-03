@@ -59,7 +59,7 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
             "Box {\n    id: \"{box_id}\",\n    role: \"dialog\",\n    aria_label: \"Example popover\",\n    tabindex: \"-1\",\n    attributes: popover.floating_events(),\n    style: popover.style(),\n    onmounted: popover.floating().mount(),\n    \"Popover content\"\n}"
         ),
         indent(
-            "Button {\n    onmounted: anchor.mount(),\n    onclick: move |_| opened.toggle(),\n    attributes: popover.anchor_events(),\n    aria_haspopup: \"dialog\",\n    aria_expanded: \"{opened()}\",\n    aria_controls: \"{box_id}\",\n    \"Popover\"\n}"
+            "Button {\n    onmounted: anchor.mount(),\n    onclick: move |_| opened.toggle(),\n    attributes: popover.anchor_events(),\n    aria_haspopup: \"dialog\",\n    aria_expanded: \"{opened()}\",\n    aria_controls: opened().then_some(box_id()),\n    \"Popover\"\n}"
         )
     )
 }
@@ -161,7 +161,8 @@ fn PopoverDemo(
                 // The same signal the hook is given, never a second copy -
                 // nothing else stops the two disagreeing.
                 aria_expanded: "{opened()}",
-                aria_controls: "{box_id}",
+                // Only while open: the box does not exist before.
+                aria_controls: opened().then_some(box_id()),
                 variant: "outlined",
                 // One name; `aria-expanded` says whether it is open.
                 "Popover"

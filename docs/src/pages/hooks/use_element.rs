@@ -43,7 +43,7 @@ pub fn UseElementPage() -> Element {
                     " return at once, reads such as "
                     Code { source: "dimensions()" }
                     " are futures. The full method list is on "
-                    Anchor { to: Route::PlatformPage {}, "Platform" }
+                    Anchor { to: Route::PlatformPage {}, underline: "always", "Platform" }
                     "."
                 }
             },
