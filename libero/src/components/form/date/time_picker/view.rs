@@ -4,7 +4,7 @@ use chrono::{NaiveTime, Timelike};
 
 use crate::{
     components::common::has_shortcut_modifier,
-    hooks::{Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag},
+    hooks::{Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_timeout},
     localization::DateLocale,
     platform::ElementApi,
 };
@@ -227,6 +227,11 @@ impl ClockView {
         }
     }
 
+    /// Whether an advance now completes the field's pick.
+    fn completes(self) -> bool {
+        !self.disabled && self.oncomplete.is_some() && self.after((self.hand)()).is_none()
+    }
+
     /// On to the next hand, or complete after the last.
     pub(super) fn advance(self) {
         if self.disabled {
@@ -363,10 +368,31 @@ struct Press {
     released: bool,
 }
 
+/// The analog face's pointer handlers.
+pub(super) struct FaceDrag {
+    pub(super) drag: Drag,
+    /// The face's click, which completes a pick that closes the field (5400).
+    pub(super) onclick: Callback<()>,
+}
+
+/// How long a completing release waits for its click before it completes anyway.
+const CLICK_WAIT_MS: u64 = 400;
+
 /// Pointer picks on the analog face: a press or a drag sets the hand shown to
-/// the pointer's angle, and the release moves on to the next hand.
-pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> Drag {
+/// the pointer's angle, and the release moves on to the next hand. The last hand's
+/// release completes after its click, or the click lands on the page under a closed sheet.
+pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> FaceDrag {
     let mut press = use_hook(|| CopyValue::new(None::<Press>));
+    let mut waiting = use_hook(|| CopyValue::new(false));
+    let complete = use_callback(move |()| {
+        if waiting.cloned() {
+            waiting.set(false);
+            if let Some(oncomplete) = clock.oncomplete {
+                oncomplete.call(());
+            }
+        }
+    });
+    let fallback = use_timeout(move || complete.call(()), CLICK_WAIT_MS);
     let pick = move |clock: ClockView, x: f64, y: f64| {
         let Some(Press {
             centre: Some((cx, cy, half)),
@@ -390,13 +416,20 @@ pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> Drag {
     let finish = move |clock: ClockView| {
         let picked = press.cloned().is_some_and(|press| press.picked);
         { press }.set(None);
-        if picked {
-            clock.advance();
+        match (picked, clock.completes()) {
+            (true, true) => {
+                { waiting }.set(true);
+                fallback.start();
+            }
+            (true, false) => clock.advance(),
+            _ => {}
         }
     };
     let onstart = use_callback(move |start: DragStart| {
         // Started here, awaited in the task: see `platform::Read`.
         let (offset, size) = (face.client_offset(), face.dimensions());
+        { waiting }.set(false);
+        fallback.stop();
         press.set(Some(Press {
             centre: None,
             picked: false,
@@ -433,10 +466,14 @@ pub(super) fn use_face_drag(clock: ClockView, face: ElementHandle) -> Drag {
             }
         }
     });
-    use_drag(DragOptions {
+    let drag = use_drag(DragOptions {
         capture: face,
         onstart,
         onmove,
         onend,
-    })
+    });
+    FaceDrag {
+        drag,
+        onclick: complete,
+    }
 }

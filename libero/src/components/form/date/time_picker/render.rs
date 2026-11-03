@@ -4,10 +4,10 @@ use chrono::Timelike;
 
 use crate::{
     components::{common::Part, form::ChronoPickerPart},
-    hooks::{Drag, ElementHandle},
+    hooks::ElementHandle,
 };
 
-use super::view::{ClockView, Column, Hand, INNER_RING, OUTER_RING, TWO_DIGITS, at};
+use super::view::{ClockView, Column, FaceDrag, Hand, INNER_RING, OUTER_RING, TWO_DIGITS, at};
 use super::{SpinAt, SpinColumn, SpinOption};
 
 impl ClockView {
@@ -222,7 +222,11 @@ impl ClockView {
     }
 
     /// `face` is the face's element, `drag` its pointer handlers.
-    pub(super) fn analog_view(self, face: ElementHandle, drag: Drag) -> Element {
+    pub(super) fn analog_view(
+        self,
+        face: ElementHandle,
+        FaceDrag { drag, onclick }: FaceDrag,
+    ) -> Element {
         let ClockView {
             names,
             value,
@@ -405,6 +409,7 @@ impl ClockView {
                 onpointermove: drag.onpointermove,
                 onpointerup: drag.onpointerup,
                 onpointercancel: drag.onpointercancel,
+                onclick: move |_| onclick.call(()),
                 {ticks}
                 {pointer}
                 div {

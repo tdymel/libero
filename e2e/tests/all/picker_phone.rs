@@ -436,6 +436,43 @@ fn the_minutes_tap_closes_the_time_sheet() {
     });
 }
 
+/// Todo 5400: the closing tap's click lands on the sheet, not on the page the sheet leaves bare.
+#[test]
+fn the_closing_tap_clicks_nothing_under_the_sheet() {
+    block_on(async {
+        let fixture = phone_at("/picker-phone", 375).await;
+        let page = &fixture.page;
+        tap(page, &input("at")).await.unwrap();
+        sheet_shown(page).await.unwrap();
+        pointer::tap_at(page, mark(page, "11").await).await.unwrap();
+        let minute = mark(page, "45").await;
+        page.evaluate(format!(
+            "window.__clicks = []; \
+             addEventListener('click', () => window.__clicks.push(!!document.querySelector({SHEET:?})), true)"
+        ))
+        .await
+        .unwrap();
+        pointer::tap_at(page, minute).await.unwrap();
+        let closed = format!(
+            "!document.querySelector({SHEET:?}) \
+             && document.querySelector('#echo').textContent.includes('11:45:00')"
+        );
+        wait::for_js_true(page, &closed, "the minute closed the sheet on 11:45")
+            .await
+            .unwrap();
+        crate::settle::painted(page).await.unwrap();
+        wait::for_js_true(
+            page,
+            "window.__clicks.length > 0 && window.__clicks.every(Boolean)",
+            "the closing tap's click landed while the sheet was still there",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a closing tap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 5355: arrows step the hands with the sheet open; Enter on the minutes closes it.
 #[test]
 fn enter_on_the_minutes_closes_the_time_sheet() {
