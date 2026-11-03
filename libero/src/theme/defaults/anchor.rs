@@ -12,6 +12,7 @@ str_enum! {
     #[state_prefix = "underline"]
     pub enum AnchorUnderline {
         Always = "always",
+        /// Underlined under the pointer, and at rest in a dark theme (colour alone fails 1.4.1 there).
         #[default]
         Hover = "hover",
         /// Underlined at rest, bare under the pointer.

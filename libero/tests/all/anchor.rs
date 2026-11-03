@@ -108,6 +108,41 @@ fn a_not_hover_anchor_is_underlined_at_rest_and_bare_under_the_pointer() {
     );
 }
 
+/// Todo 5601: the default `hover` link is underlined at rest in a dark theme, where its
+/// colour alone is 2.79:1 against the text.
+#[test]
+fn a_hover_anchor_is_underlined_at_rest_in_dark() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Anchor { to: "https://example.com", "Example" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let state = attributes_of(&html, "a")["data-state"].clone();
+    let state = state
+        .split(' ')
+        .find(|token| token.starts_with("underline-hover"))
+        .unwrap_or_else(|| panic!("no hover state in {state}"));
+    let selector = format!(r#"[data-state~="{state}"]"#);
+    let rest = &html[html.find(&selector).expect("the hover rule")..];
+    let window = &rest[..500];
+    let dark = format!("{selector}{{text-decoration:underline;}}");
+    assert!(
+        rest.starts_with(&format!("{selector}{{text-decoration:none;}}")),
+        "{window}"
+    );
+    for guard in [
+        r#":where(:root[data-lsx-scheme="dark"]) ."#,
+        "@media (prefers-color-scheme: dark){:where(:root:not([data-lsx-scheme])) .",
+    ] {
+        assert!(window.contains(guard), "{guard} in {window}");
+    }
+    assert_eq!(window.matches(&dark).count(), 2, "{window}");
+}
+
 #[test]
 fn an_external_anchor_renders_a_plain_link() {
     fn app() -> Element {

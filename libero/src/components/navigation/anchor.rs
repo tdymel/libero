@@ -30,8 +30,10 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
             .text_decoration("underline")
             .hover_tint(":hover", sx().text_decoration("none")),
         AnchorUnderline::Never => sx().text_decoration("none"),
+        // Dark: the link blue is 2.79:1 against the text, so colour alone fails 1.4.1 (todo 5601).
         AnchorUnderline::Hover => sx()
             .text_decoration("none")
+            .dark(sx().text_decoration("underline"))
             .hover_tint(":hover", sx().text_decoration("underline")),
     }
 }

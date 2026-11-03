@@ -42,7 +42,7 @@ pub fn AnchorPage() -> Element {
                     .doc("With the hint, draws a small external icon after the text. Unset, the theme's `anchor.new_tab_icon`, which is off. `Button`, `ActionIcon`, `Chip`, `NavLink`, `Repository` and `MenuItem` take it too."),
                 prop("underline", "AnchorUnderline")
                     .default("hover")
-                    .doc("When the underline draws: `always`, `hover` (only under the pointer), `not-hover` (at rest, gone under the pointer) or `never`. On a touch screen nothing hovers, so `hover` draws no underline and `not-hover` always does."),
+                    .doc("When the underline draws: `always`, `hover` (under the pointer, and at rest in a dark theme), `not-hover` (at rest, gone under the pointer) or `never`. On a touch screen nothing hovers, so in a light theme `hover` draws no underline and `not-hover` always does."),
                 prop("children", "Element").default("required").doc("The link's content."),
                 prop("parts", "Parts<AnchorPart>")
                     .doc("Styles for the inner parts in the Style API tab, under `sx`."),
@@ -59,7 +59,7 @@ pub fn AnchorPage() -> Element {
                 .must([
                     "Leave `to` unset for an action that does not go anywhere, so it is announced as a button, not a link.",
                     "Make the link text say where the link goes: it is the accessible name.",
-                    "Set `underline: \"always\"` on a link inside a paragraph: the default `hover` draws it only on hover and `never` not at all, so at rest the link stands out by color alone.",
+                    "Set `underline: \"always\"` on a link inside a paragraph: the default `hover` draws it only on hover (and at rest in a dark theme) and `never` not at all, so at rest in a light theme the link stands out by color alone.",
                     "Give a nav row of Anchors its own padding for a 44 px finger target. Running text is exempt from WCAG 2.5.8, and an Anchor cannot tell which it is in.",
                 ])
                 .example("A link in a paragraph, `Anchor { to: \"https://www.rust-lang.org\", target: \"_blank\", underline: \"always\", \"The Rust website\" }`: it keeps its underline, and a screen reader reads \"The Rust website (opens in a new tab)\"."),
