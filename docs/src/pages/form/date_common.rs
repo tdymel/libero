@@ -1,7 +1,7 @@
 //! What the ChronoField and ChronoPicker demos share: the caption and state
 //! controls of a field, the controls both demos have, and reading them back.
 
-use crate::components::{Control, DemoValues};
+use crate::components::{Control, DemoValues, description_position_control};
 use libero::chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::{DateLevel, DatePreset, DateRange, FieldStatus};
 
@@ -56,6 +56,7 @@ pub fn field_controls() -> Vec<Control> {
             true => vec![format!("description: {:?}", captions_of(values).1)],
             false => vec![],
         }),
+        description_position_control(),
         Control::switch("helper").code(|_, values| match is_on(values, "helper") {
             true => vec![r#"helper: "Typing works too.""#.to_string()],
             false => vec![],

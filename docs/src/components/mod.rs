@@ -12,8 +12,8 @@ pub use a11y_doc::{A11yDoc, A11yPanel, a11y};
 pub use demo::DemoCode;
 pub use demo::{
     Child, Control, Demo, DemoFile, DemoValues, FieldCopy, PageScroll, UNSET, Wrap, align_of,
-    delay_of, field_controls, field_props, gradient_controls, gradient_value, indent,
-    inline_field_controls, not_gradient_variant, or_unset, side_of,
+    delay_of, description_position_control, field_controls, field_props, gradient_controls,
+    gradient_value, indent, inline_field_controls, not_gradient_variant, or_unset, side_of,
 };
 pub use doc_page::{DocPage, ExtraTab};
 pub use doc_section::{DocSection, SectionLink};

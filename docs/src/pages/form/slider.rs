@@ -4,7 +4,8 @@ use super::slider_demo::{
     quality_code, quality_of, within,
 };
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, description_position_prop, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, description_position_control,
+    description_position_prop, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{SliderPart, SliderValue};
@@ -397,6 +398,7 @@ pub fn SliderPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    description_position_control(),
                     Control::switch("helper").code(|_, values| {
                         match values.str("helper").as_str() {
                             "true" => vec![r#"helper: "Higher costs more.""#.to_string()],
@@ -436,6 +438,7 @@ pub fn SliderPage() -> Element {
                                         .then(|| "Quality".to_string()),
                                     description: is_on(&values, "description")
                                         .then(|| "What the encoder aims for.".to_string()),
+                                    description_position: values.str("description_position"),
                                     helper: is_on(&values, "helper")
                                         .then(|| "Higher costs more.".to_string()),
                                     status: match values.str("status").as_str() {
@@ -481,6 +484,7 @@ pub fn SliderPage() -> Element {
                                         .then(|| "Volume".to_string()),
                                     description: is_on(&values, "description")
                                         .then(|| "What the encoder aims for.".to_string()),
+                                    description_position: values.str("description_position"),
                                     helper: is_on(&values, "helper")
                                         .then(|| "Higher costs more.".to_string()),
                                     status: match values.str("status").as_str() {

@@ -1,7 +1,7 @@
 use super::dropdown_parts::{SUGGESTION_DROPDOWN, list_dropdown_parts};
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, description_position_prop, prop, props,
-    readonly_prop, status_prop,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, description_position_control,
+    description_position_prop, prop, props, readonly_prop, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
@@ -417,6 +417,7 @@ pub fn TagsFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    description_position_control(),
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"Add a topic\"".to_string()],
@@ -478,6 +479,7 @@ pub fn TagsFieldPage() -> Element {
                             aria_label: (values.str("label") != "true").then_some("Topics"),
                             description: (values.str("description") == "true")
                                 .then(|| "Comma or Enter adds one.".to_string()),
+                            description_position: values.str("description_position"),
                             placeholder: (values.str("placeholder") == "true")
                                 .then(|| "Add a topic".to_string()),
                             status: refused().filter(|_| refuses).map(FieldStatus::Error).unwrap_or(status),

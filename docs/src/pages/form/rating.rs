@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, a11y, description_position_prop, prop, props, status_prop,
+    Control, Demo, DemoValues, DocPage, a11y, description_position_control,
+    description_position_prop, prop, props, status_prop,
 };
 use dioxus::prelude::*;
 use libero::components::RatingPart;
@@ -191,6 +192,13 @@ pub fn RatingPage() -> Element {
                             _ => vec!["aria_label: \"Your rating\"".to_string()],
                         }
                     }),
+                    Control::switch("description").code(|_, values| {
+                        match values.str("description").as_str() {
+                            "true" => vec!["description: \"How it went.\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    description_position_control(),
                     // A display-only rating takes no input, so neither applies.
                     Control::switch("clearable").hidden_when(|values| values.str("focusable") != "true"),
                     Control::switch("readonly").hidden_when(|values| values.str("focusable") != "true"),
@@ -216,6 +224,9 @@ pub fn RatingPage() -> Element {
                         },
                         label: (values.str("label") == "true").then(|| "Your rating".to_string()),
                         aria_label: (values.str("label") != "true").then(|| "Your rating".to_string()),
+                        description: (values.str("description") == "true")
+                            .then(|| "How it went.".to_string()),
+                        description_position: values.str("description_position"),
                         clearable: (values.str("clearable") == "true").then_some(true),
                         readonly: (values.str("readonly") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),

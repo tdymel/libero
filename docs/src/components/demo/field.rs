@@ -38,17 +38,23 @@ pub fn field_controls<C: FieldCopy>() -> Vec<Control> {
         Control::switch("description")
             .code(|_, values| caption(values, "description", C::DESCRIPTION)),
         Control::switch("helper").code(|_, values| caption(values, "helper", C::HELPER)),
-        Control::toggle("description_position", ["above", "below"])
-            .labels(["Above", "Below"])
-            .default("above")
-            .code(|_, values| {
-                let below = values.str("description_position") == "below";
-                match below && values.str("description") == "true" {
-                    true => vec![r#"description_position: "below""#.to_string()],
-                    false => vec![],
-                }
-            }),
+        description_position_control(),
     ]
+}
+
+/// The `description_position` toggle, shown once `description` is on.
+pub fn description_position_control() -> Control {
+    Control::toggle("description_position", ["above", "below"])
+        .labels(["Above", "Below"])
+        .default("above")
+        .hidden_when(|values| values.str("description") != "true")
+        .code(|_, values| {
+            let below = values.str("description_position") == "below";
+            match below && values.str("description") == "true" {
+                true => vec![r#"description_position: "below""#.to_string()],
+                false => vec![],
+            }
+        })
 }
 
 /// [`field_controls`] without `description_position`, for a field that draws its
@@ -138,6 +144,19 @@ mod tests {
             props.status,
             FieldStatus::Error("Write a few words.".to_string())
         );
+    }
+
+    /// Todo 5402: Above/Below does nothing without a description, so it hides until one is on.
+    #[test]
+    fn description_position_shows_only_with_a_description() {
+        let controls = field_controls::<Notes>();
+        let position = controls
+            .iter()
+            .find(|control| control.name == "description_position")
+            .unwrap();
+        let values = DemoValues::defaults(&controls);
+        assert!(position.is_hidden(&values));
+        assert!(!position.is_hidden(&values.with("description", "true")));
     }
 
     #[test]
