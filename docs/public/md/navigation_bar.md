@@ -77,7 +77,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `to` | `NavigationTarget` | - | A path, a URL or a typed route: the item is a link. Wins over `onclick`. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Without `to`, the item is a button that calls this. |
-| `selected` | `bool` | follows the route | Unset, it compares `to` with the current route. Set it for `onclick` items. |
+| `selected` | `bool` | follows the route | Unset, `to` marks its own path and the sub-paths below it, ignoring the query (the root `/` only itself). Set it for `onclick` items. |
 | `icon` | `Element` | required | Drawn in the pill above the label, hidden from screen readers. |
 | `badge` | `Element` | - | A count or dot over the icon, such as an `Indicator`. Put its count in the item's `aria-label` too. |
 | `disabled` | `bool` | `false` | Dims the item and takes it out of the Tab order. |
