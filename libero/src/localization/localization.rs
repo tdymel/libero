@@ -248,7 +248,7 @@ mod tests {
             words.file_field.crop_image,
             words.file_field.rejected_type,
             words.file_field.rejected_many,
-            words.file_field.rejected_max,
+            words.file_field.rejected_max_files,
             words.file_field.rejected_large,
             words.image_cropper.value,
             words.image_cropper.pan_value,

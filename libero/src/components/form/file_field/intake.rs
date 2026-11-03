@@ -210,7 +210,7 @@ fn rejection_note(
             .join(", ")
     };
     let (many, max_files) = match limits.count() {
-        Some(max) if max > 1 => (words.rejected_max, max.to_string()),
+        Some(max) if max > 1 => (words.rejected_max_files, (words.files)(max)),
         _ => (words.rejected_many, String::new()),
     };
     let max_size = limits

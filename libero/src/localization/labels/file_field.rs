@@ -45,9 +45,18 @@ pub struct FileFieldLabels {
     pub rejected_type: &'static str,
     /// Said when a single-file field gets more than one; `{names}` lists the rest.
     pub rejected_many: &'static str,
-    /// Said when a `multiple` field gets more than `max_files`; `{max}` is the limit,
-    /// `{names}` lists the rest.
-    pub rejected_max: &'static str,
+    /// Said when a `multiple` field gets more than `max_files`; `{max}` is the limit as
+    /// `files` counts it, `{names}` lists the rest.
+    pub rejected_max_files: &'static str,
+    /// A count of files, for `rejected_max_files`. A fn, for plural forms.
+    ///
+    /// ```
+    /// use libero::localization::FileFieldLabels;
+    ///
+    /// assert_eq!((FileFieldLabels::ENGLISH.files)(3), "3 files");
+    /// assert_eq!((FileFieldLabels::GERMAN.files)(1), "1 Datei");
+    /// ```
+    pub files: fn(usize) -> String,
     /// Said when a file is larger than `max_size`; `{max}` is the limit as a size.
     pub rejected_large: &'static str,
 }
@@ -81,7 +90,11 @@ impl FileFieldLabels {
         crop_image: "Picture to crop: {name}",
         rejected_type: "Not added, not an accepted file type: {names}",
         rejected_many: "Not added, the field takes one file: {names}",
-        rejected_max: "Not added, the field takes at most {max} files: {names}",
+        rejected_max_files: "Not added, the field takes at most {max}: {names}",
+        files: |count| match count {
+            1 => "1 file".to_string(),
+            _ => format!("{count} files"),
+        },
         rejected_large: "Not added, larger than {max}: {names}",
     };
 
@@ -97,7 +110,11 @@ impl FileFieldLabels {
         crop_image: "Zu beschneidendes Bild: {name}",
         rejected_type: "Nicht hinzugefügt, kein erlaubter Dateityp: {names}",
         rejected_many: "Nicht hinzugefügt, das Feld nimmt nur eine Datei: {names}",
-        rejected_max: "Nicht hinzugefügt, das Feld nimmt höchstens {max} Dateien: {names}",
+        rejected_max_files: "Nicht hinzugefügt, das Feld nimmt höchstens {max}: {names}",
+        files: |count| match count {
+            1 => "1 Datei".to_string(),
+            _ => format!("{count} Dateien"),
+        },
         rejected_large: "Nicht hinzugefügt, größer als {max}: {names}",
     };
 }
