@@ -104,7 +104,7 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("A row or a column."),
                     prop("variant", "Variant")
                         .default(theme.segmented_control.variant.as_str())
-                        .doc("The unselected look, shared by every segment: `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient."),
+                        .doc("The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.segmented_control.color.as_str())
                         .doc("Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset."),
@@ -117,6 +117,9 @@ pub fn SegmentedControlPage() -> Element {
                     prop("full_width", "bool")
                         .default("false")
                         .doc("Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way."),
+                    prop("selected_check", "bool")
+                        .default(if theme.segmented_control.selected_check { "true" } else { "false" })
+                        .doc("A check before the selected segment's label. Unset follows `theme.segmented_control.selected_check`. `false` keeps the segment's width; the selected segment keeps its ring and fill."),
                     prop("focusable", "bool")
                         .default("true")
                         .doc("`false` keeps the segments out of the tab order, and a click leaves focus where it is. For a control inside a field's dropdown."),
@@ -231,6 +234,7 @@ pub fn SegmentedControlPage() -> Element {
                     Control::slider("gap", ["auto", "0", "xs", "sm", "md", "lg", "xl", "xxl"]),
                 ], field_controls::<AlignmentCopy>(), vec![
                     Control::switch("full_width"),
+                    Control::switch("selected_check").default(if theme.segmented_control.selected_check { "true" } else { "false" }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                     // The flag lives inside `options`, so the switch stands
@@ -264,6 +268,7 @@ pub fn SegmentedControlPage() -> Element {
                             orientation: values.str("orientation"),
                             gap: or_unset(values.str("gap")),
                             full_width: is_on(&values, "full_width"),
+                            selected_check: is_on(&values, "selected_check"),
                             label: field.label,
                             "aria-label": field.aria_label,
                             description: field.description,

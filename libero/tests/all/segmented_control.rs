@@ -280,6 +280,28 @@ fn only_the_selected_segment_draws_a_hidden_check() {
     assert!(!body(&render(plain)).contains("data-slot=\"check\""));
 }
 
+/// Todo 5421: the prop wins over the theme, both ways.
+#[test]
+fn selected_check_overrides_the_theme_per_control() {
+    fn off() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl { value: Emphasis::Italic, selected_check: false, onchange: move |_| {} }
+            }
+        }
+    }
+    fn on() -> Element {
+        rsx! {
+            LiberoProvider { themes: &NO_CHECK,
+                SegmentedControl { value: Emphasis::Italic, selected_check: true, onchange: move |_| {} }
+            }
+        }
+    }
+
+    assert!(!body(&render(off)).contains("data-slot=\"check\""));
+    assert_eq!(body(&render(on)).matches("data-slot=\"check\"").count(), 1);
+}
+
 /// Todo 3833: a blank segment name names nothing, so the radio does not carry it.
 #[test]
 fn a_blank_segment_name_is_not_put_on_its_radio() {

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use super::core::{
     SegmentSpec, SegmentedControlPart, SegmentedControlView, render_segmented_control,
+    unselected_look,
 };
 use crate::{
     components::{
@@ -60,6 +61,10 @@ field_props! {
         /// a field's dropdown.
         #[props(default)]
         focusable: Option<bool>,
+        /// A check before the selected segment's label; unset follows the theme's
+        /// `segmented_control.selected_check`. `false` keeps the segment's width.
+        #[props(default)]
+        selected_check: Option<bool>,
     }
 }
 
@@ -210,7 +215,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     // Colour resolution plus rendering is ~790 ns, and `(variant, color, disabled)` is
     // the same on almost every render.
     let style = use_cache((variant, color, disabled), |(variant, color, disabled)| {
-        button_variables(*variant, color, false, *disabled)
+        button_variables(unselected_look(*variant), color, false, *disabled)
     });
 
     let control = render_segmented_control(
@@ -228,7 +233,9 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
                 .gap
                 .as_ref()
                 .map(|gap| ScaleOrCss::new(Some(gap), Size::Md)),
-            check: theme.segmented_control.selected_check,
+            check: props
+                .selected_check
+                .unwrap_or(theme.segmented_control.selected_check),
             focusable: props.focusable.unwrap_or(true),
             readonly: props.readonly.unwrap_or(false) || soft_disabled,
             enter: !in_form,

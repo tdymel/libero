@@ -9,7 +9,7 @@ use crate::{
             COARSE_POINTER, COARSE_TARGET, Glyph, HtmlTag, Input, Orientation, ScaleOrCss, States,
             ToolbarItem, Variables, Variant, disabled_look_sx, focus_ring_sx,
             focused_disabled_opacity_sx, has_shortcut_modifier, interactive_variant_sx, neighbour,
-            variables, variant_selected_sx,
+            on_state_sx, variables, variant_chrome_sx, variant_selected_sx,
         },
         form::{Activation, field_parts_enum},
         layout::use_box,
@@ -183,7 +183,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
             sx().selector(
                 SEGMENT,
                 interactive_variant_sx(
-                    variant,
+                    unselected_look(variant),
                     &BUTTON_VARS,
                     &BUTTON_HOVER_VAR,
                     &BUTTON_SELECTED_VAR,
@@ -191,15 +191,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 ),
             )
             // After the variant's own `:hover`, which it ties on specificity.
-            .selector(
-                "& > label[data-state~=\"checked\"]",
-                variant_selected_sx(
-                    variant,
-                    &BUTTON_VARS,
-                    &BUTTON_SELECTED_VAR,
-                    &BUTTON_ON_STATE_VAR,
-                ),
-            )
+            .selector("& > label[data-state~=\"checked\"]", selected_look(variant))
             // The selected look sets `box-shadow` more specifically than the
             // ring above; this one outranks it and composes the marker back.
             .selector(
@@ -226,6 +218,30 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         )
     })
 });
+
+/// What an unselected segment draws: the filled variant goes tonal, so the solid pick differs
+/// from it by more than a shade.
+pub(crate) fn unselected_look(variant: Variant) -> Variant {
+    match variant {
+        Variant::Filled => Variant::Tonal,
+        other => other,
+    }
+}
+
+fn selected_look(variant: Variant) -> crate::sx::Sx {
+    match variant {
+        // The solid fill; the on-state ring stays the cue that does not rely on colour.
+        Variant::Filled => variant_chrome_sx(Variant::Filled, &BUTTON_VARS)
+            .and(on_state_sx(None))
+            .focus_visible(focus_ring_sx()),
+        other => variant_selected_sx(
+            other,
+            &BUTTON_VARS,
+            &BUTTON_SELECTED_VAR,
+            &BUTTON_ON_STATE_VAR,
+        ),
+    }
+}
 
 /// One segment, with `T` already gone: `content` is the rendered label and
 /// `name` the accessible one.

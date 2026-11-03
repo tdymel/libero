@@ -22,6 +22,10 @@ pub const ROUTES: Routes = &[
     ("/segmented-control/long", || rsx! { LongPage {} }),
     ("/segmented-control/form", || rsx! { FormPage {} }),
     ("/segmented-control/raw-form", || rsx! { RawFormPage {} }),
+    (
+        "/segmented-control/no-check",
+        || rsx! { SegmentedControlPage { selected_check: false } },
+    ),
     ("/segmented-control/lone", || rsx! { LonePage {} }),
 ];
 
@@ -124,7 +128,10 @@ enum Alignment {
 /// Starts on the middle segment, like `RadioGroupPage`. `readonly` is for the planted defect:
 /// a read-only strip refuses the arrows.
 #[component]
-pub fn SegmentedControlPage(#[props(default)] readonly: bool) -> Element {
+pub fn SegmentedControlPage(
+    #[props(default)] readonly: bool,
+    #[props(default)] selected_check: Option<bool>,
+) -> Element {
     let mut alignment = use_signal(|| Alignment::Center);
 
     rsx! {
@@ -133,6 +140,7 @@ pub fn SegmentedControlPage(#[props(default)] readonly: bool) -> Element {
                 SegmentedControl {
                     label: "Alignment",
                     readonly,
+                    selected_check,
                     value: alignment(),
                     onchange: move |next| alignment.set(next),
                 }

@@ -241,6 +241,49 @@ fn the_picked_segment_shows_the_on_state_ring() {
     });
 }
 
+/// Todo 5421: `selected_check: false` draws no check, and the filled pick still differs from
+/// the unselected segments by 3:1 (1.4.11) in both schemes, ring kept.
+#[test]
+fn a_filled_pick_differs_from_the_rest_without_its_check() {
+    use e2e::Scheme;
+    use e2e::passes::contrast::COLOUR_JS;
+    const PICKED: &str = "[role=radiogroup] label[for$=\"-segment-1\"]";
+    const OTHER: &str = "[role=radiogroup] label[for$=\"-segment-0\"]";
+    const CHECK: &str = "[role=radiogroup] [data-slot=check]";
+    let bg = format!(
+        "(() => {{ {COLOUR_JS} const s = q => RGBA(getComputedStyle(document.querySelector(q)).backgroundColor); \
+         return CONTRAST(s('{PICKED}'), s('{OTHER}')); }})()"
+    );
+    block_on(async {
+        let fixture = Fixture::open("/segmented-control", Viewport::Desktop)
+            .await
+            .unwrap();
+        let checks: i64 = e2e::js(
+            &fixture.page,
+            format!("document.querySelectorAll('{CHECK}').length"),
+        )
+        .await;
+        assert_eq!(checks, 1, "the default draws the check");
+        fixture.close().await.unwrap();
+
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            let fixture =
+                Fixture::open_in("/segmented-control/no-check", Viewport::Desktop, scheme)
+                    .await
+                    .unwrap();
+            let page = &fixture.page;
+            let checks: i64 =
+                e2e::js(page, format!("document.querySelectorAll('{CHECK}').length")).await;
+            assert_eq!(checks, 0, "{scheme:?}: the check is off");
+            e2e::wait::for_js_true(page, &format!("{bg} >= 3"), "the pick to differ by 3:1")
+                .await
+                .unwrap_or_else(|e| panic!("{scheme:?}: {e}"));
+            crate::button::assert_on_marker(page, PICKED, OTHER).await;
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Waits until the focused and the checked radio are at `focused` and `checked` (todo 1820);
 /// `None` reads no focus.
 async fn until_at(fixture: &Fixture, focused: Option<i64>, checked: i64, what: &str) {
