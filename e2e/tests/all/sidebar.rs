@@ -219,8 +219,8 @@ fn a_side_panel_clears_the_notch_on_its_side() {
     });
 }
 
-/// Todos 5519, 5525: a Container is not edge-bound and pads no inset; a start Sidebar inside a
-/// start drawer leaves the notch to the drawer, so neither clears it twice.
+/// Todos 5519, 5525, 5531, 5532: a Container is not edge-bound and pads no inset; a start Sidebar
+/// inside a start drawer, a full-screen Dialog or a start Sidebar leaves the notch to it.
 #[test]
 fn only_the_outermost_edge_panel_clears_the_notch() {
     use chromiumoxide::cdp::browser_protocol::emulation::{
@@ -232,7 +232,10 @@ fn only_the_outermost_edge_panel_clears_the_notch() {
     const SCROLL: &str = " > [data-slot='scroll']";
 
     block_on(async {
-        for (dir, beside) in [("ltr", [63.0, 16.0]), ("rtl", [16.0, 63.0])] {
+        for (dir, beside, end) in [
+            ("ltr", [63.0, 16.0], [16.0, 63.0]),
+            ("rtl", [16.0, 63.0], [63.0, 16.0]),
+        ] {
             let fixture = Fixture::open("/sidebar/safe-area", Viewport::Mobile)
                 .await
                 .unwrap();
@@ -264,6 +267,21 @@ fn only_the_outermost_edge_panel_clears_the_notch() {
                 gutters[0] == gutters[1] && gutters[0] < 47.0,
                 "{dir}: the container {gutters:?}"
             );
+            // Only the same side is skipped: an end Sidebar in a start one still pads its side.
+            assert_eq!(padding(format!("#outer{SCROLL}")).await, beside, "{dir}");
+            let nested = padding(format!("#nested-start{SCROLL}")).await;
+            assert_eq!(nested, [16.0, 16.0], "{dir}: in a start sidebar");
+            let nested = padding(format!("#nested-end{SCROLL}")).await;
+            assert_eq!(nested, end, "{dir}: an end sidebar in a start one");
+
+            pointer::click(page, "#open-dialog").await.unwrap();
+            wait::for_visible(page, "#in-dialog").await.unwrap();
+            let dialog = padding("[role=dialog]".into()).await;
+            assert_eq!(dialog, [63.0, 63.0], "{dir}: the full-screen dialog");
+            let nested = padding(format!("#in-dialog{SCROLL}")).await;
+            assert_eq!(nested, [16.0, 16.0], "{dir}: in the dialog");
+            pointer::click(page, "#done").await.unwrap();
+            wait::for_hidden(page, "#in-dialog").await.unwrap();
 
             pointer::click(page, "#open").await.unwrap();
             wait::for_visible(page, "#in-drawer").await.unwrap();

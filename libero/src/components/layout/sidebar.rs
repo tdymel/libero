@@ -4,8 +4,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_props, input_from_str,
-            names_itself, parts_enum, safe_inline_padding, variables,
+            HtmlTag, Input, Part, SAFE_AREA_INLINE_END_VAR, SAFE_AREA_INLINE_START_VAR, ScaleOrCss,
+            States, Variables, base_props, input_from_str, names_itself, parts_enum,
+            safe_inline_padding, variables,
         },
         layout::{ScrollArea, use_box},
     },
@@ -22,11 +23,18 @@ static SIDEBAR_SCROLL_SX: StaticSx = StaticSx::new(|| sx().padding("lg"));
 static SIDEBAR_SCROLL_START_SX: StaticSx = StaticSx::new(|| safe_side(true));
 static SIDEBAR_SCROLL_END_SX: StaticSx = StaticSx::new(|| safe_side(false));
 
-/// A start or end panel clears a landscape notch on its side (5469), unless a Drawer around it does (5519).
+/// A start or end panel clears a landscape notch on its side (5469), unless a Drawer or a
+/// same-side Sidebar around it does (5519, 5532). Zeroed on the children: the panel reads it itself.
 fn safe_side(start: bool) -> Sx {
     let padding = SizeCss::SPACING.value(Size::Lg);
+    let var = if start {
+        SAFE_AREA_INLINE_START_VAR
+    } else {
+        SAFE_AREA_INLINE_END_VAR
+    };
     sx().padding("lg")
         .and(safe_inline_padding(&padding, start, true))
+        .selector("& > *", sx().var(var, "0"))
 }
 
 static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {

@@ -3,8 +3,8 @@
 //! content wider than the panel, and the default size beside content.
 
 use dioxus::prelude::*;
-use libero::components::{Box as LBox, Button, Container, Flex, Sidebar};
-use libero::hooks::{DrawerOptions, ModalScope, use_drawer};
+use libero::components::{Box as LBox, Button, Container, Dialog, Flex, Sidebar};
+use libero::hooks::{DrawerOptions, ModalScope, use_drawer, use_modal};
 use libero::sx::sx;
 
 use crate::Routes;
@@ -16,7 +16,8 @@ pub const ROUTES: Routes = &[
     ("/sidebar/safe-area", || rsx! { SafeAreaPage {} }),
 ];
 
-/// Todo 5519: a Container beside a start Sidebar, and a start Sidebar inside a start drawer.
+/// Todos 5519, 5531, 5532: a Container beside a start Sidebar, a start Sidebar inside a start
+/// drawer and inside a full-screen Dialog, and a start and an end Sidebar inside a start Sidebar.
 #[component]
 fn SafeAreaPage() -> Element {
     let drawer = use_drawer(
@@ -31,13 +32,26 @@ fn SafeAreaPage() -> Element {
             }
         },
     );
+    let dialog = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Filters", full_screen: "always",
+                Sidebar { id: "in-dialog", aria_label: "Dialog filters", "Filters" }
+                Button { id: "done", onclick: move |_| s.close(), "Done" }
+            }
+        }
+    });
 
     rsx! {
         Flex { direction: "row", align: "stretch", wrap: false, height: "120px",
             Sidebar { id: "beside", size: "xs", aria_label: "Filters", "Filters" }
             Container { id: "content", "Results" }
         }
+        Sidebar { id: "outer", aria_label: "Outer",
+            Sidebar { id: "nested-start", aria_label: "Nested start", "Start" }
+            Sidebar { id: "nested-end", side: "end", aria_label: "Nested end", "End" }
+        }
         Button { id: "open", onclick: move |_| { drawer.open(); }, "Open" }
+        Button { id: "open-dialog", onclick: move |_| { dialog.open(); }, "Open dialog" }
     }
 }
 

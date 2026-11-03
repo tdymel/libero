@@ -5,8 +5,9 @@ use crate::{
     components::{
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, Part, States, Variables, attr, base_props, input_from_str,
-            names_itself, parts_enum, safe_area_padding, use_name_warning, variables,
+            Glyph, HtmlTag, Input, Part, SAFE_AREA_INLINE_END_VAR, SAFE_AREA_INLINE_START_VAR,
+            States, Variables, attr, base_props, input_from_str, names_itself, parts_enum,
+            safe_area_padding, use_name_warning, variables,
         },
         layout::{Box, paper_sx, use_box},
         typography::Title,
@@ -45,7 +46,7 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
 
 /// Edge to edge over `Modal`'s frame: its negative margins cancel the frame's `md`
 /// padding, and `stretch` and `flex-grow` fill it. Plain CSS, so no centred first frame.
-/// Its padding clears a notch and a home indicator on all four sides.
+/// Its padding clears a notch and a home indicator on all four sides, so a `Sidebar` inside skips them (5531).
 fn full_screen_sx() -> Sx {
     let padding = SizeCss::SPACING.value(Size::Lg);
     sx().margin(format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Md)))
@@ -58,6 +59,8 @@ fn full_screen_sx() -> Sx {
         .with("padding-right", safe_area_padding(&padding, "right"))
         .with("padding-bottom", safe_area_padding(&padding, "bottom"))
         .with("padding-left", safe_area_padding(&padding, "left"))
+        .var(SAFE_AREA_INLINE_START_VAR, "0")
+        .var(SAFE_AREA_INLINE_END_VAR, "0")
 }
 
 input_from_str!(DialogFullScreen);
