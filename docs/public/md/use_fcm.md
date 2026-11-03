@@ -19,7 +19,7 @@ placeholder options, so Android shows Firebase's refusal and the web says
 `Unsupported`.
 
 ```toml
-libero = { version = "0.5", features = ["fcm"] }
+libero = { version = "0.6", features = ["fcm"] }
 ```
 
 ## Usage
