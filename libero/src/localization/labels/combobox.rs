@@ -44,3 +44,15 @@ impl ComboboxLabels {
         done: "Fertig",
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Todo 5598: a spoken count is bare digits, a German voice reads "1.234" as a decimal.
+    #[test]
+    fn the_announced_results_count_has_no_group_separator() {
+        assert_eq!((ComboboxLabels::ENGLISH.results)(1234), "1234 results");
+        assert_eq!((ComboboxLabels::GERMAN.results)(1234), "1234 Ergebnisse");
+    }
+}

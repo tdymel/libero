@@ -23,3 +23,17 @@ impl AvatarLabels {
         others: "{names} und weitere",
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::localization::fill;
+
+    /// Todo 5598: the chip's accessible name keeps the hidden count bare.
+    #[test]
+    fn the_chip_name_has_no_group_separator() {
+        let holes: &[(&str, &dyn std::fmt::Display)] = &[("n", &1234)];
+        assert_eq!(fill(AvatarLabels::ENGLISH.more, holes), "1234 more");
+        assert_eq!(fill(AvatarLabels::GERMAN.more, holes), "1234 weitere");
+    }
+}

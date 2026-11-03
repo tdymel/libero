@@ -1,4 +1,4 @@
-use libero::components::SliderMark;
+use libero::{components::SliderMark, localization::Formats};
 
 use super::{DemoValues, UNSET};
 
@@ -206,14 +206,14 @@ impl Control {
 
     /// A tick per option, captioned only at the ends - six captions under a
     /// 172px track collide.
-    pub fn marks(&self) -> Vec<SliderMark> {
+    pub fn marks(&self, formats: &Formats) -> Vec<SliderMark> {
         let last = self.options.len() - 1;
         self.options
             .iter()
             .enumerate()
             .map(|(at, option)| {
                 if at == 0 || at == last {
-                    SliderMark::labeled(at as f64, self.drawn_label_of(option))
+                    SliderMark::labeled(at as f64, self.drawn_label_of(option, formats))
                 } else {
                     SliderMark::new(at as f64)
                 }
@@ -274,9 +274,20 @@ impl Control {
         self
     }
 
-    /// [`label_of`](Self::label_of) as the panel draws it: `-lg` and `2 s` keep their order under RTL.
-    pub fn drawn_label_of(&self, value: &str) -> String {
-        isolated(self.label_of(value))
+    /// [`label_of`](Self::label_of) as the panel draws it: a number in the site's `formats`,
+    /// `-lg` and `2 s` keeping their order under RTL.
+    pub fn drawn_label_of(&self, value: &str, formats: &Formats) -> String {
+        let label = self.label_of(value);
+        let number = (self.labels.is_none()
+            && label
+                .chars()
+                .all(|c| c.is_ascii_digit() || c == '.' || c == '-'))
+        .then(|| label.parse::<f64>().ok())
+        .flatten();
+        match number {
+            Some(number) => isolated(formats.write_number(&number.to_string())),
+            None => isolated(label),
+        }
     }
 
     /// What an option reads as - its own value unless `labels` renames it.

@@ -4,7 +4,7 @@ use libero::{
         Box, Button, CodeBlock, Flex, Input, NativeSelect, OptionLabel, SegmentedControl, Slider,
         SliderChangeEvent, Switch, Text,
     },
-    hooks::use_id,
+    hooks::{use_formats, use_id},
     sx::{Sx, sx},
     theme::{CODE_BLOCK_BORDER, Size, TEXT_FONT_SIZE},
 };
@@ -313,6 +313,7 @@ fn segments_need(control: &Control) -> usize {
 /// path and the one a container query hides on a narrow card.
 #[component]
 fn ToggleSegments(control: Control, value: String, onchange: EventHandler<String>) -> Element {
+    let formats = use_formats();
     rsx! {
         SegmentedControl {
             // The panel is chrome, not the demo - a filled default would
@@ -323,7 +324,7 @@ fn ToggleSegments(control: Control, value: String, onchange: EventHandler<String
             "aria-label": label(control.name),
             value,
             options: control.options.clone(),
-            option_label: move |option: String| OptionLabel::from(control.drawn_label_of(&option)),
+            option_label: move |option: String| OptionLabel::from(control.drawn_label_of(&option, formats)),
             onchange: move |next: String| onchange.call(next),
         }
     }
@@ -428,6 +429,7 @@ fn DemoControl(
     values: Signal<DemoValues>,
 ) -> Element {
     let (control, mut values) = (control.0, values);
+    let formats = use_formats();
     // Switches spread over the row, centred to read as a group; the min, in `em`
     // so it grows with the text, keeps a long label inside its column (todo 5513).
     let row_sx = if control.kind == ControlKind::Switch {
@@ -486,9 +488,9 @@ fn DemoControl(
                         // The bubble and the valuetext show the option's label, not the step index.
                         format: {
                             let control = control.clone();
-                            move |at: f64| control.drawn_label_of(&control.options[at as usize])
+                            move |at: f64| control.drawn_label_of(&control.options[at as usize], formats)
                         },
-                        marks: control.marks(),
+                        marks: control.marks(formats),
                         oninput: {
                             let options = control.options.clone();
                             move |event: SliderChangeEvent| {
@@ -514,7 +516,7 @@ fn DemoControl(
                         options: control.options.clone(),
                         option_label: {
                             let control = control.clone();
-                            move |option: String| control.drawn_label_of(&option)
+                            move |option: String| control.drawn_label_of(&option, formats)
                         },
                         onchange: move |value: String| {
                             values.write().0[index].1 = value;
@@ -556,7 +558,7 @@ fn DemoControl(
                                 options: control.options.clone(),
                                 option_label: {
                                     let control = control.clone();
-                                    move |option: String| control.drawn_label_of(&option)
+                                    move |option: String| control.drawn_label_of(&option, formats)
                                 },
                                 onchange: move |value: String| {
                                     values.write().0[index].1 = value;
