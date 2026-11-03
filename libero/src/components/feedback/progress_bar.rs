@@ -5,7 +5,8 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
-            label_color, names_itself, parts_enum, use_name_warning, variables, warning_edge,
+            label_color, names_itself, parts_enum, print_exact_sx, use_name_warning, variables,
+            warning_edge,
         },
         form::{SliderSegment, segment_filled, track_segments},
         layout::use_box,
@@ -48,6 +49,7 @@ const SEGMENT_GAP: &str = "2px";
 
 static PROGRESS_BAR_TRACK_SX: StaticSx = StaticSx::new(|| {
     ProgressBarDefaults::theme_vars()
+        .and(print_exact_sx())
         .display("block")
         .width("100%")
         // Clips the fill's square corners to the track's radius.

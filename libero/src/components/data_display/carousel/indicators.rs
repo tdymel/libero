@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use super::{CarouselPart, numbered, state::CarouselView};
 use crate::{
     components::{
-        common::{Input, Orientation, Part, States, focus_ring_sx, has_shortcut_modifier, states},
+        common::{
+            Input, Orientation, Part, States, focus_ring_sx, has_shortcut_modifier, print_exact_sx,
+            states,
+        },
         layout::Box,
     },
     hooks::{ElementHandle, id_selector},
@@ -18,6 +21,7 @@ use crate::{
 
 static CAROUSEL_INDICATORS_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
+        .and(print_exact_sx())
         .justify_content("center")
         .align_items("center")
         .gap(CAROUSEL_INDICATORS_GAP.value())

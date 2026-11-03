@@ -11,7 +11,7 @@ use crate::{
         common::{
             COARSE_POINTER, COARSE_TARGET, ClassList, HtmlTag, Input, Part, States, Variables,
             base_color, coarse_hit_area_sx, disabled_look_within_sx, has_shortcut_modifier,
-            shadow_sx, text_color, variables,
+            print_exact_sx, shadow_sx, text_color, variables,
         },
         form::field_parts_enum,
         layout::use_box,
@@ -98,6 +98,7 @@ const PLAIN_THUMB_SHADOW: &str = "0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px 
 
 static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
     SliderDefaults::theme_vars()
+        .and(print_exact_sx())
         // A vertical swipe scrolls the page, as over a native Android slider.
         .and(sideways_drag_sx())
         .display("flex")

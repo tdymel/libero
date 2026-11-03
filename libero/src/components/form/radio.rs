@@ -5,7 +5,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, States, base_color_or, coarse_hit_area_sx, disabled_look_sx,
-            fill_color, min_hit_area_sx, names_itself, use_name_warning, variables,
+            fill_color, min_hit_area_sx, names_itself, print_exact_sx, use_name_warning, variables,
         },
         form::{choice, field_parts_enum, field_props, use_field, use_fieldset_disabled},
     },
@@ -26,6 +26,7 @@ static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
     choice::control_sx(RadioDefaults::theme_vars())
         // The focus ring follows the circle.
         .border_radius("50%")
+        .and(print_exact_sx())
         .when(
             "error",
             choice::error_sx("[data-slot='circle']", sx().border_color("error.7")),

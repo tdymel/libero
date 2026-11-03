@@ -5,7 +5,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, ScaleOrCss, States, Variables, base_props, disabled_look_sx,
-            min_hit_area_sx, names_itself, shadow_sx, use_name_warning, variables,
+            min_hit_area_sx, names_itself, print_exact_sx, shadow_sx, use_name_warning, variables,
         },
         form::use_fieldset_disabled,
         layout::use_box,
@@ -24,6 +24,7 @@ const COLOR_SWATCH_COLOR: CssVar = CssVar::new("--lsx-color-swatch-color");
 static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
     let color = COLOR_SWATCH_COLOR.value();
     ColorSwatchDefaults::theme_vars()
+        .and(print_exact_sx())
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")

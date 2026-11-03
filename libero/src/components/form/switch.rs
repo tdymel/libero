@@ -6,7 +6,8 @@ use crate::{
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, TOOLBAR_ITEM, ToolbarItem, base_color_or,
             coarse_hit_area_sx, contrast_color, disabled_look_within_sx, fill_color,
-            min_hit_area_sx, names_itself, use_name_warning, use_toolbar_item, variables,
+            min_hit_area_sx, names_itself, print_exact_sx, use_name_warning, use_toolbar_item,
+            variables,
         },
         form::{
             Asks, choice, field_parts_enum, field_props, use_bound, use_field, use_form_context,
@@ -35,6 +36,7 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
     choice::control_sx(SwitchDefaults::theme_vars().var(SizeCss::RADIUS.override_var(), "inherit"))
         // The focus ring follows the track.
         .border_radius(SWITCH_RADIUS.value())
+        .and(print_exact_sx())
         .when(
             "error",
             choice::error_sx("[data-slot='track']", sx().background("error.7")),

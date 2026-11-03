@@ -4,6 +4,12 @@ use crate::{
     theme::{GRADIENT_FROM, gradient_image},
 };
 
+/// Prints a state that is only a background (inherited by the parts): print drops them by default.
+pub(crate) fn print_exact_sx() -> Sx {
+    sx().with("print-color-adjust", "exact")
+        .with("-webkit-print-color-adjust", "exact")
+}
+
 /// The gradient through the glyphs. Blitz paints the whole box, so there it is the first stop.
 pub(crate) fn gradient_text_sx() -> Sx {
     if !clips_background_to_text() {

@@ -786,3 +786,22 @@ fn sx_dark_and_light_follow_the_root_scheme() {
         assert!(!css.contains(THEME_ATTRIBUTE), "{css}");
     }
 }
+
+/// Print keeps the light theme's vars over a pinned or system dark theme (todo 5615).
+#[test]
+fn print_takes_the_light_theme_over_every_block() {
+    use crate::sx::THEME_ATTRIBUTE;
+
+    let css = Stylesheet::from(&ThemeSet::DEFAULT).as_str().to_string();
+    let print = css
+        .find("@media print{:root:root:root{")
+        .expect("a print block");
+    let pinned_dark = css
+        .find(&format!(
+            ":root[{THEME_ATTRIBUTE}=\"{}\"]{{",
+            ThemeSet::DARK
+        ))
+        .expect("the pinned dark block");
+    assert!(pinned_dark < print, "{css}");
+    assert!(css[print..].contains("color-scheme:light"), "{css}");
+}

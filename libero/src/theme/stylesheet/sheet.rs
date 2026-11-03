@@ -41,6 +41,7 @@ impl From<&ThemeSet> for Stylesheet {
     /// }
     /// :root[data-lsx-theme="light"] { … }
     /// :root[data-lsx-theme="dark"]  { … }
+    /// @media print { :root:root:root { … } } /* the light theme, whatever shows */
     /// ```
     ///
     /// Each block pins its theme's `color-scheme`, so a pinned theme paints native parts in its
@@ -61,6 +62,12 @@ impl From<&ThemeSet> for Stylesheet {
         );
         css.push_str(&pair_block(&theme_selector(ThemeSet::LIGHT), light));
         css.push_str(&pair_block(&theme_selector(ThemeSet::DARK), dark));
+        // Paper is white: a dark theme's light ink printed at 2.8:1. Three `:root`s outrank every block above.
+        let _ = write!(
+            css,
+            "@media print{{{}}}",
+            pair_block(":root:root:root", light)
+        );
 
         // From the light theme: its colours are vars, and `font_smoothing` is not a scheme choice.
         css.push_str(&base_layer_and_keyframes(light, "light dark"));
