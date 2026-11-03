@@ -116,8 +116,16 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
                 sx().z_index("1"),
             ),
         )
-        // Room for the captions. Padding, not margin, which would collapse.
-        .when("marks-labeled", sx().padding_bottom("1.5em"))
+        // Room for the captions: their offset and a line, less the track the box holds.
+        // Padding, not margin, which would collapse.
+        .when(
+            "marks-labeled",
+            sx().padding_bottom(format!(
+                "calc({} - {} + 1.5em)",
+                SLIDER_THUMB.value(),
+                SLIDER_TRACK.value()
+            )),
+        )
         // No grab cursor for a drag `onstart` refuses.
         .when("readonly", sx().selector("& *", sx().cursor("default")))
         // No `pointer-events: none`, so `not-allowed` shows (todo 596); `onstart` refuses the

@@ -524,6 +524,37 @@ fn an_upright_thumb_tooltip_clears_the_captions() {
     });
 }
 
+/// Todo 5406: a description set below starts under the mark captions, at phone to desktop width.
+#[test]
+fn a_description_below_sits_under_the_mark_captions() {
+    block_on(async {
+        for viewport in [Viewport::Mobile, Viewport::Desktop] {
+            let fixture = Fixture::open("/slider/description-below", viewport)
+                .await
+                .unwrap();
+            let bad: Vec<String> = fixture
+                .page
+                .evaluate_bounded(
+                    "['single', 'range', 'discrete'].map(id => { \
+                     const root = document.getElementById(id), \
+                     description = root.querySelector(\"[data-slot='description']\"), \
+                     captions = [...root.querySelectorAll('[data-slot=mark-label]')]; \
+                     if (!description || captions.length === 0) return id + ': no description or captions'; \
+                     const top = description.getBoundingClientRect().top, \
+                     bottom = Math.max(...captions.map(e => e.getBoundingClientRect().bottom)); \
+                     return top < bottom - 0.5 ? `${id}: description at ${top}, captions end at ${bottom}` : ''; \
+                     }).filter(Boolean)",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(bad.is_empty(), "description over the captions: {bad:?}");
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// WCAG 2.5.8 on the 16px thumb's 24px hit area (302): hit-tests 11.5px out, 13px as the
 /// failing control, then drags from 11px above, outside the drawn box.
 #[test]

@@ -24,7 +24,47 @@ pub const ROUTES: Routes = &[
     ("/slider/preview-resize", || rsx! { SliderPreviewResizePage {} }),
     ("/slider/preview-vertical", || rsx! { SliderPreviewVerticalPage {} }),
     ("/slider/captions-vertical", || rsx! { SliderCaptionsVerticalPage {} }),
+    ("/slider/description-below", || rsx! { SliderDescriptionBelowPage {} }),
 ];
+
+/// Todo 5406: a description set below sits under the sliders' mark captions.
+#[component]
+fn SliderDescriptionBelowPage() -> Element {
+    let marks = || vec![SliderMark::labeled(0.0, "Low"), SliderMark::labeled(100.0, "High")];
+    rsx! {
+        Flex { direction: "column", gap: "lg", padding: "md",
+            div { id: "single",
+                Slider {
+                    label: "Quality",
+                    description: "What the encoder aims for.",
+                    description_position: "below",
+                    value: 40.0f64,
+                    marks: marks(),
+                    oninput: move |_: SliderChangeEvent<f64>| {},
+                }
+            }
+            div { id: "range",
+                RangeSlider {
+                    label: "Price",
+                    description: "Within this span.",
+                    description_position: "below",
+                    value: (20.0f64, 60.0f64),
+                    marks: marks(),
+                    oninput: move |_: SliderChangeEvent<(f64, f64)>| {},
+                }
+            }
+            div { id: "discrete",
+                Slider {
+                    label: "Level",
+                    description: "One of the steps.",
+                    description_position: "below",
+                    value: Quality::Medium,
+                    oninput: move |_: SliderChangeEvent<Quality>| {},
+                }
+            }
+        }
+    }
+}
 
 /// Todo 4775: 200px upright tracks with captions at the viewport's left edge, so their
 /// bubbles have no room at the start side: `Level` at 50, `Top` at its maximum.
