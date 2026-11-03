@@ -7,33 +7,33 @@ button "Before"
   StaticText "Before"
 button "Previous days"
 grid "March 2026"
-  row "Mar 18, March 18, 2026 Mar 19, March 19, 2026 Mar 20, March 20, 2026 Mar 21, March 21, 2026 Mar 22, March 22, 2026 Mar 23, March 23, 2026 Mar 24, March 24, 2026"
-    gridcell "Mar 18, March 18, 2026" [selected]
-      button "Mar 18, March 18, 2026" [current=date]
+  row "Mar 18, Wednesday, March 18, 2026 Mar 19, Thursday, March 19, 2026 Mar 20, Friday, March 20, 2026 Mar 21, Saturday, March 21, 2026 Mar 22, Sunday, March 22, 2026 Mar 23, Monday, March 23, 2026 Mar 24, Tuesday, March 24, 2026"
+    gridcell "Mar 18, Wednesday, March 18, 2026" [selected]
+      button "Mar 18, Wednesday, March 18, 2026" [current=date]
         StaticText "Mar"
         StaticText "18"
-    gridcell "Mar 19, March 19, 2026" [selected=false]
-      button "Mar 19, March 19, 2026"
+    gridcell "Mar 19, Thursday, March 19, 2026" [selected=false]
+      button "Mar 19, Thursday, March 19, 2026"
         StaticText "Mar"
         StaticText "19"
-    gridcell "Mar 20, March 20, 2026" [selected=false]
-      button "Mar 20, March 20, 2026"
+    gridcell "Mar 20, Friday, March 20, 2026" [selected=false]
+      button "Mar 20, Friday, March 20, 2026"
         StaticText "Mar"
         StaticText "20"
-    gridcell "Mar 21, March 21, 2026" [selected=false]
-      button "Mar 21, March 21, 2026"
+    gridcell "Mar 21, Saturday, March 21, 2026" [selected=false]
+      button "Mar 21, Saturday, March 21, 2026"
         StaticText "Mar"
         StaticText "21"
-    gridcell "Mar 22, March 22, 2026" [selected=false]
-      button "Mar 22, March 22, 2026"
+    gridcell "Mar 22, Sunday, March 22, 2026" [selected=false]
+      button "Mar 22, Sunday, March 22, 2026"
         StaticText "Mar"
         StaticText "22"
-    gridcell "Mar 23, March 23, 2026" [selected=false]
-      button "Mar 23, March 23, 2026"
+    gridcell "Mar 23, Monday, March 23, 2026" [selected=false]
+      button "Mar 23, Monday, March 23, 2026"
         StaticText "Mar"
         StaticText "23"
-    gridcell "Mar 24, March 24, 2026" [selected=false]
-      button "Mar 24, March 24, 2026"
+    gridcell "Mar 24, Tuesday, March 24, 2026" [selected=false]
+      button "Mar 24, Tuesday, March 24, 2026"
         StaticText "Mar"
         StaticText "24"
 button "Next days"
