@@ -7,11 +7,13 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Box, Button, Container, ScrollArea, ScrollAreaHandle, Tabs, use_scroll_area},
+    components::{
+        Button, Container, ScrollArea, ScrollAreaHandle, Tabs, VisuallyHidden, use_scroll_area,
+    },
     hooks::{ElementHandle, use_element, use_fullscreen, use_local_storage, use_theme_set},
     platform::ElementApi,
     sx::{Sx, sx},
-    theme::{NamedColorCss, TABS_BORDER_COLOR, ThemeSet, Z_INDEX_HEADER, Z_INDEX_MODAL},
+    theme::{NamedColorCss, TABS_BORDER_COLOR, ThemeSet, Z_INDEX_MODAL},
 };
 
 use crate::Routes;
@@ -181,21 +183,11 @@ fn use_skip_to_main(mut open: Signal<bool>, main: ElementHandle) -> Callback<()>
 /// so the router never sees the fragment.
 fn skip_link(skip: Callback<()>) -> Element {
     rsx! {
-        Box {
+        // Logical: the shown link sits at the inline start, so RTL keeps it off the header tools.
+        VisuallyHidden { focusable: true,
             sx: sx()
-                .selector(
-                    "& > a",
-                    sx().position("fixed")
-                        .top("8px")
-                        .left("8px")
-                        .z_index(format!("calc({} + 1)", Z_INDEX_HEADER.value()))
-                        .padding("sm")
-                        .border_radius("sm")
-                        .background("surface")
-                        .color("primary.7")
-                        .transform("translateY(-200%)"),
-                )
-                .selector("& > a:focus", sx().transform("none")),
+                .border_radius("sm")
+                .selector("& > a", sx().display("block").padding("sm").color("primary.7")),
             a {
                 href: "#docs-main",
                 onclick: move |event: MouseEvent| {
