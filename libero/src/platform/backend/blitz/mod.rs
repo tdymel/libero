@@ -46,7 +46,7 @@ pub(super) use deferred::{awaits_layout, when_free, when_laid_out, when_laid_out
 pub(super) use direction::{is_rtl, rtl_target};
 pub(super) use document::document;
 pub(super) use drag::follow_pointer;
-use drag::followed;
+use drag::{followed, followed_cancel};
 use element::{BlitzElement, is_rendered, node_of};
 pub(super) use element::{element, element_contains, mounted_by_selector};
 pub(super) use focus::{focus_lands_in, input_serial, press_kept_focus, silent_focus};

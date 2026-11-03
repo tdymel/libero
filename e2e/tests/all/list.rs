@@ -214,7 +214,12 @@ async fn a_keyed_move_in_a_child_renumbers<D: Driver>(d: &mut D, _route: &str) -
     .await?;
     d.click("#swap").await?;
     eventually(d, "C first after the swap", async |d| {
-        Ok(d.text("#keyed > li").await?.trim().starts_with('C'))
+        // Natively the item also reads its hidden number span (5395).
+        let text = d.text("#keyed > li").await?;
+        Ok(text
+            .trim_start_matches(|c: char| c.is_ascii_digit() || c == '.' || c == '\u{a0}')
+            .trim()
+            .starts_with('C'))
     })
     .await?;
     eventually(d, "1, 2, 3 in DOM order after the swap", async |d| {

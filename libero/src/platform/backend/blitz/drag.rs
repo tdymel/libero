@@ -12,13 +12,14 @@ thread_local! {
     pub(super) static FOLLOW: Cell<Option<Follow>> = const { Cell::new(None) };
 }
 
-/// A drag's moves and release, for the pointer it pressed with.
+/// A drag's moves, release and cancel, for the pointer it pressed with.
 #[derive(Clone, Copy)]
 struct Follow {
     pointer_id: i32,
     capture: NodeId,
     onmove: Callback<Event<PointerData>>,
     onup: Callback<Event<PointerData>>,
+    oncancel: Callback<Event<PointerData>>,
 }
 
 pub(in crate::platform::backend) fn follow_pointer(
@@ -26,6 +27,7 @@ pub(in crate::platform::backend) fn follow_pointer(
     capture: &Rc<MountedData>,
     onmove: Callback<Event<PointerData>>,
     onup: Callback<Event<PointerData>>,
+    oncancel: Callback<Event<PointerData>>,
 ) {
     // A selector-found capture too, not just a mounted one (todo 2749).
     let Some((anchor, node_id)) = node_of(capture) else {
@@ -36,6 +38,7 @@ pub(in crate::platform::backend) fn follow_pointer(
         capture: node_id,
         onmove,
         onup,
+        oncancel,
     }));
     let cursor = anchor
         .free_doc()
@@ -61,6 +64,16 @@ fn catch_pointer(cursor: Option<String>) {
         let name = QualName::new(None, ns!(), local_name!("style"));
         doc.mutate().set_attribute(area, name, &style);
     });
+}
+
+/// Ends the followed drag as a cancel when the OS revokes its pointer.
+pub(super) fn followed_cancel(event: &Event<PointerData>) {
+    let Some(follow) = FOLLOW.get().filter(|f| f.pointer_id == event.pointer_id()) else {
+        return;
+    };
+    FOLLOW.set(None);
+    catch_pointer(None);
+    follow.oncancel.call(event.clone());
 }
 
 /// Hands the followed drag what bubbled here from outside its element. A stopped

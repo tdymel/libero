@@ -1179,16 +1179,17 @@ pub(crate) fn follow_pointer(
     capture: &Rc<MountedData>,
     onmove: Callback<Event<PointerData>>,
     onup: Callback<Event<PointerData>>,
+    oncancel: Callback<Event<PointerData>>,
 ) {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    blitz::follow_pointer(event, capture, onmove, onup);
+    blitz::follow_pointer(event, capture, onmove, onup, oncancel);
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     {
-        let _ = (capture, onmove, onup);
+        let _ = (capture, onmove, onup, oncancel);
         webview::follow_pointer(event);
     }
     #[cfg(target_arch = "wasm32")]
-    let _ = (event, capture, onmove, onup);
+    let _ = (event, capture, onmove, onup, oncancel);
 }
 
 /// Only a WebView watches the page for it - see

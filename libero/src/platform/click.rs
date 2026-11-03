@@ -32,15 +32,17 @@ pub(crate) fn hits_inline_boxes() -> bool {
 }
 
 /// Where `set_pointer_capture` failed, hands `capture`'s drag the moves and the
-/// release of `event`'s pointer that land outside it, until that release.
+/// release of `event`'s pointer that land outside it, until that release; `oncancel` hears
+/// the OS revoking it.
 /// Only Blitz does, from `LiberoProvider`'s wrapper; elsewhere a no-op.
 pub(crate) fn follow_pointer(
     event: &Event<PointerData>,
     capture: &Rc<MountedData>,
     onmove: Callback<Event<PointerData>>,
     onup: Callback<Event<PointerData>>,
+    oncancel: Callback<Event<PointerData>>,
 ) {
-    super::backend::follow_pointer(event, capture, onmove, onup)
+    super::backend::follow_pointer(event, capture, onmove, onup, oncancel)
 }
 
 /// Calls `onrelease` once `pointer_id` lifts or cancels anywhere on the page, so a drag

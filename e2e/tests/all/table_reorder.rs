@@ -861,10 +861,45 @@ e2e::scenario!(
     native: skip("Blitz follows the pointer itself and reads no scripts")
 );
 
+/// [`a_cancelled_pointer_moves_no_column`] through Blitz's event pipeline: a held finger, a
+/// `pointercancel`.
+async fn native_cancelled_pointer<D: Driver>(d: &mut D, before: &str) -> Result<()> {
+    let from = d.rect("th[aria-label=Name] [data-drag-handle] svg").await?;
+    let target = d.rect("th[aria-label=Origin]").await?;
+    let y = from.y + from.height / 2.0;
+    let x0 = from.x + from.width / 2.0;
+    let x1 = target.x + target.width * 0.6;
+    d.touch_down("th[aria-label=Name] [data-drag-handle] svg")
+        .await?;
+    for step in 1..=10 {
+        d.touch_move(x0 + (x1 - x0) * f64::from(step) / 10.0, y)
+            .await?;
+    }
+    eventually(d, "the drop line past Origin", async |d| {
+        d.exists("[data-drop-line]").await
+    })
+    .await?;
+    // Blitz sends the event to what is under the point, not to a captured grip: cancel at the grip.
+    d.touch_cancel(x0, y).await?;
+    eventually(d, "the ghost gone", async |d| {
+        Ok(!d.exists("[data-drag-ghost]").await?)
+    })
+    .await?;
+    let after = d.text("#columns").await?;
+    ensure!(
+        after == before,
+        "a cancelled drag moved a column: {before} to {after}"
+    );
+    Ok(())
+}
+
 /// D12-F1: a pointer the OS revokes mid-drag drops nothing, as Escape: the ghost goes, the
 /// order stays.
 async fn a_cancelled_pointer_moves_no_column<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let before = d.text("#columns").await?;
+    if d.platform() == Platform::Native {
+        return native_cancelled_pointer(d, &before).await;
+    }
     d.evaluate(
         "(() => {
             const grip = document.querySelector('th[aria-label=Name] [data-drag-handle] svg');
@@ -904,8 +939,7 @@ async fn a_cancelled_pointer_moves_no_column<D: Driver>(d: &mut D, _route: &str)
 e2e::scenario!(
     a_cancelled_grip_drag_moves_no_column,
     "/table-reorder",
-    a_cancelled_pointer_moves_no_column,
-    native: skip("the drag dispatches a pointercancel from a script, and Blitz runs none")
+    a_cancelled_pointer_moves_no_column
 );
 
 /// Todo 2018: the rows measure at the press, so a finger's drag moves the row soon.

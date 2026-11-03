@@ -214,6 +214,16 @@ pub trait Driver {
         let _ = selector;
         bail!("{:?}: no held touch", self.platform())
     }
+    /// Moves the held [`Driver::touch_down`] finger to viewport point `(x, y)`.
+    async fn touch_move(&mut self, x: f64, y: f64) -> Result<()> {
+        let _ = (x, y);
+        bail!("{:?}: no held touch", self.platform())
+    }
+    /// The OS revokes the held [`Driver::touch_down`] finger at `(x, y)`: a `pointercancel`.
+    async fn touch_cancel(&mut self, x: f64, y: f64) -> Result<()> {
+        let _ = (x, y);
+        bail!("{:?}: no held touch", self.platform())
+    }
     /// A finger tap at the first match's centre: [`Driver::touch_down`], then up there.
     async fn tap(&mut self, selector: &str) -> Result<()> {
         self.touch_down(selector).await?;

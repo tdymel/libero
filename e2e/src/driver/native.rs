@@ -192,6 +192,16 @@ impl Driver for Native {
         Ok(())
     }
 
+    async fn touch_move(&mut self, x: f64, y: f64) -> Result<()> {
+        self.page.touch_move(x as f32, y as f32);
+        Ok(())
+    }
+
+    async fn touch_cancel(&mut self, x: f64, y: f64) -> Result<()> {
+        self.page.touch_cancel(x as f32, y as f32);
+        Ok(())
+    }
+
     async fn swipe_from(&mut self, x: f64, y: f64, dx: f64, dy: f64) -> Result<()> {
         self.page
             .swipe_from(x as f32, y as f32, dx as f32, dy as f32);

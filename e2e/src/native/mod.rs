@@ -790,6 +790,16 @@ impl Page {
         self.dispatch(UiEvent::PointerUp(self.finger(x, y, false)));
     }
 
+    /// Moves the held finger to a viewport point.
+    pub fn touch_move(&mut self, x: f32, y: f32) {
+        self.dispatch(UiEvent::PointerMove(self.finger(x, y, true)));
+    }
+
+    /// The held finger is revoked at a viewport point: Blitz's `pointercancel`.
+    pub fn touch_cancel(&mut self, x: f32, y: f32) {
+        self.dispatch(UiEvent::PointerCancel(self.finger(x, y, false)));
+    }
+
     /// A finger lands on a viewport point, moves by `(dx, dy)` in eight steps, lifts there.
     pub fn swipe_from(&mut self, x: f32, y: f32, dx: f32, dy: f32) {
         const STEPS: u8 = 8;

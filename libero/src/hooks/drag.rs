@@ -342,6 +342,7 @@ fn use_drag_inner(
         }
     });
     let end = use_callback(move |event: Event<PointerData>| finish.call((event, false)));
+    let revoked = use_callback(move |event: Event<PointerData>| finish.call((event, true)));
 
     // Starts the drag `event`'s pointer went down for at `client`; `false` if
     // `onstart` cancelled it.
@@ -370,7 +371,7 @@ fn use_drag_inner(
         if capture.set_pointer_capture(event.pointer_id()).is_err()
             && let Some(within) = capture.mounted()
         {
-            platform::follow_pointer(&event, &within, track, end);
+            platform::follow_pointer(&event, &within, track, end, revoked);
         }
         // iOS WebKit at times sends the release past the capture (3603); after the handle's
         // own release this finds the drag over.

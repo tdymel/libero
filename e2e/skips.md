@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 759
+Scenarios: 760
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -11,6 +11,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `accordion::a_section_inserted_ahead_keeps_the_focus_and_its_text` | android | 958: element identity on the WebView |
 | `accordion::a_section_inserted_ahead_keeps_the_focus_and_its_text` | desktop | 958: element identity on the WebView |
 | `accordion::a_section_inserted_ahead_keeps_the_focus_and_its_text` | ios | 958: element identity on the WebView |
+| `accordion::a_section_losing_its_panel_hands_the_focus_to_its_heading` | android | 958: element identity on the WebView |
+| `accordion::a_section_losing_its_panel_hands_the_focus_to_its_heading` | desktop | 958: element identity on the WebView |
+| `accordion::a_section_losing_its_panel_hands_the_focus_to_its_heading` | ios | 958: element identity on the WebView |
 | `accordion::focus_returns_to_the_trigger_of_a_panel_that_closes_around_it` | android | 958: element identity on the WebView |
 | `accordion::focus_returns_to_the_trigger_of_a_panel_that_closes_around_it` | desktop | 958: element identity on the WebView |
 | `accordion::focus_returns_to_the_trigger_of_a_panel_that_closes_around_it` | ios | 958: element identity on the WebView |
@@ -367,7 +370,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_filter::a_select_filter_narrows_a_table` | android | 958: element identity on the WebView |
 | `table_filter::a_select_filter_narrows_a_table` | ios | 958: element identity on the WebView |
 | `table_grid::a_custom_editor_clears_the_error_by_changed` | android | 958: roving keys are inert in the emulator's WebView |
-| `table_grid::a_filtered_button_is_not_a_tab_stop` | native | Blitz reads no script |
 | `table_grid::a_hidden_column_keeps_the_stops_row` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::a_second_tap_opens_the_editor` | desktop | no touch input in the desktop driver |
 | `table_grid::a_second_tap_opens_the_editor` | ios | 3416: the first tap's touch end reaches the page 2 s late, so WebKit raises no click on the cell |
@@ -377,7 +379,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::an_arrow_leaves_a_widget_for_the_next_cell` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::an_arrow_shows_a_partly_hidden_cell_whole` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::an_error_shows_in_a_fixed_row_height_table` | android | 958: roving keys are inert in the emulator's WebView |
-| `table_grid::an_error_shows_in_a_fixed_row_height_table` | native | no script reads |
 | `table_grid::arrows_move_the_cell_stop` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::ctrl_end_shows_the_far_cell_on_both_axes` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::enter_commits_and_escape_cancels` | android | 958: roving keys are inert in the emulator's WebView |
@@ -388,7 +389,6 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_grid::page_down_leaves_out_the_sticky_edges` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::page_down_moves_a_view` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::shift_space_selects_the_row` | android | 958: roving keys are inert in the emulator's WebView |
-| `table_grid::sort_menu_buttons_and_grips_are_not_tab_stops` | native | Blitz reads no script |
 | `table_grid::space_on_the_select_all_box_acts_once` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::tab_and_shift_enter_move_the_stop` | android | 958: roving keys are inert in the emulator's WebView |
 | `table_grid::tab_enters_and_leaves_in_one_stop` | android | 958: roving keys are inert in the emulator's WebView |
@@ -405,10 +405,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `table_groups::a_windowed_scrollbar_stops_above_the_footer` | android | 958: element identity on the WebView |
 | `table_groups::a_windowed_scrollbar_stops_above_the_footer` | native | 1010: Blitz paints its own bar, ours is not drawn |
 | `table_pins::a_refused_menu_pin_stays_unsaid` | ios | a phone's narrow table releases the host's second pin |
-| `table_pins::a_refused_menu_pin_stays_unsaid` | native | Blitz reads no scripts |
 | `table_pins::narrow_areas_release_their_pins_and_wide_ones_pin_again` | desktop | its window cannot be narrowed |
 | `table_pins::narrow_areas_release_their_pins_and_wide_ones_pin_again` | native | 1024px is wide enough for the pins |
-| `table_reorder::a_cancelled_grip_drag_moves_no_column` | native | Blitz reads no scripts |
 | `table_reorder::a_deep_move_up_keeps_scroll_and_focus` | android | 958: element identity on the WebView |
 | `table_reorder::a_deep_move_up_keeps_scroll_and_focus` | ios | 3416: a tap on the deep row's move button scrolls the page 21px |
 | `table_reorder::a_move_button_moves_its_row` | android | 958: element identity on the WebView |

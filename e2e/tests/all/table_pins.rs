@@ -342,15 +342,30 @@ const RECORD_SAID: &str = "(() => { window.__said = []; new MutationObserver(() 
      document.querySelectorAll('[role=status]').forEach(s => window.__said.push(s.textContent))) \
      .observe(document.body, { subtree: true, childList: true, characterData: true }); })()";
 
+/// Appends the live region's text now, if it has one.
+async fn sample_said<D: Driver>(d: &mut D, sampled: &mut String) -> Result<()> {
+    if d.exists("[role=status]").await? {
+        sampled.push_str(&d.text("[role=status]").await?);
+        sampled.push('|');
+    }
+    Ok(())
+}
+
 /// 4427, 4416, 4434: a menu pin or unpin the host refuses is never said, not even once the host
 /// pins that column.
 async fn a_refused_menu_pin_is_never_said<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
-    d.evaluate(RECORD_SAID).await?;
+    // Native runs no script: it samples the live region after each step instead.
+    let native = d.platform() == Platform::Native;
+    let mut sampled = String::new();
+    if !native {
+        d.evaluate(RECORD_SAID).await?;
+    }
     d.click("button[aria-label=\"Origin column options\"]")
         .await?;
     let pin = menu_entry(d, "Pin to start").await?;
     d.click(&pin).await?;
     eventually_text(d, "#pinned", "Name,Origin", "the host to hear the pin").await?;
+    sample_said(d, &mut sampled).await?;
     assert_eq!(d.attr("th[aria-label=Origin]", "data-pin").await?, None);
 
     // 4434: a refused Unpin stays unsaid too.
@@ -359,6 +374,7 @@ async fn a_refused_menu_pin_is_never_said<D: Driver>(d: &mut D, _route: &str) ->
     let unpin = menu_entry(d, "Unpin").await?;
     d.click(&unpin).await?;
     eventually_text(d, "#pinned", "", "the host to hear the unpin").await?;
+    sample_said(d, &mut sampled).await?;
     assert_eq!(
         d.attr("th[aria-label=Name]", "data-pin").await?.as_deref(),
         Some("start")
@@ -372,6 +388,7 @@ async fn a_refused_menu_pin_is_never_said<D: Driver>(d: &mut D, _route: &str) ->
             == Some("start"))
     })
     .await?;
+    sample_said(d, &mut sampled).await?;
     // A later announcement: any pin news would have come before it.
     d.click("button[aria-label=\"Season column options\"]")
         .await?;
@@ -381,8 +398,13 @@ async fn a_refused_menu_pin_is_never_said<D: Driver>(d: &mut D, _route: &str) ->
         Ok(d.text("[role=status]").await?.contains("Season"))
     })
     .await?;
-    let said = d.evaluate("window.__said.join('|')").await?;
-    let said = said.as_str().unwrap_or_default();
+    sample_said(d, &mut sampled).await?;
+    let said = if native {
+        sampled
+    } else {
+        let said = d.evaluate("window.__said.join('|')").await?;
+        said.as_str().unwrap_or_default().to_string()
+    };
     assert!(
         said.contains("Season"),
         "the live region went unrecorded: {said}"
@@ -395,7 +417,6 @@ e2e::scenario!(
     a_refused_menu_pin_stays_unsaid,
     "/table/pinned-refused",
     a_refused_menu_pin_is_never_said,
-    native: skip("a MutationObserver records the live region, and Blitz runs no script"),
     ios: skip("a phone's narrow table releases the host's second pin")
 );
 

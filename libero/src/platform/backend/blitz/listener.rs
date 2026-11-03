@@ -6,9 +6,9 @@ use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
 use super::{
-    BLANK_PRESS, HELD, HIT, PRESS, activate, defer, doc, focus, followed, forget_press, keyed,
-    max_length, notify_scroll, placeholder, pressed, refused, removed, resize, swallow,
-    tab_from_start, wheel,
+    BLANK_PRESS, HELD, HIT, PRESS, activate, defer, doc, focus, followed, followed_cancel,
+    forget_press, keyed, max_length, notify_scroll, placeholder, pressed, refused, removed, resize,
+    swallow, tab_from_start, wheel,
 };
 
 /// Wraps the app, so a press's target is known until its click bubbled and keys
@@ -117,6 +117,10 @@ pub(in crate::platform::backend) fn Listener(children: Element) -> Element {
                 focus::released();
                 refused::release(&event);
                 resize::pressed();
+            },
+            onpointercancel: move |event| {
+                HELD.set(false);
+                followed_cancel(&event);
             },
             // A wheel bubbles where its scroll does not: see `BlitzScroll`.
             onwheel: |event| {

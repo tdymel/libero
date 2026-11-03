@@ -239,6 +239,7 @@ pub(crate) fn use_swipe_close(
         }
     });
     let up = use_callback(move |event: PointerEvent| release.call((event, true)));
+    let revoked = use_callback(move |event: PointerEvent| release.call((event, false)));
     // The moves Blitz reports from outside the box.
     let track = use_callback(move |event: PointerEvent| {
         if let Some(Press::Drag { pointer_id, base }) = *press.peek()
@@ -275,7 +276,7 @@ pub(crate) fn use_swipe_close(
             && capture.set_pointer_capture(event.pointer_id()).is_err()
             && let Some(within) = capture.mounted()
         {
-            platform::follow_pointer(&event, &within, track, up);
+            platform::follow_pointer(&event, &within, track, up, revoked);
         }
         follow.call(DragPoint {
             x: at.x - base.x,
@@ -314,7 +315,7 @@ pub(crate) fn use_swipe_close(
         }),
         listener("onpointerup", move |event: PointerEvent| up.call(event)),
         listener("onpointercancel", move |event: PointerEvent| {
-            release.call((event, false))
+            revoked.call(event)
         }),
     ];
     // Fires before the box's own, which it bubbles to. A press on the strip moves no focus:
