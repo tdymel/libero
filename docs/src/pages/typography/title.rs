@@ -124,7 +124,7 @@ pub fn TitlePage() -> Element {
                             tag => vec![format!("component: {tag:?}")],
                         }),
                         // On, so a link in a title shows its inherited type without another switch.
-                        Control::switch("link").default("true"),
+                        Control::switch("link").default("true").code(|_, _| vec![]),
                         // The theme's own second stop and angle print as `Gradient::default()`.
                         Control::switch("gradient").code(|_, values| {
                             let default = values.str("gradient_to") == "secondary"
