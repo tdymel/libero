@@ -114,7 +114,8 @@ base_props! {
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
         /// Place against the viewport (`position: fixed`) instead; the anchored edges
-        /// clear the safe-area insets.
+        /// clear the safe-area insets. It stays over the page; keep it off controls, or a
+        /// focused control can sit under it (WCAG 2.4.11).
         #[props(default)]
         fixed: bool,
         children: Element,

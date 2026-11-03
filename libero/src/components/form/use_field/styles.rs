@@ -46,8 +46,7 @@ pub(in crate::components::form) static FIELD_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& > [data-slot='label-row'] > [data-slot='label-trailing']",
-            sx().margin_left("auto")
-                .rtl(sx().margin_left("0").margin_right("auto")),
+            sx().margin_inline_start("auto"),
         )
         // A full-width control fills only the wrapper, so the wrapper fills its parent.
         .when("full-width", sx().width("100%"))

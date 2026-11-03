@@ -51,7 +51,7 @@ pub fn FloatPage() -> Element {
                     .doc("Shift down, a spacing step or a CSS length. A negative step shifts up."),
                 prop("fixed", "bool")
                     .default("false")
-                    .doc("Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it. It stays below overlays and modals. The edges it is anchored to clear the safe-area insets: the notch, the status bar and the home indicator."),
+                    .doc("Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it. It stays below overlays and modals. The edges it is anchored to clear the safe-area insets: the notch, the status bar and the home indicator. A fixed Float stays over the page; keep it off controls, or a focused control can sit under it (WCAG 2.4.11)."),
                 prop("z_index", "ThemeAwareValue")
                     .default("1")
                     .doc("Stacking order. The default sits below a sticky `Header`; raise it to go over one."),

@@ -487,6 +487,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .attr("readonly", readonly)
         .attr("required", required)
         .attr("autocomplete", "off")
+        // A Latin month name in an RTL layout keeps its order; an RTL date stays RTL (5496).
+        .attr_default("dir", "auto")
         // A phone's keyboard would cover the picker, which is the input there (todos 1012, 3905).
         .attr("inputmode", keyboardless.inputmode())
         // APG Date Picker Combobox: a textbox may not carry `aria-expanded`.

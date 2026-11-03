@@ -42,6 +42,8 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-slot='columns']",
             sx().display("flex")
+                // Clock times read left to right in RTL scripts too.
+                .direction("ltr")
                 .align_items("center")
                 .justify_content("center")
                 // Room for the focus ring, clear of the separators and an edge.
@@ -101,6 +103,7 @@ pub(in super::super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-slot='readout']",
             sx().display("flex")
+                .direction("ltr")
                 .align_items("center")
                 .gap("4px")
                 .font_size("1.5em"),

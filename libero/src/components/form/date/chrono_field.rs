@@ -373,6 +373,15 @@ mod tests {
         assert!(html.contains(r#"value="2026""#), "{html}");
     }
 
+    /// Todo 5496: the text takes its direction from its first strong character.
+    #[test]
+    fn the_text_sets_its_own_direction() {
+        let html = dioxus_ssr::render_element(rsx! {
+            LiberoProvider { ChronoField::<NaiveDate> {} }
+        });
+        assert!(html.contains(r#"dir="auto""#), "{html}");
+    }
+
     /// Todo 536: each refusal names its rule, the bounds in the field's format.
     #[test]
     fn a_refusal_names_the_bound_it_missed() {
