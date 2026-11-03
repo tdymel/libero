@@ -238,6 +238,7 @@ pub fn RangeSliderPage() -> Element {
             // snippet: let mut last = use_signal(|| SliderChangeEvent::Change((20.0, 80.0)));
             // snippet: let mut last_quality = use_signal(|| SliderChangeEvent::Change((Quality::Low, Quality::High)));
             Demo {
+                pinned_preview: true,
                 component: "RangeSlider",
                 children_text: "",
                 controls: [vec![

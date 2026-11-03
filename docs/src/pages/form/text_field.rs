@@ -4,7 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
-use libero::components::{Code, Text, TextField};
+use libero::components::{Button, Code, Text, TextField};
 use libero::{sx::sx, use_theme};
 
 struct UsernameCopy;
@@ -19,6 +19,10 @@ impl FieldCopy for UsernameCopy {
 
 fn no_trailing(values: &DemoValues) -> bool {
     values.str("trailing") != "true"
+}
+
+fn label_trailing_on(values: &DemoValues) -> bool {
+    values.str("label") == "true" && values.str("label_trailing") == "true"
 }
 
 #[component]
@@ -145,6 +149,16 @@ pub fn TextFieldPage() -> Element {
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.text_field.radius.as_str()),
                 ], field_controls::<UsernameCopy>(), vec![
+                    // It shares the label's row, so it goes with the label.
+                    Control::switch("label_trailing")
+                        .hidden_when(|values| values.str("label") != "true")
+                        .code(|_, values| match label_trailing_on(values) {
+                            true => vec![
+                                r#"label_trailing: rsx! { Button { variant: "text", size: "xs", onclick: move |_| value.set("ada_lovelace".to_string()), "Suggest" } }"#
+                                    .to_string(),
+                            ],
+                            false => vec![],
+                        }),
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"ada\"".to_string()],
@@ -180,6 +194,14 @@ pub fn TextFieldPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: field.label,
+                        label_trailing: label_trailing_on(&values).then(|| rsx! {
+                            Button {
+                                variant: "text",
+                                size: "xs",
+                                onclick: move |_| value.set("ada_lovelace".to_string()),
+                                "Suggest"
+                            }
+                        }),
                         aria_label: field.aria_label,
                         description: field.description,
                         description_position: field.description_position,

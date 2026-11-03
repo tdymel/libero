@@ -27,7 +27,8 @@ pub const ROUTES: Routes = &[
     ("/slider/description-below", || rsx! { SliderDescriptionBelowPage {} }),
 ];
 
-/// Todos 5406, 5415: a description set below sits under the sliders' mark captions, with a helper or status too.
+/// Todos 5406, 5415, 5416: a description set below sits under the sliders' mark captions, with a
+/// helper or status too, and adds no room above an unlabelled control.
 #[component]
 fn SliderDescriptionBelowPage() -> Element {
     let marks = || vec![SliderMark::labeled(0.0, "Low"), SliderMark::labeled(100.0, "High")];
@@ -70,6 +71,26 @@ fn SliderDescriptionBelowPage() -> Element {
                     description: "Within this span.",
                     description_position: "below",
                     status: FieldStatus::Error("Too wide.".into()),
+                    value: (20.0f64, 60.0f64),
+                    marks: marks(),
+                    oninput: move |_: SliderChangeEvent<(f64, f64)>| {},
+                }
+            }
+            div { id: "unlabelled",
+                Slider {
+                    aria_label: "Quality",
+                    description: "What the encoder aims for.",
+                    description_position: "below",
+                    value: 40.0f64,
+                    marks: marks(),
+                    oninput: move |_: SliderChangeEvent<f64>| {},
+                }
+            }
+            div { id: "unlabelled-range",
+                RangeSlider {
+                    aria_label: "Price",
+                    description: "Within this span.",
+                    description_position: "below",
                     value: (20.0f64, 60.0f64),
                     marks: marks(),
                     oninput: move |_: SliderChangeEvent<(f64, f64)>| {},

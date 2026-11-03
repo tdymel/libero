@@ -174,7 +174,10 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         "Slider: no `label` or `aria_label`, so the thumb is announced as just \"slider\".",
     );
 
-    let control_sx = control_spacing(!props.label.is_none() || !props.description.is_none());
+    // A description drawn under the control leaves nothing above it to keep off the thumb.
+    let control_sx = control_spacing(
+        !props.label.is_none() || (!props.description.is_none() && !field.description_below()),
+    );
 
     let control = rsx! {
         SliderCore {

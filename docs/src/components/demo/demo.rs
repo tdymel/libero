@@ -582,6 +582,10 @@ pub fn Demo(
     /// Leaves the preview no scroll box of its own while it answers `true`, so a sticky header
     /// sticks to the page's scroll.
     page_scroll: Option<PageScroll>,
+    /// Pins the preview to the top of its pane beside the controls and keeps it in view as
+    /// the page scrolls, for a short preview next to a long control panel.
+    #[props(default)]
+    pinned_preview: bool,
     /// The demo's own source, printed above the call: `DemoFile(include_str!("x_demo.rs"))`.
     file: Option<DemoFile>,
     /// Tells the code blocks apart when a page has several demos of one component.
@@ -632,6 +636,8 @@ pub fn Demo(
     let (card_overflow, preview_overflow) =
         match page_scroll.is_some_and(|PageScroll(scrolls)| scrolls(&current)) {
             true => ("clip", "visible"),
+            // A hidden card is a scroll box, which the pinned preview would stick to.
+            false if pinned_preview => ("clip", "auto"),
             false => ("hidden", "auto"),
         };
     rsx! {
@@ -654,15 +660,28 @@ pub fn Demo(
                 Box {
                     // A phone's narrow card keeps 8px inline: a coarse pointer's 308px calendar fits
                     // at 360px (3955). 12px block, or the scroll box clips an outset focus ring (4726).
-                    sx: card_query(sx().padding("12px 8px"), 400, sx().padding("24px"))
-                        .flex("1")
-                        .min_width("240px")
-                        .display("flex")
-                        .align_items("center")
-                        // A preview wider than the card scrolls rather than
-                        // being cut off; `safe` keeps its start reachable.
-                        .justify_content("safe center")
-                        .overflow_x(preview_overflow),
+                    sx: {
+                        let preview = card_query(sx().padding("12px 8px"), 400, sx().padding("24px"))
+                            .flex("1")
+                            .min_width("240px")
+                            .display("flex")
+                            .align_items("center")
+                            // A preview wider than the card scrolls rather than
+                            // being cut off; `safe` keeps its start reachable.
+                            .justify_content("safe center")
+                            .overflow_x(preview_overflow);
+                        match pinned_preview {
+                            // Only beside the panel (the 768px query below): stacked, it would cover the controls.
+                            true => card_query(
+                                preview,
+                                768,
+                                sx().align_self("flex-start")
+                                    .position("sticky")
+                                    .top("0"),
+                            ),
+                            false => preview,
+                        }
+                    },
                     {render.call(DemoValues(current.0.clone(), Some(values)))}
                 }
                 // No props, no panel - the preview and the code block are

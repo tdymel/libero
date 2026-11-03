@@ -587,6 +587,38 @@ fn a_helper_leaves_the_description_under_the_captions() {
     });
 }
 
+/// Todo 5416: a description below with no label leaves no room above the control.
+#[test]
+fn an_unlabelled_slider_with_a_description_below_starts_at_its_control() {
+    block_on(async {
+        for viewport in [Viewport::Mobile, Viewport::Desktop] {
+            let fixture = Fixture::open("/slider/description-below", viewport)
+                .await
+                .unwrap();
+            let gaps: Vec<f64> = fixture
+                .page
+                .evaluate_bounded(
+                    "['unlabelled', 'unlabelled-range'].map(id => { \
+                     const root = document.getElementById(id); \
+                     let room = 0; \
+                     for (let el = root.querySelector(\"[data-slot='track']\"); el !== root; el = el.parentElement) \
+                       room += parseFloat(getComputedStyle(el).marginTop) + parseFloat(getComputedStyle(el).paddingTop); \
+                     return room; })",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                gaps.iter().all(|gap| gap.abs() < 0.5),
+                "at {}: room above the control (single, range): {gaps:?}",
+                viewport.name()
+            );
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Todo 5417: under a finger the 44px press is centred on the track, not on the box that
 /// also holds the caption room.
 #[test]

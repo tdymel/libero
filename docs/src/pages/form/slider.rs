@@ -320,6 +320,7 @@ pub fn SliderPage() -> Element {
             // snippet: let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
             // snippet: let mut last_quality = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
             Demo {
+                pinned_preview: true,
                 component: "Slider",
                 children_text: "",
                 controls: vec![
