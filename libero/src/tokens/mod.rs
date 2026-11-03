@@ -33,5 +33,6 @@ pub use hex_color::HexColor;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(crate) use hex_color::{Ends, TEXT_CONTRAST};
 pub use responsive::{Responsive, responsive};
+pub(crate) use responsive::{range_query, range_token};
 pub use size::{NegativeSize, Size};
 pub use sizes::Sizes;

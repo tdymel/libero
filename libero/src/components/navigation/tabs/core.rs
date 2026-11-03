@@ -11,12 +11,12 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{ElementHandle, id_selector, use_element, use_focus_within},
+    hooks::{ElementHandle, id_selector, use_element, use_focus_within, use_range_css},
     platform::{ElementApi, focus_selector, logical_key, when_laid_out},
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
-        CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE, TABS_PAD_X,
-        TABS_PAD_Y, TabsDefaults, TabsPlacement,
+        CssVar, Responsive, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE,
+        TABS_PAD_X, TABS_PAD_Y, TabsDefaults, TabsPlacement,
     },
 };
 
@@ -244,10 +244,12 @@ pub(crate) struct TabsView {
     pub focusable: bool,
     /// The panel is a tab stop (APG, for content that can't take focus).
     pub panel_stop: bool,
-    pub size: Size,
+    pub size: Responsive<Size>,
     pub class: Input<ClassList>,
     pub sx: Input<crate::sx::Sx>,
     pub states: Input<States>,
+    pub hidden_from: Input<Size>,
+    pub visible_from: Input<Size>,
     pub attributes: Vec<Attribute>,
 }
 
@@ -268,6 +270,8 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         class,
         sx: user_sx,
         states,
+        hidden_from,
+        visible_from,
         attributes,
     } = view;
 
@@ -276,7 +280,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
 
     let states: Input<States> = states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&size, |size| size.state_name())
         .with("full-width", full_width)
         .with("vertical", vertical)
         .with(placement.state_name(), vertical)
@@ -296,11 +300,16 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     let naming = if named { naming } else { Vec::new() };
     let panel_id = selected.map(|selected| format!("{root}-panel-{selected}"));
     let panel_labelled_by = selected.map(|selected| format!("{root}-tab-{selected}"));
+    use_range_css(
+        &TABS_SX,
+        size.range_copies(|size| size.state_name(), TabsDefaults::size_sx),
+    );
 
     use_box()
         .framework_sx(&TABS_SX)
         .class(&class)
         .sx(&user_sx)
+        .visibility(&hidden_from, &visible_from)
         .states(&states)
         .variables(&variables)
         .prepare()

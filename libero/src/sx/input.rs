@@ -134,6 +134,58 @@ macro_rules! input_from {
 
 pub(crate) use input_from;
 
+/// `T`/`Option<T>`/`Responsive<T>` and a forwarded `Input<T>` -> `Input<Responsive<T>>`, for a
+/// prop taken per breakpoint; `str T` adds `&str`/`String` for a type parsed from a word.
+macro_rules! input_from_responsive {
+    (str $ty:ty) => {
+        $crate::sx::input::input_from_responsive!($ty);
+
+        impl From<&str> for $crate::sx::Input<$crate::tokens::Responsive<$ty>> {
+            fn from(value: &str) -> Self {
+                <$ty>::from(value).into()
+            }
+        }
+
+        impl From<String> for $crate::sx::Input<$crate::tokens::Responsive<$ty>> {
+            fn from(value: String) -> Self {
+                value.as_str().into()
+            }
+        }
+    };
+    ($ty:ty) => {
+        impl From<$ty> for $crate::sx::Input<$crate::tokens::Responsive<$ty>> {
+            fn from(value: $ty) -> Self {
+                Self::Value(value.into())
+            }
+        }
+
+        impl From<Option<$ty>> for $crate::sx::Input<$crate::tokens::Responsive<$ty>> {
+            fn from(value: Option<$ty>) -> Self {
+                value.map_or(Self::None, Into::into)
+            }
+        }
+
+        impl From<$crate::tokens::Responsive<$ty>>
+            for $crate::sx::Input<$crate::tokens::Responsive<$ty>>
+        {
+            fn from(value: $crate::tokens::Responsive<$ty>) -> Self {
+                Self::Value(value)
+            }
+        }
+
+        /// A forwarded plain prop: `size: props.size`.
+        impl From<$crate::sx::Input<$ty>> for $crate::sx::Input<$crate::tokens::Responsive<$ty>> {
+            fn from(value: $crate::sx::Input<$ty>) -> Self {
+                value.into_option().into()
+            }
+        }
+    };
+}
+
+pub(crate) use input_from_responsive;
+
+input_from_responsive!(str Size);
+
 input_from!(Sx, f32, f64, usize, States, Variables);
 
 impl From<&'static StaticSx> for Input<Sx> {
@@ -204,6 +256,13 @@ impl From<Responsive<ThemeAwareValue>> for Input<Responsive<ThemeAwareValue>> {
     }
 }
 
+/// A forwarded plain prop: `radius: props.radius.clone()`.
+impl From<Input<ThemeAwareValue>> for Input<Responsive<ThemeAwareValue>> {
+    fn from(value: Input<ThemeAwareValue>) -> Self {
+        value.into_option().into()
+    }
+}
+
 impl From<Responsive<Size>> for Input<Responsive<ThemeAwareValue>> {
     fn from(value: Responsive<Size>) -> Self {
         Self::Value(value.map(ThemeAwareValue::from))
@@ -214,6 +273,17 @@ impl From<Responsive<Size>> for Input<Responsive<ThemeAwareValue>> {
 mod tests {
     use super::*;
     use crate::sx::{StaticSx, sx};
+
+    #[test]
+    fn a_plain_value_converts_to_a_responsive_input() {
+        let word: Input<Responsive<Size>> = "lg".into();
+        let none: Input<Responsive<Size>> = None::<Size>.into();
+        let forwarded: Input<Responsive<Size>> = Input::<Size>::Value(Size::Sm).into();
+
+        assert_eq!(word.as_ref().map(Responsive::base), Some(Size::Lg));
+        assert!(none.as_ref().is_none());
+        assert_eq!(forwarded.as_ref().map(Responsive::base), Some(Size::Sm));
+    }
 
     static PADDING: StaticSx = StaticSx::new(|| sx().padding("lg"));
     static SAME_PADDING: StaticSx = StaticSx::new(|| sx().padding("lg"));

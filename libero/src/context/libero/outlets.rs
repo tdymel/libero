@@ -91,6 +91,13 @@ pub(super) fn StyleOutlet() -> Element {
                 dangerous_inner_html: "{renderer_css(&stylesheet, &answers)}"
             }
         }
+        // Range copies, ahead of the blocks and so of every component sheet.
+        for (node_key, stylesheet) in context.stylesheet_registry.stylesheets(SheetRank::Range) {
+            style {
+                key: "{node_key}",
+                dangerous_inner_html: "{renderer_css(&stylesheet, &answers)}"
+            }
+        }
         if blocks() {
             style {
                 dangerous_inner_html: CssLayer::blocks_css(),

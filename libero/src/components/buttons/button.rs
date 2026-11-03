@@ -8,19 +8,20 @@ use crate::{
             BUTTON_VARS, COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Part, ScaleOrCss, States,
             TOOLBAR_ITEM, ToolbarItem, Variant, base_color, base_props, contrast_color,
             disabled_look_sx, fill_color, focus_ring_sx, input_from_str, interactive_variant_sx,
-            label_color, literal_contrast, parts_enum, text_color, use_button_group,
-            use_toolbar_item, variables, variant_colors, variant_selected_sx,
+            label_color, literal_contrast, parts_enum, responsive_sx, text_color, use_button_group,
+            use_toolbar_item, variables, variant_colors, variant_selected_sx, with_own,
         },
         feedback::Loader,
         form::use_fieldset_disabled,
         layout::{render_anchor, use_box},
         navigation::{NewTabHint, wants_new_tab_hint},
     },
-    hooks::{ripple_sx, use_cache, use_gradient_style, use_ripple, use_theme},
+    hooks::{ripple_sx, use_cache, use_gradient_style, use_range_css, use_ripple, use_theme},
     platform::click_stopped,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        BUTTON_HEIGHT, ButtonDefaults, CssVar, Gradient, LOADER_SIZE, SURFACE_LABEL, Size, SizeCss,
+        BUTTON_HEIGHT, ButtonDefaults, CssVar, Gradient, LOADER_SIZE, Responsive, SURFACE_LABEL,
+        Size, SizeCss,
     },
     utils::warn,
 };
@@ -60,26 +61,7 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
     Variant::ALL
         .iter()
         .fold(base, |base, &variant| {
-            base.when(
-                variant.state_name(),
-                interactive_variant_sx(
-                    variant,
-                    &BUTTON_VARS,
-                    &BUTTON_HOVER_VAR,
-                    &BUTTON_SELECTED_VAR,
-                    &BUTTON_ON_STATE_VAR,
-                )
-                // After the variant's `:hover`, which it ties on specificity.
-                .when(
-                    "checked",
-                    variant_selected_sx(
-                        variant,
-                        &BUTTON_VARS,
-                        &BUTTON_SELECTED_VAR,
-                        &BUTTON_ON_STATE_VAR,
-                    ),
-                ),
-            )
+            base.when(variant.state_name(), variant_sx(variant))
         })
         // No `pointer-events: none`: the variant's `:hover` skips it already.
         .when("disabled", disabled_look_sx("not-allowed"))
@@ -99,12 +81,68 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
 /// `overflow: hidden` would clip descenders at 200% (WCAG 1.4.4, todo 2338).
 /// Still a definite height, so a stretching flex row does not grow the button.
 fn zoom_height_sx() -> Sx {
-    sx().per_size(|size| {
-        sx().height(format!(
-            "max({}, calc(1.5em + 2px))",
-            BUTTON_HEIGHT.value(size)
-        ))
-    })
+    sx().per_size(zoom_height)
+}
+
+fn zoom_height(size: Size) -> Sx {
+    sx().height(format!(
+        "max({}, calc(1.5em + 2px))",
+        BUTTON_HEIGHT.value(size)
+    ))
+}
+
+/// A range copy of one size: the plain word's three blocks in one.
+fn size_copy_sx(size: Size) -> Sx {
+    ButtonDefaults::size_sx(size)
+        .and(zoom_height(size))
+        .when("loading-overlay", loader_size_sx(size))
+}
+
+/// A range copy of one variant: its block, reading the instance's vars for that variant.
+fn variant_copy_sx(variant: Variant) -> Sx {
+    VARIANT_VARS
+        .into_iter()
+        .fold(variant_sx(variant), |sx, var| {
+            let value = variant_var(&var, variant).value();
+            sx.var(var, value)
+        })
+}
+
+fn variant_sx(variant: Variant) -> Sx {
+    interactive_variant_sx(
+        variant,
+        &BUTTON_VARS,
+        &BUTTON_HOVER_VAR,
+        &BUTTON_SELECTED_VAR,
+        &BUTTON_ON_STATE_VAR,
+    )
+    // After the variant's `:hover`, which it ties on specificity.
+    .when(
+        "checked",
+        variant_selected_sx(
+            variant,
+            &BUTTON_VARS,
+            &BUTTON_SELECTED_VAR,
+            &BUTTON_ON_STATE_VAR,
+        ),
+    )
+}
+
+/// The colour vars [`button_variables`] writes, which differ per variant.
+const VARIANT_VARS: [CssVar; 8] = [
+    BUTTON_COLOR_VAR,
+    BUTTON_FILL_VAR,
+    BUTTON_CONTRAST_VAR,
+    BUTTON_HOVER_VAR,
+    BUTTON_SELECTED_VAR,
+    BUTTON_ON_STATE_VAR,
+    BUTTON_CONTAINER_VAR,
+    BUTTON_ON_CONTAINER_VAR,
+];
+
+/// `var` for one variant of a responsive one, as `--lsx-button-hover-v-filled`.
+fn variant_var(var: &CssVar, variant: Variant) -> CssVar {
+    CssVar::Owned(format!("{}-v-{}", var.name(), variant.as_str()))
 }
 
 /// Beside the children, never shrinking, as on `Chip`: `leading` is before them.
@@ -145,17 +183,18 @@ fn loading_overlay_sx() -> Sx {
         );
 
     Size::ALL.into_iter().fold(base, |base, size| {
-        base.when(
-            size.state_name(),
-            sx().selector(
-                "& > span:last-child",
-                sx().var(
-                    LOADER_SIZE,
-                    format!("calc({} / 2)", BUTTON_HEIGHT.value(size)),
-                ),
-            ),
-        )
+        base.when(size.state_name(), loader_size_sx(size))
     })
+}
+
+fn loader_size_sx(size: Size) -> Sx {
+    sx().selector(
+        "& > span:last-child",
+        sx().var(
+            LOADER_SIZE,
+            format!("calc({} / 2)", BUTTON_HEIGHT.value(size)),
+        ),
+    )
 }
 
 /// The colour half of the `style` attribute. Depends on its arguments alone, so `Button` caches it.
@@ -166,6 +205,38 @@ pub(crate) fn button_variables(
     base: &ThemeAwareValue,
     uncolored: bool,
     disabled: bool,
+) -> String {
+    named_button_variables(variant, base, uncolored, disabled, |var| var)
+}
+
+/// Every variant a responsive `variant` takes, each under its own names ([`variant_var`]).
+fn responsive_button_variables(
+    variant: &Responsive<Variant>,
+    base: &ThemeAwareValue,
+    uncolored: bool,
+    disabled: bool,
+) -> String {
+    let mut seen: Vec<Variant> = Vec::new();
+    for (_, _, value) in variant.runs() {
+        if !seen.contains(&value) {
+            seen.push(value);
+        }
+    }
+    seen.into_iter()
+        .map(|value| {
+            named_button_variables(value, base, uncolored, disabled, |var| {
+                variant_var(&var, value)
+            })
+        })
+        .collect()
+}
+
+fn named_button_variables(
+    variant: Variant,
+    base: &ThemeAwareValue,
+    uncolored: bool,
+    disabled: bool,
+    name: impl Fn(CssVar) -> CssVar,
 ) -> String {
     let contrast = contrast_color(base);
     let colors = variant_colors(variant, base);
@@ -182,19 +253,19 @@ pub(crate) fn button_variables(
     });
 
     variables()
-        .with(BUTTON_COLOR_VAR, label)
-        .with(BUTTON_FILL_VAR, fill_color(base))
+        .with(name(BUTTON_COLOR_VAR), label)
+        .with(name(BUTTON_FILL_VAR), fill_color(base))
         .with(
-            BUTTON_CONTRAST_VAR,
+            name(BUTTON_CONTRAST_VAR),
             contrast
                 .and_then(|c| c.resolve(None))
                 .or_else(|| literal_contrast(base)),
         )
-        .with(BUTTON_HOVER_VAR, colors.hover)
-        .with(BUTTON_SELECTED_VAR, colors.selected)
-        .with(BUTTON_ON_STATE_VAR, colors.on_state)
-        .with(BUTTON_CONTAINER_VAR, colors.container)
-        .with(BUTTON_ON_CONTAINER_VAR, colors.on_container)
+        .with(name(BUTTON_HOVER_VAR), colors.hover)
+        .with(name(BUTTON_SELECTED_VAR), colors.selected)
+        .with(name(BUTTON_ON_STATE_VAR), colors.on_state)
+        .with(name(BUTTON_CONTAINER_VAR), colors.container)
+        .with(name(BUTTON_ON_CONTAINER_VAR), colors.on_container)
         .render()
 }
 
@@ -214,17 +285,26 @@ base_props! {
     pub struct ButtonProps {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Per breakpoint too: `responsive(Variant::Outlined).md(Variant::Filled)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         /// Second stop and angle of the `gradient` variant, whose first stop is `color`:
         /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
         #[props(default, into)]
         gradient: Option<Gradient>,
         /// Corner radius, independent of `size`: a size word or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         #[props(default)]
         full_width: Option<bool>,
         /// `justify-content` of the icons and the label, as `justify: "space-between"` on a
@@ -303,9 +383,10 @@ pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
     let group = use_button_group();
     let item = use_toolbar_item();
-    let variant = props
+    let variants = props
         .variant
-        .copied_or(group.variant.unwrap_or(theme.button.variant));
+        .copied_or(group.variant.unwrap_or(theme.button.variant).into());
+    let variant = variants.base();
     let color_prop = props.color.as_ref().or(group.color.as_ref());
     let color = base_color("Button", color_prop);
     let is_link = props.to.as_ref().is_some();
@@ -342,37 +423,65 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let ripple = use_ripple();
 
-    let size = props
+    let sizes = props
         .size
-        .copied_or(group.size.unwrap_or(theme.button.size));
+        .copied_or(group.size.unwrap_or(theme.button.size).into());
+    // The `Loader` takes one size; the overlay's follows the breakpoints in CSS.
+    let size = sizes.base();
     let radius = ScaleOrCss::new(
-        props.radius.as_ref().or(group.radius.as_ref()),
+        props
+            .radius
+            .as_ref()
+            .map(Responsive::base_ref)
+            .or(group.radius.as_ref()),
         theme.button.radius,
     );
+    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
+    let radius_steps = match radii {
+        Some(radii) => radii.map(|value| ScaleOrCss::new(Some(&value), theme.button.radius).size),
+        None => radius.size.into(),
+    };
+    // Custom CSS per breakpoint rides the override var in the user layer, under `sx`.
+    let radius_sx = radii.and_then(|radii| {
+        responsive_sx(radii, |sx, value| {
+            let css = ScaleOrCss::new(Some(&value), theme.button.radius)
+                .custom_css(SizeCss::RADIUS)
+                .unwrap_or_else(|| "initial".into());
+            sx.var(SizeCss::RADIUS.override_var(), css)
+        })
+    });
+    let own_sx = radius_sx.map(|radius_sx| with_own(Some(radius_sx), &props.sx));
 
     let showing = ripple.showing();
     // ~790 ns uncached, and the key rarely changes between renders.
     let uncolored = color_prop.is_none();
     let style = use_cache(
-        (variant, color, uncolored, disabled),
-        |(variant, color, uncolored, disabled)| {
-            button_variables(*variant, color, *uncolored, *disabled)
+        (variants, color, uncolored, disabled),
+        |(variants, color, uncolored, disabled)| match variants.is_plain() {
+            true => button_variables(variants.base(), color, *uncolored, *disabled),
+            false => responsive_button_variables(variants, color, *uncolored, *disabled),
         },
     );
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
         color_prop,
-        variant == Variant::Gradient,
+        variant == Variant::Gradient
+            || variants
+                .breakpoints()
+                .any(|(_, value)| value == Variant::Gradient),
         false,
     );
     let style = match gradient {
         Some(gradient) => format!("{style}{gradient}"),
         None => style,
     };
-    let style = format!(
-        "{style}{}",
-        radius.override_variables(SizeCss::RADIUS).render()
-    );
+    let style = match radii {
+        Some(_) => style,
+        None => format!(
+            "{style}{}",
+            radius.override_variables(SizeCss::RADIUS).render()
+        ),
+    };
     let style = match props.justify.resolve(None) {
         Some(justify) => format!(
             "{style}{}",
@@ -401,13 +510,24 @@ pub fn Button(props: ButtonProps) -> Element {
         ("loading-overlay", loading && !inline_loader),
         ("full-width", full_width),
         ("checked", selected),
-        (variant.state_name(), true),
-        (size.state_name(), true),
-        (radius.size.radius_state_name(), true),
     ]);
+    own.extend(
+        variants
+            .state_tokens(Variant::state_name)
+            .chain(sizes.state_tokens(|size| size.state_name()))
+            .chain(radius_steps.state_tokens(|size| size.radius_state_name()))
+            .map(|state| (state, true)),
+    );
     if let Some(ripple) = showing.as_ref() {
         own.push((ripple.state(), true));
     }
+    // Only the ranges this instance uses; a plain one registers nothing.
+    let mut copies = sizes.range_copies(|size| size.state_name(), size_copy_sx);
+    copies.extend(
+        radius_steps.range_copies(|size| size.radius_state_name(), ButtonDefaults::radius_sx),
+    );
+    copies.extend(variants.range_copies(Variant::state_name, variant_copy_sx));
+    use_range_css(&BUTTON_BASE_SX, copies);
 
     let states: Input<States> = match props.states.as_ref() {
         Some(caller) => own
@@ -450,7 +570,8 @@ pub fn Button(props: ButtonProps) -> Element {
     let boxed = use_box()
         .framework_sx(&BUTTON_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
+        .visibility(&props.hidden_from, &props.visible_from)
         .parts(&props.parts)
         .states(&states)
         .style(style)

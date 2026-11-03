@@ -37,10 +37,12 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. Under a gradient, its first stop. Unset, a `standard` or `outlined` button on a gradient `Paper`, a coloured or gradient `Header`, a filled, tonal or gradient `Alert` or a `Mark` takes that surface's text color. A secondary action beside a filled primary one, such as "Cancel" beside "Save", is `color: "neutral"` with `variant: "outlined"`; `"ink"` draws it in the page's text colour instead. |
-| `variant` | `Variant` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop. |
+| `variant` | `Responsive<Variant>` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants. |
-| `radius` | `ThemeAwareValue` | `md` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. |
-| `size` | `Size` | `md` | Height, padding and font size. |
+| `radius` | `Responsive<ThemeAwareValue>` | `md` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
+| `size` | `Responsive<Size>` | `md` | Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
+| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
+| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
 | `justify` | `ThemeAwareValue` | `center` | Where the icons and the label sit along the button, as `justify-content`: `start`, `end`, `space-between` or any CSS. It shows on a `full_width` button or one given a width. Unset, they are centred, and an overlong label is cut at its end. |
 | `gap` | `ThemeAwareValue` | `xs` | Space between the icons and the label: a size word or any CSS, as `gap: "0"`. It faces the label under `dir="rtl"` too. |

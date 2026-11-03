@@ -41,12 +41,15 @@ thread_local! {
 }
 
 fn build_static(sx: &'static Sx) -> Stylesheet {
+    with_static(sx, Stylesheet::clone)
+}
+
+fn with_static<R>(sx: &'static Sx, f: impl FnOnce(&Stylesheet) -> R) -> R {
     STATIC_SX_CSS.with(|cache| {
-        cache
+        f(cache
             .borrow_mut()
             .entry(std::ptr::from_ref(sx) as usize)
-            .or_insert_with(|| Stylesheet::from(sx))
-            .clone()
+            .or_insert_with(|| Stylesheet::from(sx)))
     })
 }
 
@@ -230,17 +233,52 @@ fn class_name(slot: &Option<CssRegistration>) -> Option<&str> {
         .and_then(|registration| registration.class_name.as_deref())
 }
 
-/// The three registrations every `Box`-shaped component makes, behind one hook
-/// slot (~360 ns saved per component), composed into the `class` value.
+/// A [`keyed`](Stylesheet::keyed) sheet named by its `data-state` word, built only
+/// when the word changes: `hidden_from`'s rule.
+#[derive(Clone, Copy)]
+pub(crate) struct WordSheet {
+    pub word: &'static str,
+    pub build: fn(&'static str) -> Stylesheet,
+}
+
+impl CssSource for WordSheet {
+    fn identity_hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.word.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    fn build(self) -> Stylesheet {
+        (self.build)(self.word)
+    }
+}
+
+/// The registrations every `Box`-shaped component makes, behind one hook slot
+/// (~360 ns saved per component), composed into the `class` value. The `words`
+/// slots stay empty unless the box uses `hidden_from` / `visible_from`.
 pub(crate) fn use_box_css(
     class: &Input<ClassList>,
     focus: Option<&'static StaticSx>,
     framework: Option<&'static StaticSx>,
     sx: Option<SxSource<'_>>,
+    words: [Option<WordSheet>; 2],
 ) -> String {
-    let state = use_css_registrations(3);
+    let state = use_css_registrations(5);
     let context = &mut *state.context.borrow_mut();
     let slots = &mut *state.slots.borrow_mut();
+    let (slots, word_slots) = slots.split_at_mut(3);
+    let words_changed = word_slots
+        .iter_mut()
+        .zip(words)
+        .fold(false, |changed, (slot, word)| {
+            register(
+                slot,
+                word,
+                CssLayer::Framework,
+                SheetRank::Component,
+                context,
+            ) || changed
+        });
     let (head, sx_slot) = slots.split_at_mut(2);
     let (focus_slot, framework_slot) = head.split_at_mut(1);
 
@@ -265,7 +303,10 @@ pub(crate) fn use_box_css(
         SheetRank::Component,
         context,
     );
-    bump_if_changed(focus_changed || framework_changed || sx_changed, context);
+    bump_if_changed(
+        focus_changed || framework_changed || sx_changed || words_changed,
+        context,
+    );
 
     // One `String`, not a `ClassList` (five allocations). Order: the caller's
     // classes, then framework, focus, static.
@@ -290,4 +331,105 @@ pub(crate) fn use_box_css(
         composed.push_str(name);
     }
     composed
+}
+
+/// One range copy for [`use_range_css`]: `block` under `word`, within the viewport range
+/// `query`. The block builds only when the word is new to the instance.
+pub(crate) struct RangeCopy<'a> {
+    word: &'static str,
+    query: String,
+    block: Box<dyn FnOnce() -> Sx + 'a>,
+}
+
+impl<T: Clone + PartialEq> crate::tokens::Responsive<T> {
+    /// The copies a responsive axis value needs, one per run; none for a plain value.
+    pub(crate) fn range_copies<'a>(
+        &self,
+        token: impl Fn(T) -> &'static str,
+        block: impl Fn(T) -> Sx + Clone + 'a,
+    ) -> Vec<RangeCopy<'a>>
+    where
+        T: 'a,
+    {
+        if self.is_plain() {
+            return Vec::new();
+        }
+        self.runs()
+            .into_iter()
+            .map(|(from, until, value)| {
+                let block = block.clone();
+                RangeCopy {
+                    word: crate::tokens::range_token(from, until, token(value.clone())),
+                    query: crate::tokens::range_query(from, until),
+                    block: Box::new(move || block(value)),
+                }
+            })
+            .collect()
+    }
+}
+
+/// The range copies one instance holds, released when its scope goes.
+struct RangeRegistrations {
+    context: RefCell<LiberoContext>,
+    held: RefCell<Vec<(&'static str, Option<StylesheetKey>)>>,
+}
+
+impl Drop for RangeRegistrations {
+    fn drop(&mut self) {
+        let context = self.context.get_mut();
+        let held = std::mem::take(self.held.get_mut());
+        for key in held.iter().filter_map(|(_, key)| *key) {
+            context.stylesheet_registry.release(key);
+        }
+        if !held.is_empty() && context.stylesheet_registry.take_outlet_change() {
+            *context.stylesheet_registry_version.write() += 1;
+        }
+    }
+}
+
+/// Registers a responsive instance's range copies of `base`'s axis blocks, rooted at `base`'s
+/// class: `@media <run>{.<class>[data-state~="<word>"]{..}}`, the plain word block's specificity,
+/// shared by every instance using the word. A plain instance registers nothing. One hook slot.
+pub(crate) fn use_range_css(base: &'static StaticSx, copies: Vec<RangeCopy<'_>>) {
+    let state = use_hook(|| {
+        Rc::new(RangeRegistrations {
+            context: RefCell::new(consume_context::<LiberoContext>()),
+            held: RefCell::new(Vec::new()),
+        })
+    });
+    let held = &mut *state.held.borrow_mut();
+    if held
+        .iter()
+        .map(|(word, _)| *word)
+        .eq(copies.iter().map(|copy| copy.word))
+    {
+        return;
+    }
+    let context = &mut *state.context.borrow_mut();
+    let Some(class_name) = with_static(base, |sheet| sheet.class_name().map(str::to_string)) else {
+        return;
+    };
+    // Acquire before release, so a copy kept across the change never leaves.
+    let next: Vec<_> = copies
+        .into_iter()
+        .map(|copy| {
+            let sx =
+                crate::sx::sx().media(copy.query, crate::sx::sx().when(copy.word, (copy.block)()));
+            let sheet = Stylesheet::rooted_at(&sx, &class_name);
+            // An empty block (Tabs' `top`) is a word with no rule.
+            let key = (!sheet.as_str().is_empty()).then(|| {
+                context
+                    .stylesheet_registry
+                    .acquire(sheet, CssLayer::Framework, SheetRank::Range)
+            });
+            (copy.word, key)
+        })
+        .collect();
+    for key in std::mem::replace(held, next)
+        .into_iter()
+        .filter_map(|(_, key)| key)
+    {
+        context.stylesheet_registry.release(key);
+    }
+    bump_if_changed(true, context);
 }

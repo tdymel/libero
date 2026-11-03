@@ -93,6 +93,17 @@ const RESPONSIVE: &str = r#"sx()
 
 const RESPONSIVE_VALUE: &str = r#"sx().width(bp().sm("480px").lg("720px"))"#;
 
+const RESPONSIVE_PROPS: &str = r#"Button {
+    size: responsive(Size::Sm).md(Size::Lg),
+    variant: responsive(Variant::Outlined).md(Variant::Filled),
+    "Save"
+}
+Button { hidden_from: "md", "Menu" }
+
+// data-state="base-md:size-sm md-:size-lg base-md:outlined md-:filled ..."
+// A rule of your own on a plain word misses this button; name the range word:
+sx().when("md-:size-lg", sx().letter_spacing("0.02em"))"#;
+
 const MEDIA: &str = r#"sx()
     .transition("transform 200ms ease")
     .media("(prefers-reduced-motion: reduce)", sx().transition("none"))"#;
@@ -427,6 +438,31 @@ pub fn StylingPage() -> Element {
                         column("min-width").value(|size: &Size| size.breakpoint_value()),
                     ],
                 }
+                Text {
+                    "Some props take a value per breakpoint too: "
+                    Code { source: "size" }
+                    " on Button, Badge and Tabs, "
+                    Code { source: "variant" }
+                    " on Button and Badge, "
+                    Code { source: "radius" }
+                    " on Button. The CSS for a breakpoint range is added the first "
+                    "time a component uses it, so a page with plain values ships none. "
+                    Code { source: "hidden_from" }
+                    " hides a component from a breakpoint up, "
+                    Code { source: "visible_from" }
+                    " below it."
+                }
+                Text {
+                    "A responsive value replaces the plain state word with one word per range, "
+                    "as "
+                    Code { source: "md-:size-lg" }
+                    " (from md up) or "
+                    Code { source: "base-md:size-sm" }
+                    " (under md). A "
+                    Code { source: "when(\"size-lg\", ..)" }
+                    " of your own does not match such an instance: name the range word."
+                }
+                CodeBlock { source: RESPONSIVE_PROPS, label: "Responsive props", language: "rust" }
             }
 
             DocSection {

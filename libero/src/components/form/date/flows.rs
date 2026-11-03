@@ -180,10 +180,13 @@ fn step_tabs(
             size: match size {
                 Size::Xs => Size::Xs,
                 _ => Size::Sm,
-            },
+            }
+            .into(),
             class: Input::default(),
             sx: Input::default(),
             states: Input::default(),
+            hidden_from: Input::None,
+            visible_from: Input::None,
             attributes: vec![Attribute::new("aria-label", label, None, false)],
         },
         id,

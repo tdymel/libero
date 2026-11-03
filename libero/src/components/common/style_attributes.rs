@@ -4,8 +4,10 @@ use dioxus::prelude::use_hook;
 
 use crate::{
     components::common::{ClassList, Input, States, Variables},
-    hooks::{SxSource, use_box_css},
+    css::Stylesheet,
+    hooks::{SxSource, WordSheet, use_box_css},
     sx::{StaticSx, Sx},
+    tokens::{Size, range_query},
 };
 
 /// The class / `data-state` / `style` triple the styling props resolve to.
@@ -33,6 +35,7 @@ pub(crate) fn use_style_attributes(
         focus_ring.then_some(&BOX_FOCUS_SX),
         framework_sx,
         sx_source,
+        visibility_sheets(states),
     );
 
     let variables_style = variables
@@ -100,6 +103,87 @@ impl Written {
 // Here, not in `Box`: an `<a href>` is focusable without a tabindex.
 static BOX_FOCUS_SX: StaticSx =
     StaticSx::new(|| crate::sx::sx().focus_visible(super::focus_ring_sx()));
+
+/// The `hidden_from` and `visible_from` words, by [`Size::index`].
+const HIDDEN_FROM: [&str; 6] = [
+    "hidden-from-xs",
+    "hidden-from-sm",
+    "hidden-from-md",
+    "hidden-from-lg",
+    "hidden-from-xl",
+    "hidden-from-xxl",
+];
+const VISIBLE_FROM: [&str; 6] = [
+    "visible-from-xs",
+    "visible-from-sm",
+    "visible-from-md",
+    "visible-from-lg",
+    "visible-from-xl",
+    "visible-from-xxl",
+];
+
+/// `states` with the `hidden_from` / `visible_from` words; untouched (no clone) without them.
+pub(crate) fn with_visibility(
+    states: &Input<States>,
+    hidden_from: &Input<Size>,
+    visible_from: &Input<Size>,
+) -> Option<Input<States>> {
+    let words = [
+        hidden_from.as_ref().map(|size| HIDDEN_FROM[size.index()]),
+        visible_from.as_ref().map(|size| VISIBLE_FROM[size.index()]),
+    ];
+    if words.iter().all(Option::is_none) {
+        return None;
+    }
+    let states = words
+        .into_iter()
+        .flatten()
+        .fold(states.as_ref().cloned().unwrap_or_default(), States::active);
+    Some(states.into())
+}
+
+/// The rule each active visibility word needs, registered only while a box uses it.
+fn visibility_sheets(states: &Input<States>) -> [Option<WordSheet>; 2] {
+    let mut sheets = [None, None];
+    let Some(states) = states.as_ref() else {
+        return sheets;
+    };
+    for (word, _) in states.iter().filter(|(_, active)| *active) {
+        let slot = match word {
+            word if HIDDEN_FROM.contains(&word) => 0,
+            word if VISIBLE_FROM.contains(&word) => 1,
+            _ => continue,
+        };
+        sheets[slot] = Some(WordSheet {
+            word,
+            build: visibility_sheet,
+        });
+    }
+    sheets
+}
+
+/// `!important` over any `display` the component sets; no class, so [`keyed`](Stylesheet::keyed).
+fn visibility_sheet(word: &'static str) -> Stylesheet {
+    let (hidden, size) = HIDDEN_FROM
+        .iter()
+        .position(|hidden| *hidden == word)
+        .map(|at| (true, at))
+        .or_else(|| {
+            VISIBLE_FROM
+                .iter()
+                .position(|visible| *visible == word)
+                .map(|at| (false, at))
+        })
+        .map_or((true, Size::Xs), |(hidden, at)| (hidden, Size::ALL[at]));
+    let query = match hidden {
+        true => range_query(Some(size), None),
+        false => range_query(None, Some(size)),
+    };
+    Stylesheet::from(format!(
+        "@media {query}{{[data-state~=\"{word}\"]{{display:none !important;}}}}"
+    ))
+    .keyed()
+}
 
 /// A custom property value that computes as absent. Write it in a `style` set via
 /// `.attr("style", ..)` rather than leave the var out.

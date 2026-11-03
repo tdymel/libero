@@ -59,36 +59,8 @@ str_enum! {
 
 input_from_str!(NavigationBarVariant);
 
-/// One shape, or one per breakpoint: `variant: responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)`.
-impl From<&str> for Input<Responsive<NavigationBarVariant>> {
-    fn from(value: &str) -> Self {
-        Self::Value(Responsive::new(value.into()))
-    }
-}
-
-impl From<String> for Input<Responsive<NavigationBarVariant>> {
-    fn from(value: String) -> Self {
-        value.as_str().into()
-    }
-}
-
-impl From<NavigationBarVariant> for Input<Responsive<NavigationBarVariant>> {
-    fn from(value: NavigationBarVariant) -> Self {
-        Self::Value(Responsive::new(value))
-    }
-}
-
-impl From<Option<NavigationBarVariant>> for Input<Responsive<NavigationBarVariant>> {
-    fn from(value: Option<NavigationBarVariant>) -> Self {
-        value.map_or(Self::None, Into::into)
-    }
-}
-
-impl From<Responsive<NavigationBarVariant>> for Input<Responsive<NavigationBarVariant>> {
-    fn from(value: Responsive<NavigationBarVariant>) -> Self {
-        Self::Value(value)
-    }
-}
+// One shape, or one per breakpoint: `variant: responsive(NavigationBarVariant::Bar).sm(NavigationBarVariant::Rail)`.
+crate::sx::input::input_from_responsive!(str NavigationBarVariant);
 
 str_enum! {
     /// Which item labels show. A hidden label still names its item.

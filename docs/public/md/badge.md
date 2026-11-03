@@ -40,10 +40,12 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `Variant` | `filled` | The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state. |
+| `variant` | `Responsive<Variant>` | `filled` | The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `color` | `ThemeAwareValue` | `primary` | A theme color name or a CSS color. A theme color also sets a label color that reads on it. Under a gradient, its first stop; unset, the theme's `badge.color` seeds it. |
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
-| `size` | `Size` | `md` | Height, horizontal padding and font size, on a scale smaller than a chip's. |
+| `size` | `Responsive<Size>` | `md` | Height, horizontal padding and font size, on a scale smaller than a chip's. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`. |
+| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
+| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `radius` | `ThemeAwareValue` | `xxl` | A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is a pill at every height. |
 | `circle` | `bool` | `false` | Drops the horizontal padding and makes the width at least the height, for a count of one or two characters. |
 | `trailing_icon` | `Element` | - | Drawn after the label, one spacing step away, as a check after "Verified". It never shrinks, and a long label's ellipsis stops before it. |

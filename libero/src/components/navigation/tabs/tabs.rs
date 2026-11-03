@@ -8,7 +8,7 @@ use crate::{
     },
     hooks::{use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
-    theme::{Size, TabsActivation, TabsPlacement},
+    theme::{Responsive, Size, TabsActivation, TabsPlacement},
 };
 
 input_from_str!(TabsActivation);
@@ -45,8 +45,9 @@ pub struct TabsProps<T: Options> {
     option_label: Option<Callback<T, OptionLabel>>,
     /// The tab strip's font and padding scale; the panel keeps its surroundings' font.
     /// On a coarse pointer a tab is at least 44px tall, so small sizes draw taller there.
+    /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
     #[props(default, into)]
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     /// Indicator and selected-label colour.
     #[props(default, into)]
     color: Input<ThemeAwareValue>,
@@ -75,6 +76,12 @@ pub struct TabsProps<T: Options> {
     parts: Input<Parts<TabsPart>>,
     #[props(default, into)]
     states: Input<States>,
+    /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+    #[props(default, into)]
+    hidden_from: Input<Size>,
+    /// Hidden below this breakpoint's width: `visible_from: "md"`.
+    #[props(default, into)]
+    visible_from: Input<Size>,
 }
 
 /// A strip of tabs over an enum, with the selected tab's panel below it.
@@ -175,10 +182,12 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             manual: props.activation.copied_or(theme.tabs.activation) == TabsActivation::Manual,
             focusable: true,
             panel_stop: props.panel_focusable,
-            size: props.size.copied_or(theme.tabs.size),
+            size: props.size.copied_or(theme.tabs.size.into()),
             sx: parts_under_sx(&props.parts, props.sx),
             class: props.class,
             states: props.states,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             attributes: props.attributes,
         },
         root(),

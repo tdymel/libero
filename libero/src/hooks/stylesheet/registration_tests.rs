@@ -73,7 +73,7 @@ fn Probe(tick: u32) -> Element {
         true => SxSource::Owned(&owned),
         false => SxSource::Static(&PADDING),
     };
-    let class = use_box_css(&Input::None, Some(&COLOR), None, Some(source));
+    let class = use_box_css(&Input::None, Some(&COLOR), None, Some(source), [None, None]);
     let context = use_context::<LiberoContext>();
     let version = *context.stylesheet_registry_version.peek();
     SEEN.set((version, context.stylesheet_registry.len()));

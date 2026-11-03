@@ -1,4 +1,4 @@
-use crate::{components::common::Input, str_enum::str_enum, tokens::Responsive};
+use crate::str_enum::str_enum;
 
 str_enum! {
     /// An item's width, in twelfths of its zone.
@@ -34,29 +34,4 @@ impl GridSpan {
     }
 }
 
-impl From<GridSpan> for Input<Responsive<GridSpan>> {
-    fn from(span: GridSpan) -> Self {
-        Input::Value(span.into())
-    }
-}
-
-impl From<Option<GridSpan>> for Input<Responsive<GridSpan>> {
-    fn from(span: Option<GridSpan>) -> Self {
-        match span {
-            Some(span) => Input::Value(span.into()),
-            None => Input::None,
-        }
-    }
-}
-
-impl From<Responsive<GridSpan>> for Input<Responsive<GridSpan>> {
-    fn from(value: Responsive<GridSpan>) -> Self {
-        Input::Value(value)
-    }
-}
-
-impl From<&str> for Input<Responsive<GridSpan>> {
-    fn from(value: &str) -> Self {
-        GridSpan::from(value).into()
-    }
-}
+crate::sx::input::input_from_responsive!(str GridSpan);

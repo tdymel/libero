@@ -9,9 +9,12 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_gradient_style, use_theme},
+    hooks::{use_gradient_style, use_range_css, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{BADGE_BOX, BADGE_RADII, BADGE_RADIUS, BadgeDefaults, CssVar, Gradient, Size, SizeCss},
+    theme::{
+        BADGE_BOX, BADGE_RADII, BADGE_RADIUS, BadgeDefaults, CssVar, Gradient, Responsive, Size,
+        SizeCss,
+    },
 };
 
 const BADGE_COLOR_VAR: CssVar = CssVar::new("--lsx-badge-color");
@@ -113,16 +116,24 @@ fn badge_variables(props: &BadgeProps, color: &ThemeAwareValue, variant: Variant
 
 base_props! {
     pub struct BadgeProps {
+        /// Per breakpoint too: `responsive(Variant::Outlined).md(Variant::Filled)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         /// Second stop and angle of `variant: "gradient"`, whose first stop is `color`:
         /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
         #[props(default, into)]
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
+        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+        #[props(default, into)]
+        hidden_from: Input<Size>,
+        /// Hidden below this breakpoint's width: `visible_from: "md"`.
+        #[props(default, into)]
+        visible_from: Input<Size>,
         /// A step on the badge's own radius scale, or any CSS, as `radius: "0"`; the default is a pill.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
@@ -153,8 +164,16 @@ base_props! {
 #[component]
 pub fn Badge(props: BadgeProps) -> Element {
     let theme = use_theme();
-    let variant = props.variant.copied_or(theme.badge.variant);
-    let size = props.size.copied_or(theme.badge.size);
+    let variants = props.variant.copied_or(theme.badge.variant.into());
+    let sizes = props.size.copied_or(theme.badge.size.into());
+    // Only `tonal` reads the container colours: computed if any range is tonal.
+    let variant = match variants
+        .breakpoints()
+        .any(|(_, variant)| variant == Variant::Tonal)
+    {
+        true => Variant::Tonal,
+        false => variants.base(),
+    };
     let color = props
         .color
         .as_ref()
@@ -169,21 +188,29 @@ pub fn Badge(props: BadgeProps) -> Element {
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
         seed,
-        variant == Variant::Gradient,
+        variants.base() == Variant::Gradient
+            || variants
+                .breakpoints()
+                .any(|(_, variant)| variant == Variant::Gradient),
         false,
     );
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(variant.state_name(), true)
-        .with(size.state_name(), true)
+        .responsive(&variants, Variant::state_name)
+        .responsive(&sizes, |size| size.state_name())
         // The box can't be round with an icon beside the label: a pill keeps its padding (5449).
         .with(
             "circle",
             props.circle.unwrap_or(false) && props.trailing_icon.is_none(),
         )
         .into();
+    let mut copies = sizes.range_copies(|size| size.state_name(), BadgeDefaults::size_sx);
+    copies.extend(variants.range_copies(Variant::state_name, |variant| {
+        variant_chrome_sx(variant, &BADGE_VARS)
+    }));
+    use_range_css(&BADGE_BASE_SX, copies);
 
     let label = use_box()
         .framework_sx(&BADGE_LABEL_SX)
@@ -201,6 +228,7 @@ pub fn Badge(props: BadgeProps) -> Element {
         .framework_sx(&BADGE_BASE_SX)
         .class(&props.class)
         .sx(&props.sx)
+        .visibility(&props.hidden_from, &props.visible_from)
         .states(&states)
         .variables(&variables)
         .style(gradient)

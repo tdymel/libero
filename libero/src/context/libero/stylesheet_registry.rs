@@ -21,6 +21,9 @@ pub(crate) enum SheetRank {
     /// First in the layer, so any other sheet overrides it at equal specificity.
     /// Only `Box`'s focus ring, which a component's own `:focus-visible` must beat.
     Default,
+    /// A responsive instance's range copies (`use_range_css`): ahead of every component
+    /// sheet, so the base sheet's state rules still win a specificity tie.
+    Range,
     /// Hash order.
     Component,
 }
@@ -42,7 +45,7 @@ struct RegisteredStylesheet {
     ref_count: usize,
     /// When it last fell to no users, matched against its `retired` queue entry.
     retired_at: u64,
-    /// Only a sheet scoped to its own class matches nothing once unused; a global
+    /// Only an insertable sheet (class-scoped or keyed) matches nothing once unused; a global
     /// (`:root`, raw CSS) one must leave the cascade at its last release.
     retainable: bool,
     /// Its rules live in the outlet's layer blocks, not in a `<style>` of its own.
@@ -219,20 +222,27 @@ struct Sheets {
 }
 
 impl Sheets {
-    /// Puts a class-scoped sheet's rules at the end of its layer's block, see [`block_rules`].
-    /// Global sheets stay `<style>`s.
-    fn insert(&mut self, key: StylesheetKey, css: &str, scoped: bool) -> bool {
+    /// Puts an insertable sheet's rules into its layer's block, see [`block_rules`]: a range
+    /// copy after the earlier copies, any other at the end. Global sheets stay `<style>`s.
+    fn insert(&mut self, key: StylesheetKey, css: &str, insertable: bool) -> bool {
         let Some(blocks) = &self.blocks else {
             return false;
         };
-        if key.rank != SheetRank::Component || !scoped {
+        if key.rank == SheetRank::Default || !insertable {
             return false;
         }
         let Some(rules) = block_rules(css, self.nests, &self.answers) else {
             return false;
         };
         let order = &mut self.inserted[key.layer.index()];
-        let start: usize = order.iter().map(|(_, count)| count).sum();
+        let at = match key.rank {
+            SheetRank::Range => order
+                .iter()
+                .take_while(|(inserted, _)| inserted.rank == SheetRank::Range)
+                .count(),
+            _ => order.len(),
+        };
+        let start: usize = order[..at].iter().map(|(_, count)| count).sum();
         let mut end = start;
         for rule in &rules {
             // A rule the browser rejects is dropped, as a `<style>` would drop it.
@@ -243,7 +253,7 @@ impl Sheets {
         if end == start {
             return false;
         }
-        order.push((key, end - start));
+        order.insert(at, (key, end - start));
         true
     }
 
@@ -304,8 +314,8 @@ impl StylesheetRegistry {
         let registry = &mut *registry;
 
         if !registry.by_key.contains_key(&key) {
-            let scoped = stylesheet.class_name().is_some();
-            let inserted = registry.insert(key, stylesheet.as_str(), scoped);
+            let insertable = stylesheet.insertable();
+            let inserted = registry.insert(key, stylesheet.as_str(), insertable);
             registry.outlet_changed |= !inserted;
             registry.by_key.insert(
                 key,
@@ -316,12 +326,13 @@ impl StylesheetRegistry {
                         SheetRank::Default => {
                             format!("{}-default-{:x}", layer.css_name(), key.hash)
                         }
+                        SheetRank::Range => format!("{}-range-{:x}", layer.css_name(), key.hash),
                         SheetRank::Component => format!("{}-{:x}", layer.css_name(), key.hash),
                     }),
                     css: Rc::from(layered_css(layer, &stylesheet)),
                     ref_count: 0,
                     retired_at: 0,
-                    retainable: scoped,
+                    retainable: insertable,
                     inserted,
                 },
             );
@@ -722,6 +733,69 @@ mod tests {
             stylesheet.as_str()
         );
         assert!(!registry.take_outlet_change(), "the outlet has nothing new");
+    }
+
+    /// A copy inserted after its base sheet still goes ahead of it, and leaves cleanly (5643).
+    #[test]
+    fn a_range_copy_goes_in_ahead_of_every_component_sheet() {
+        let (registry, rules) = attached();
+        let base = Stylesheet::from(&sx().padding("lg"));
+        let copy = |padding: &str| {
+            Stylesheet::from(format!(
+                "@media (min-width: 62rem){{.{}[data-state~=\"md-:size-xl\"]{{padding:{padding};}}}}",
+                base.class_name().unwrap_or_default()
+            ))
+            .keyed()
+        };
+        let nested = |padding: &str| {
+            block_rules(copy(padding).as_str(), true, &A11yAnswers::default())
+                .unwrap_or_default()
+                .concat()
+        };
+
+        registry.acquire(base.clone(), CssLayer::Framework, SheetRank::Component);
+        let first = registry.acquire(copy("1px"), CssLayer::Framework, SheetRank::Range);
+        registry.acquire(copy("2px"), CssLayer::Framework, SheetRank::Range);
+
+        assert_eq!(
+            block(&rules, CssLayer::Framework),
+            [nested("1px"), nested("2px"), base.as_str().to_string()]
+        );
+        registry.release(first);
+        registry.acquire(copy("3px"), CssLayer::Framework, SheetRank::Range);
+        assert_eq!(
+            block(&rules, CssLayer::Framework)
+                .last()
+                .map(String::as_str),
+            Some(base.as_str())
+        );
+        assert!(!registry.take_outlet_change(), "no `<style>` after mount");
+    }
+
+    /// A keyed global rule (`hidden_from`'s) goes in like a class-scoped one and is retained.
+    #[test]
+    fn a_keyed_sheet_is_inserted_and_retained_a_plain_global_one_is_not() {
+        let (registry, rules) = attached();
+        let css =
+            "@media (min-width: 62rem){[data-state~=\"hidden-from-md\"]{display:none !important;}}";
+
+        let keyed = registry.acquire(
+            Stylesheet::from(css).keyed(),
+            CssLayer::Framework,
+            SheetRank::Component,
+        );
+        registry.release(keyed);
+
+        assert_eq!(
+            block(&rules, CssLayer::Framework).len(),
+            1,
+            "kept in the LRU"
+        );
+        assert!(!registry.take_outlet_change());
+        let global = registry.acquire(css, CssLayer::UserStatic, SheetRank::Component);
+        assert!(block(&rules, CssLayer::UserStatic).is_empty());
+        registry.release(global);
+        assert!(registry.stylesheets(SheetRank::Component).is_empty());
     }
 
     /// A suspense up to the root recreates the outlet's blocks empty (todo 4124).

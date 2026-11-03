@@ -214,7 +214,7 @@ pub use storage::{
     use_session_storage, use_session_storage_with,
 };
 pub use stylesheet::use_stylesheet;
-pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
+pub(crate) use stylesheet::{SxSource, WordSheet, use_box_css, use_css, use_range_css};
 pub(crate) use subscription_slot::{SubscriptionSlot, use_subscription_slot};
 #[cfg(feature = "use-swipe")]
 pub use swipe::{

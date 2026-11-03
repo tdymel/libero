@@ -165,6 +165,29 @@ property:
 | `xl` | `88rem` |
 | `xxl` | `101rem` |
 
+Some props take a value per breakpoint too: `size` on Button, Badge and Tabs,
+`variant` on Button and Badge, `radius` on Button. The CSS for a breakpoint range is added the first time a
+component uses it, so a page with plain values ships none. `hidden_from` hides a
+component from a breakpoint up, `visible_from` below it.
+
+A responsive value replaces the plain state word with one word per range, as
+`md-:size-lg` (from md up) or `base-md:size-sm` (under md). A
+`when("size-lg", ..)` of your own does not match such an instance: name the
+range word.
+
+```rust,ignore
+Button {
+    size: responsive(Size::Sm).md(Size::Lg),
+    variant: responsive(Variant::Outlined).md(Variant::Filled),
+    "Save"
+}
+Button { hidden_from: "md", "Menu" }
+
+// data-state="base-md:size-sm md-:size-lg base-md:outlined md-:filled ..."
+// A rule of your own on a plain word misses this button; name the range word:
+sx().when("md-:size-lg", sx().letter_spacing("0.02em"))
+```
+
 ## Media and container queries
 
 `media` nests styles under any `@media` query, passed through verbatim, mostly

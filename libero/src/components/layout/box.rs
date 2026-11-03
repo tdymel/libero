@@ -8,11 +8,12 @@ use crate::{
     components::common::{
         ClassList, HtmlTag, Input, IntoChildren, Part, Parts, States, StyleAttributes, Variables,
         attr, base_props, parts_source, render_polymorphic, sx_source, use_style_attributes,
-        with_parts,
+        with_parts, with_visibility,
     },
     hooks::SxSource,
     platform::OBSERVE_ATTR,
     sx::{StaticSx, Sx},
+    theme::Size,
     utils::warn,
 };
 
@@ -58,6 +59,7 @@ pub(crate) struct BoxBuilder<'a> {
     variables: Option<&'a Input<Variables>>,
     style: Option<String>,
     focus_ring: bool,
+    visibility: Option<(&'a Input<Size>, &'a Input<Size>)>,
 }
 
 impl Default for BoxBuilder<'_> {
@@ -72,6 +74,7 @@ impl Default for BoxBuilder<'_> {
             variables: None,
             style: None,
             focus_ring: true,
+            visibility: None,
         }
     }
 }
@@ -121,6 +124,17 @@ impl<'a> BoxBuilder<'a> {
         self
     }
 
+    /// The `hidden_from` / `visible_from` props, as `data-state` words with a lazy rule each.
+    #[inline]
+    pub fn visibility(
+        mut self,
+        hidden_from: &'a Input<Size>,
+        visible_from: &'a Input<Size>,
+    ) -> Self {
+        self.visibility = Some((hidden_from, visible_from));
+        self
+    }
+
     /// Drops the shared focus ring, for an element whose ancestor draws it
     /// (a field's control and its frame); both would draw two rings.
     #[inline]
@@ -146,6 +160,10 @@ impl<'a> BoxBuilder<'a> {
 
         let mut merged = None;
         let sx = with_parts(self.parts, self.sx.and_then(sx_source), &mut merged);
+        let states = self.states.unwrap_or(&NONE_STATES);
+        let visible = self
+            .visibility
+            .and_then(|(hidden, visible)| with_visibility(states, hidden, visible));
         BoxStyle {
             own: Vec::new(),
             fallback: Vec::new(),
@@ -153,7 +171,7 @@ impl<'a> BoxBuilder<'a> {
                 self.class.unwrap_or(&NONE_CLASS),
                 self.framework_sx,
                 sx,
-                self.states.unwrap_or(&NONE_STATES),
+                visible.as_ref().unwrap_or(states),
                 self.variables.unwrap_or(&NONE_VARIABLES),
                 self.style,
                 self.focus_ring,
@@ -430,6 +448,7 @@ pub fn Box(props: BoxProps) -> Element {
         variables: Some(&props.variables),
         style: props.style,
         focus_ring: true,
+        visibility: None,
     }
     .prepare();
 

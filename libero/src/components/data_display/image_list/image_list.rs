@@ -43,26 +43,7 @@ impl From<Option<u8>> for Input<u8> {
     }
 }
 
-impl From<u8> for Input<Responsive<u8>> {
-    fn from(value: u8) -> Self {
-        Self::Value(value.into())
-    }
-}
-
-impl From<Option<u8>> for Input<Responsive<u8>> {
-    fn from(value: Option<u8>) -> Self {
-        match value {
-            Some(value) => Self::Value(value.into()),
-            None => Self::None,
-        }
-    }
-}
-
-impl From<Responsive<u8>> for Input<Responsive<u8>> {
-    fn from(value: Responsive<u8>) -> Self {
-        Self::Value(value)
-    }
-}
+crate::sx::input::input_from_responsive!(u8);
 
 /// The column counts a twelve-track `GridZone` expresses exactly; others snap.
 const COLUMN_COUNTS: [u8; 6] = [1, 2, 3, 4, 6, 12];

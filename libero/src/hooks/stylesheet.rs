@@ -4,7 +4,7 @@ mod registration_tests;
 
 use crate::{CssLayer, css::Stylesheet};
 
-pub(crate) use registration::{SxSource, use_box_css, use_css};
+pub(crate) use registration::{SxSource, WordSheet, use_box_css, use_css, use_range_css};
 
 /// Registers anything that converts into a [`Stylesheet`] and returns its
 /// class name, on the `UserCustom` layer so it always wins the cascade. Raw

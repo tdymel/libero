@@ -27,17 +27,21 @@ pub fn BadgePage() -> Element {
             source: "libero/src/components/data_display/badge.rs",
             markdown: "/md/badge.md",
             properties: vec![props("Badge", vec![
-                prop("variant", "Variant")
+                prop("variant", "Responsive<Variant>")
                     .default(theme.badge.variant.as_str())
-                    .doc("The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state."),
+                    .doc("The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.badge.color.as_str())
                     .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it. Under a gradient, its first stop; unset, the theme's `badge.color` seeds it."),
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(theme.badge.size.as_str())
-                    .doc("Height, horizontal padding and font size, on a scale smaller than a chip's."),
+                    .doc("Height, horizontal padding and font size, on a scale smaller than a chip's. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("radius", "ThemeAwareValue")
                     .default(theme.badge.radius.as_str())
                     .doc("A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is a pill at every height."),

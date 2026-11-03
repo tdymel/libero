@@ -26,6 +26,16 @@ impl States {
         self.with(state, false)
     }
 
+    /// An axis value's words: `token(value)` when plain, else one per viewport run,
+    /// matching the copies `use_range_css` registers.
+    pub(crate) fn responsive<T: Clone + PartialEq>(
+        self,
+        value: &crate::tokens::Responsive<T>,
+        token: impl Fn(T) -> &'static str,
+    ) -> Self {
+        value.state_tokens(token).fold(self, Self::active)
+    }
+
     /// Every state set, on or off, in order.
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, bool)> + '_ {
         self.0.iter().copied()

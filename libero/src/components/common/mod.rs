@@ -102,7 +102,7 @@ pub(crate) use reveal_inline::reveal_unique;
 #[cfg(feature = "use-element")]
 pub(crate) use reveal_inline::{reveal_block, reveal_inline};
 pub(crate) use style_attributes::{
-    ABSENT, StyleAttributes, sx_source, use_style_attributes, with_parts,
+    ABSENT, StyleAttributes, sx_source, use_style_attributes, with_parts, with_visibility,
 };
 pub(crate) use svg_fit::{
     PROBES_AFTER_MOUNT, SVG_FIT, on_failed_after_mount, svg_fit, svg_fit_sx, svg_fit_variables,

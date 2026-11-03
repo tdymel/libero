@@ -37,36 +37,8 @@ impl FlexDirection {
 
 input_from_str!(FlexDirection);
 
-/// One direction, or one per breakpoint: `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`.
-impl From<&str> for Input<Responsive<FlexDirection>> {
-    fn from(value: &str) -> Self {
-        Self::Value(Responsive::new(value.into()))
-    }
-}
-
-impl From<String> for Input<Responsive<FlexDirection>> {
-    fn from(value: String) -> Self {
-        value.as_str().into()
-    }
-}
-
-impl From<FlexDirection> for Input<Responsive<FlexDirection>> {
-    fn from(value: FlexDirection) -> Self {
-        Self::Value(Responsive::new(value))
-    }
-}
-
-impl From<Option<FlexDirection>> for Input<Responsive<FlexDirection>> {
-    fn from(value: Option<FlexDirection>) -> Self {
-        value.map_or(Self::None, Into::into)
-    }
-}
-
-impl From<Responsive<FlexDirection>> for Input<Responsive<FlexDirection>> {
-    fn from(value: Responsive<FlexDirection>) -> Self {
-        Self::Value(value)
-    }
-}
+// One direction, or one per breakpoint: `direction: responsive(FlexDirection::Column).md(FlexDirection::Row)`.
+crate::sx::input::input_from_responsive!(str FlexDirection);
 
 str_enum! {
     pub enum FlexWrap {

@@ -132,6 +132,7 @@ mod range_slider;
 mod rating;
 mod refused;
 mod repository;
+mod responsive;
 mod rich_text_editor;
 mod rich_text_editor_blocks;
 mod rich_text_editor_input;

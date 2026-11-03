@@ -106,6 +106,98 @@ impl<T> Responsive<T> {
             breakpoints: self.breakpoints.clone().map(|value| value.map(&mut f)),
         }
     }
+
+    /// No breakpoint set: what a plain `size: "md"` converts to.
+    pub fn is_plain(&self) -> bool {
+        self.breakpoints.iter().all(Option::is_none)
+    }
+
+    /// The disjoint viewport ranges of equal value, as `(from, until, value)`; `None` is
+    /// no bound. One run, `(None, None, base)`, for a plain value.
+    pub(crate) fn runs(&self) -> Vec<(Option<Size>, Option<Size>, T)>
+    where
+        T: Clone + PartialEq,
+    {
+        let mut runs: Vec<(Option<Size>, Option<Size>, T)> = Vec::new();
+        for slot in SLOTS {
+            let value = slot.map_or_else(|| self.base.clone(), |size| self.at(size));
+            match runs.last_mut() {
+                Some(last) if last.2 == value => {}
+                Some(last) => {
+                    last.1 = slot;
+                    runs.push((slot, None, value));
+                }
+                None => runs.push((slot, None, value)),
+            }
+        }
+        runs
+    }
+
+    /// The `data-state` words: `token(base)` when plain, else one [`range_token`] per
+    /// [`runs`](Self::runs) range, so exactly one matches at any width. No allocation when plain.
+    pub(crate) fn state_tokens(
+        &self,
+        token: impl Fn(T) -> &'static str,
+    ) -> impl Iterator<Item = &'static str>
+    where
+        T: Clone + PartialEq,
+    {
+        let plain = self.is_plain();
+        let base = plain.then(|| token(self.base.clone()));
+        let runs = (!plain).then(|| {
+            self.runs()
+                .into_iter()
+                .map(|(from, until, value)| range_token(from, until, token(value)))
+                .collect::<Vec<_>>()
+        });
+        base.into_iter().chain(runs.into_iter().flatten())
+    }
+}
+
+/// The seven viewport ranges an axis splits into: under `xs`, then each breakpoint up.
+const SLOTS: [Option<Size>; 7] = [
+    None,
+    Some(Size::Xs),
+    Some(Size::Sm),
+    Some(Size::Md),
+    Some(Size::Lg),
+    Some(Size::Xl),
+    Some(Size::Xxl),
+];
+
+/// From `from`'s breakpoint to just under `until`'s; `max-width` is inclusive, so 0.02px under.
+pub(crate) fn range_query(from: Option<Size>, until: Option<Size>) -> String {
+    let rem = |size: Size| {
+        let value = size.breakpoint_value().trim_end_matches("rem");
+        value.parse::<f64>().unwrap_or_default()
+    };
+    let from = from.map(|size| format!("(min-width: {})", size.breakpoint_value()));
+    let until = until.map(|size| format!("(max-width: {}rem)", rem(size) - 0.00125));
+    from.into_iter()
+        .chain(until)
+        .collect::<Vec<_>>()
+        .join(" and ")
+}
+
+/// `token` within one run, as `md-xl:size-lg` (`base` under `xs`, nothing for no end).
+/// Interned: at most 27 ranges times an axis's tokens, and `States` holds `&'static str`.
+pub(crate) fn range_token(
+    from: Option<Size>,
+    until: Option<Size>,
+    token: &'static str,
+) -> &'static str {
+    use std::{cell::RefCell, collections::HashMap};
+    type Range = (Option<Size>, Option<Size>, &'static str);
+    thread_local! {
+        static TOKENS: RefCell<HashMap<Range, &'static str>> = RefCell::new(HashMap::new());
+    }
+    TOKENS.with_borrow_mut(|tokens| {
+        *tokens.entry((from, until, token)).or_insert_with(|| {
+            let from = from.map_or("base", |size| size.as_str());
+            let until = until.map_or("", |size| size.as_str());
+            String::leak(format!("{from}-{until}:{token}"))
+        })
+    })
 }
 
 /// A per-breakpoint value, starting from `base`: `responsive(1).sm(2).lg(3)`.
@@ -202,6 +294,43 @@ mod tests {
                 .sm(shared.clone()),
         );
         assert_eq!(std::rc::Rc::strong_count(&shared), 2);
+    }
+
+    #[test]
+    fn a_plain_value_keeps_its_one_token() {
+        let tokens: Vec<_> = Responsive::from(Size::Sm)
+            .state_tokens(|size| size.state_name())
+            .collect();
+
+        assert_eq!(tokens, ["size-sm"]);
+    }
+
+    #[test]
+    fn a_responsive_value_names_one_word_per_run() {
+        let tokens: Vec<_> = responsive(Size::Sm)
+            .md(Size::Lg)
+            .xl(Size::Lg)
+            .xxl(Size::Sm)
+            .state_tokens(|size| size.state_name())
+            .collect();
+
+        assert_eq!(
+            tokens,
+            ["base-md:size-sm", "md-xxl:size-lg", "xxl-:size-sm"]
+        );
+    }
+
+    #[test]
+    fn ranges_are_disjoint() {
+        assert_eq!(
+            range_query(None, Some(Size::Xs)),
+            "(max-width: 35.99875rem)"
+        );
+        assert_eq!(
+            range_query(Some(Size::Md), Some(Size::Lg)),
+            "(min-width: 62rem) and (max-width: 74.99875rem)"
+        );
+        assert_eq!(range_query(Some(Size::Xxl), None), "(min-width: 101rem)");
     }
 
     #[test]

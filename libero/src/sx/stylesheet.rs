@@ -48,6 +48,20 @@ impl From<&Sx> for Stylesheet {
     }
 }
 
+impl Stylesheet {
+    /// `sx` rooted at another sheet's `class_name` (a lazy range copy styling that class),
+    /// [`keyed`](Stylesheet::keyed) by it. No class of its own.
+    pub(crate) fn rooted_at(sx: &Sx, class_name: &str) -> Self {
+        let mut scopes = Vec::new();
+        let context = CssContext {
+            selectors: vec![format!(".{class_name}")],
+            at_rules: Vec::new(),
+        };
+        collect_scopes(&mut scopes, sx, &context);
+        Stylesheet::new(scopes).keyed()
+    }
+}
+
 impl From<&StaticSx> for Stylesheet {
     fn from(sx: &StaticSx) -> Self {
         Stylesheet::from(std::ops::Deref::deref(sx))

@@ -4,6 +4,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Button, ButtonPart, Code, Input, Loader, Pictogram, Text};
+use libero::theme::{Size, responsive};
 use libero::{sx::sx, use_theme};
 use pictogram_icons_lucide as lucide;
 
@@ -24,6 +25,11 @@ fn not_loading(values: &DemoValues) -> bool {
     is_link(values) || values.str("loading") != "true"
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 fn custom_loader(values: &DemoValues) -> Option<Element> {
     (values.str("custom_loader") == "true")
         .then(|| rsx! { Loader { variant: "dots", size: "xs", color: "currentColor" } })
@@ -42,17 +48,21 @@ pub fn ButtonPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("primary")
                     .doc("Accent color. A theme color name or any CSS color. Under a gradient, its first stop. Unset, a `standard` or `outlined` button on a gradient `Paper`, a coloured or gradient `Header`, a filled, tonal or gradient `Alert` or a `Mark` takes that surface's text color. A secondary action beside a filled primary one, such as \"Cancel\" beside \"Save\", is `color: \"neutral\"` with `variant: \"outlined\"`; `\"ink\"` draws it in the page's text colour instead."),
-                prop("variant", "Variant")
+                prop("variant", "Responsive<Variant>")
                     .default(theme.button.variant.as_str())
-                    .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop."),
+                    .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                 prop("gradient", "Gradient")
                     .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants."),
-                prop("radius", "ThemeAwareValue")
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.button.radius.as_str())
-                    .doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`."),
-                prop("size", "Size")
+                    .doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                prop("size", "Responsive<Size>")
                     .default(theme.button.size.as_str())
-                    .doc("Height, padding and font size."),
+                    .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                prop("hidden_from", "Size")
+                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+                prop("visible_from", "Size")
+                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("full_width", "bool")
                     .default("false")
                     .doc("Stretches the button to fill its container."),
@@ -150,7 +160,17 @@ pub fn ButtonPage() -> Element {
                     gradient_to,
                     gradient_deg,
                     Control::sizes("size")
-                        .default(theme.button.size.as_str()),
+                        .default(theme.button.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.button.radius.as_str()),
@@ -243,7 +263,10 @@ pub fn ButtonPage() -> Element {
                         color: values.str("color"),
                         variant: values.str("variant"),
                         gradient: gradient_value(&values),
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, size) => responsive(Size::Sm).md(size),
+                            (false, size) => size.into(),
+                        },
                         radius: values.str("radius"),
                         full_width: values.str("full_width") == "true",
                         justify: match values.str("justify").as_str() {

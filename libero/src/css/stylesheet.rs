@@ -21,6 +21,8 @@ pub struct Stylesheet {
     class_name: Option<String>,
     /// Of the CSS before [`with_root_class`](Self::with_root_class): the class name's source.
     hash: u64,
+    /// Matches no element that does not opt in, see [`insertable`](Self::insertable).
+    keyed: bool,
 }
 
 impl Stylesheet {
@@ -31,6 +33,19 @@ impl Stylesheet {
 
     pub(crate) fn class_name(&self) -> Option<&str> {
         self.class_name.as_deref()
+    }
+
+    /// Marks CSS that styles only elements opting in by a class or a `data-state` word, as a
+    /// class-scoped sheet does: the registry may insert it after mount and keep it once unused.
+    pub(crate) fn keyed(mut self) -> Self {
+        self.keyed = true;
+        self
+    }
+
+    /// Class-scoped or [`keyed`](Self::keyed): inert once unused, so it may go into a
+    /// layer block after mount and stay in the LRU. A global sheet may do neither.
+    pub(crate) fn insertable(&self) -> bool {
+        self.keyed || self.class_name.is_some()
     }
 
     /// Swaps the placeholder root selector for the class name. [`hash`](Self::hash)
@@ -64,6 +79,7 @@ impl From<String> for Stylesheet {
             css: value,
             class_name: None,
             hash: hasher.finish(),
+            keyed: false,
         }
     }
 }
