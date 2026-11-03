@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
 use libero::{
     components::{
-        ActionIcon, Chip, Code, FieldStatus, Flex, OptionSource, SelectionArgs, TagRejectReason,
-        TagRejection, TagsField, TagsFieldOptionArgs, Text,
+        ActionIcon, Chip, Code, FieldStatus, Flex, OptionList, OptionSource, SelectionArgs,
+        TagRejectReason, TagRejection, TagsField, TagsFieldFilterArgs, TagsFieldOptionArgs, Text,
     },
     hooks::use_localization,
     localization::{Localization, fill},
@@ -21,8 +21,8 @@ use libero::{
 // snippet: let words = use_localization();
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
 const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
-    // Unclipped, so the x's 24px hit area reaches past the pill.
-    Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
+    // Unclipped, so the x's 24px hit area reaches past the pill. `min_width` lets it shrink in the field.
+    Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible").min_width("0"),
         trailing: rsx! {
             // A disabled or read-only field's tag has no remove control.
             if !t.disabled && !t.readonly {
@@ -44,7 +44,8 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
                 }
             }
         },
-        "#{t.value}"
+        // A long tag ends in an ellipsis, so the x stays in view.
+        span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis", "#{t.value}" }
     }
 }"##;
 
@@ -114,6 +115,21 @@ fn topic_row(o: TagsFieldOptionArgs) -> Element {
     }
 }
 
+/// Printed while `filter` is on: it replaces the default `contains`.
+// snippet: let mut topics = use_signal(Vec::<String>::new);
+// snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), suggestions: vec!["rust".to_string()], .. }
+const FILTER: &str = r#"filter: |args: TagsFieldFilterArgs| args.value.starts_with(args.query.trim().to_lowercase().as_str())"#;
+
+/// Printed while `empty` is on: drawn when the typed text matches no suggestion.
+// snippet: let mut topics = use_signal(Vec::<String>::new);
+// snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), suggestions: vec!["rust".to_string()], .. }
+const EMPTY: &str = r#"empty: rsx! { Text { size: "sm", "No such topic. Enter adds it." } }"#;
+
+/// Printed while `pending` is on: a fetch that has not answered yet.
+// snippet: let mut topics = use_signal(Vec::<String>::new);
+// snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
+const PENDING: &str = r#"suggestions: None::<OptionList<String>>"#;
+
 /// One tag at a time, before it joins the list.
 // snippet: let mut topics = use_signal(Vec::<String>::new);
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
@@ -143,15 +159,30 @@ fn why(rejection: TagRejection) -> String {
     }
 }
 
-/// `open_on_focus`, `option` and `onquery` bring the suggestions with them: alone they would show nothing.
+/// `open_on_focus`, `option`, `onquery` and `pending` bring the suggestions with them: alone they would show nothing.
 fn offers(values: &DemoValues) -> bool {
-    ["suggestions", "open_on_focus", "option", "onquery"]
-        .iter()
-        .any(|name| values.str(name) == "true")
+    [
+        "suggestions",
+        "open_on_focus",
+        "option",
+        "onquery",
+        "pending",
+    ]
+    .iter()
+    .any(|name| values.str(name) == "true")
 }
 
 fn querying(values: &DemoValues) -> bool {
     values.str("onquery") == "true"
+}
+
+fn pending(values: &DemoValues) -> bool {
+    values.str("pending") == "true"
+}
+
+/// `prefiltered` skips the filter, so `filter` only counts without `onquery`.
+fn filtering(values: &DemoValues) -> bool {
+    values.str("filter") == "true" && !querying(values)
 }
 
 fn refusing(values: &DemoValues) -> bool {
@@ -171,7 +202,7 @@ fn topic_tag(words: &'static Localization, t: SelectionArgs<String>) -> Element 
     let label = t.value.clone();
     let remove_label = fill(words.common.remove, &[("label", &label)]);
     rsx! {
-        Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible"),
+        Chip { size: "xs", variant: "outlined", sx: sx().overflow("visible").min_width("0"),
             trailing: rsx! {
                 if !t.disabled && !t.readonly {
                     span { "data-slot": "remove",
@@ -188,7 +219,7 @@ fn topic_tag(words: &'static Localization, t: SelectionArgs<String>) -> Element 
                     }
                 }
             },
-            "#{label}"
+            span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis", "#{label}" }
         }
     }
 }
@@ -424,22 +455,42 @@ pub fn TagsFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("suggestions").code(|_, values| {
-                        match offers(values) && !querying(values) {
+                    Control::switch("suggestions").default("true").code(|_, values| {
+                        match offers(values) && !querying(values) && !pending(values) {
                             true => vec![SUGGESTIONS.to_string()],
                             false => vec![],
                         }
                     }),
-                    // The caller's search answers each draft, so the field skips its own filter.
-                    Control::switch("onquery").code(|_, values| match querying(values) {
-                        true => vec![
+                    Control::switch("onquery").code(|_, values| match (querying(values), pending(values)) {
+                        (true, false) => vec![
                             "onquery: move |text: String| query.set(text)".to_string(),
                             "prefiltered: true".to_string(),
                             "suggestions: search_topics(&query())".to_string(),
                         ],
+                        (true, true) => vec![
+                            "onquery: move |text: String| query.set(text)".to_string(),
+                            "prefiltered: true".to_string(),
+                        ],
+                        _ => vec![],
+                    }),
+                    // The fetch never answers here, so the loader stays up.
+                    Control::switch("pending").code(|_, values| match pending(values) {
+                        true => vec![
+                            PENDING.to_string(),
+                            "loading_label: \"Loading topics\"".to_string(),
+                        ],
                         false => vec![],
                     }),
-                    Control::switch("option").code(|_, values| match values.str("option").as_str() {
+                    // The field's own filter: the caller's replaces it, and `prefiltered` skips it.
+                    Control::switch("filter").code(|_, values| match filtering(values) {
+                        true => vec![FILTER.to_string()],
+                        false => vec![],
+                    }),
+                    Control::switch("empty").code(|_, values| match values.str("empty").as_str() {
+                        "true" => vec![EMPTY.to_string()],
+                        _ => vec![],
+                    }),
+                    Control::switch("option").default("true").code(|_, values| match values.str("option").as_str() {
                         "true" => vec![TOPIC_ROW.to_string()],
                         _ => vec![],
                     }),
@@ -483,13 +534,20 @@ pub fn TagsFieldPage() -> Element {
                             placeholder: (values.str("placeholder") == "true")
                                 .then(|| "Add a topic".to_string()),
                             status: refused().filter(|_| refuses).map(FieldStatus::Error).unwrap_or(status),
-                            suggestions: match (querying(&values), offers(&values)) {
-                                (true, _) => OptionSource::from(search_topics(&query())),
-                                (false, true) => {
+                            suggestions: match (pending(&values), querying(&values), offers(&values)) {
+                                (true, _, _) => OptionSource::from(None::<OptionList<String>>),
+                                (_, true, _) => OptionSource::from(search_topics(&query())),
+                                (_, false, true) => {
                                     OptionSource::from(["rust", "dioxus", "wasm", "css"].map(String::from).to_vec())
                                 }
-                                (false, false) => OptionSource::default(),
+                                (_, false, false) => OptionSource::default(),
                             },
+                            loading_label: pending(&values).then(|| "Loading topics".to_string()),
+                            filter: filtering(&values).then(|| Callback::new(|args: TagsFieldFilterArgs| {
+                                args.value.starts_with(args.query.trim().to_lowercase().as_str())
+                            })),
+                            empty: (values.str("empty") == "true")
+                                .then(|| rsx! { Text { size: "sm", "No such topic. Enter adds it." } }),
                             onquery: move |text: String| query.set(text),
                             prefiltered: querying(&values).then_some(true),
                             option: (values.str("option") == "true").then(|| Callback::new(topic_row)),
