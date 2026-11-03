@@ -14,7 +14,7 @@ impl ElementApi for MountedElement {
         queue(async move { element.set_focus(true).await })
     }
 
-    fn focus_pressed(&self) -> Result<(), PlatformError> {
+    fn focus_after_press(&self) -> Result<(), PlatformError> {
         match super::focus_press_without_ring(&self.0) {
             true => Ok(()),
             false => self.focus(),

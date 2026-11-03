@@ -165,7 +165,7 @@ impl NotificationStore {
         runtime.in_scope(self.owner, || {
             spawn(async move {
                 let _ = match pressed {
-                    true => target.focus_pressed(),
+                    true => target.focus_after_press(),
                     false => target.focus(),
                 };
                 handing_off.set(false);

@@ -289,11 +289,11 @@ pub trait ElementApi {
     /// ```
     /// # use libero::platform::{ElementApi, PlatformError};
     /// # fn f(element: &dyn ElementApi) -> Result<(), PlatformError> {
-    /// element.focus_pressed()?;
+    /// element.focus_after_press()?;
     /// # Ok(())
     /// # }
     /// ```
-    fn focus_pressed(&self) -> Result<(), PlatformError> {
+    fn focus_after_press(&self) -> Result<(), PlatformError> {
         self.focus()
     }
 

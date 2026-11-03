@@ -326,8 +326,8 @@ impl ElementApi for ElementHandle {
         self.get()?.focus()
     }
 
-    fn focus_pressed(&self) -> Result<(), PlatformError> {
-        self.get()?.focus_pressed()
+    fn focus_after_press(&self) -> Result<(), PlatformError> {
+        self.get()?.focus_after_press()
     }
 
     fn blur(&self) -> Result<(), PlatformError> {

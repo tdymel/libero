@@ -158,7 +158,7 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
             // Nothing before the host, or no way to ask: where focus came from.
             let pressed = store.pressed.try_peek().is_ok_and(|pressed| *pressed);
             let focus = |target: &dyn ElementApi| match pressed {
-                true => target.focus_pressed(),
+                true => target.focus_after_press(),
                 false => target.focus(),
             };
             match (before, return_to) {
