@@ -430,6 +430,7 @@ pub fn SelectPage() -> Element {
             // snippet: when choices=true let mut value = use_signal(|| None::<Choice<Fruit>>);
             Demo {
                 component: "Select",
+                pinned_preview: true,
                 children_text: "",
                 // `filter` and the custom rows share helpers, printed for either switch.
                 wrap: Wrap(|values: &DemoValues, source: &str| {

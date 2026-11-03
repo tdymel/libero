@@ -398,6 +398,7 @@ pub fn TagsFieldPage() -> Element {
             // snippet: let words = use_localization();
             Demo {
                 component: "TagsField",
+                pinned_preview: true,
                 children_text: "",
                 wrap: Wrap(|values: &DemoValues, source: &str| {
                     let why = if refusing(values) { WHY } else { "" };

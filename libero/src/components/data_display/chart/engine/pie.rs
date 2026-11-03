@@ -236,10 +236,10 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         &marks,
         |slice| spec.ink.on(spec.slices[slice].color),
         spec.ink.label,
-        // A ring's band keeps a label whose empty corner pokes past it; a full pie's slices
-        // meet at their edges, so the whole box in the page's font must fit (5115).
+        // A ring's band keeps a label whose empty corner pokes past it or whose no-break space
+        // widens it (5572); a full pie's slices meet at their edges, so the whole box must fit (5115).
         match spec.donut {
-            Some(_) => (1.0, 0.8),
+            Some(_) => (0.9, 0.7),
             None => (PAGE_FONT_SLACK, PAGE_FONT_SLACK),
         },
     );

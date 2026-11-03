@@ -14,7 +14,7 @@ use libero::{
         Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderSegment, SliderTrack, Text,
     },
     sx::sx,
-    use_theme,
+    use_formats, use_theme,
 };
 
 const MIN_VALUES: [&str; 4] = ["auto", "0.5", "10.0", "50.0"];
@@ -150,7 +150,10 @@ fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
             ]
         }
         (true, false) => {
-            vec![r#"format: Callback::new(|value: f64| format!("{value}%"))"#.to_string()]
+            vec![
+                r#"format: Callback::new(move |value: f64| formats.write_percent(&value.to_string()))"#
+                    .to_string(),
+            ]
         }
     }
 }
@@ -181,6 +184,7 @@ fn wrap_readout(values: &DemoValues, code: &str) -> String {
 #[component]
 pub fn SliderPage() -> Element {
     let theme = use_theme();
+    let formats = use_formats();
     let mut volume = use_signal(|| 40.0);
     let mut quality = use_signal(|| Quality::Medium);
     let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
@@ -319,6 +323,7 @@ pub fn SliderPage() -> Element {
             // snippet: let mut quality = use_signal(|| Quality::Medium);
             // snippet: let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
             // snippet: let mut last_quality = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
+            // snippet: let formats = use_formats();
             Demo {
                 pinned_preview: true,
                 component: "Slider",
@@ -485,7 +490,7 @@ pub fn SliderPage() -> Element {
                                     track: track(&values),
                                     group_digits: is_on(&values, "group_digits"),
                                     format: is_on(&values, "format")
-                                        .then(|| Callback::new(|value: f64| format!("{value}%"))),
+                                        .then(|| Callback::new(move |value: f64| formats.write_percent(&value.to_string()))),
                                     label: is_on(&values, "label")
                                         .then(|| "Volume".to_string()),
                                     description: is_on(&values, "description")

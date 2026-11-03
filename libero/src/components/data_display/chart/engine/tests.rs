@@ -1720,8 +1720,6 @@ fn a_ring_keeps_its_wide_slices_labels() {
     let mut ring = pie(PieLabels::Percent, Some(0.4));
     (ring.width, ring.height) = (304.0, 168.0);
     ring.labels_inside = true;
-    // The ring's fit is the point: German's no-break space leaves "62 %" a hair too wide.
-    ring.formats = &Formats::AMERICAN;
     ring.slices = [("A", 62.0), ("B", 20.0), ("C", 10.0), ("D", 8.0)]
         .map(|(name, value)| spec(name, &[Some(value)]))
         .to_vec();

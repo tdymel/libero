@@ -2,18 +2,34 @@ use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, p
 use dioxus::prelude::*;
 use libero::{
     components::{CircularProgress, CircularProgressPart, Code, Input, Text},
+    localization::Formats,
     theme::Theme,
-    use_theme,
+    use_formats, use_theme,
 };
 
 fn indeterminate(values: &DemoValues) -> bool {
     values.str("indeterminate") == "true"
 }
 
-/// The centred text: the percentage while there is one.
-fn label_text(values: &DemoValues) -> String {
-    match values.str("label") == "true" && !indeterminate(values) {
-        true => format!("{}%", values.str("value")),
+fn shows_label(values: &DemoValues) -> bool {
+    values.str("label") == "true" && !indeterminate(values)
+}
+
+/// The centred text: the percentage in the site's formats while there is one.
+fn label_text(values: &DemoValues, formats: &Formats) -> String {
+    match shows_label(values) {
+        true => formats.write_percent(&values.str("value")),
+        false => String::new(),
+    }
+}
+
+/// The child the snippet prints: the call that writes the percentage.
+fn label_code(values: &DemoValues) -> String {
+    match shows_label(values) {
+        true => format!(
+            r#"{{use_formats().write_percent("{}")}}"#,
+            values.str("value")
+        ),
         false => String::new(),
     }
 }
@@ -43,7 +59,7 @@ fn controls(theme: &Theme) -> Vec<Control> {
             .default(theme.circular_progress.size.as_str())
             .options_from(|values| {
                 let sizes = ["xs", "sm", "md", "lg", "xl", "xxl"];
-                let from = if label_text(values).is_empty() { 0 } else { 2 };
+                let from = if shows_label(values) { 2 } else { 0 };
                 sizes[from..].iter().map(ToString::to_string).collect()
             }),
         Control::sizes("thickness").default(theme.circular_progress.thickness.as_str()),
@@ -58,6 +74,7 @@ fn controls(theme: &Theme) -> Vec<Control> {
 #[component]
 pub fn CircularProgressPage() -> Element {
     let theme = use_theme();
+    let formats = use_formats();
     let defaults = theme.circular_progress;
     rsx! {
         DocPage {
@@ -114,11 +131,11 @@ pub fn CircularProgressPage() -> Element {
             Demo {
                 component: "CircularProgress",
                 children_text: "",
-                child: Child(label_text),
+                code_child: Child(label_code),
                 fixed: vec![r#"aria_label: "Upload""#.to_string()],
                 controls: controls(theme),
                 render: move |values: DemoValues| {
-                    let label = label_text(&values);
+                    let label = label_text(&values, formats);
                     rsx! {
                         CircularProgress {
                             aria_label: "Upload",

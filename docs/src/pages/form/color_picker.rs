@@ -6,7 +6,7 @@ use libero::components::{
     AlphaSlider, Code, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider, SliderChangeEvent,
     Swatches, Text,
 };
-use libero::use_theme;
+use libero::{use_formats, use_theme};
 
 /// The demo swatches and their names.
 const SWATCHES: [(&str, &str); 14] = [
@@ -36,6 +36,7 @@ HueSlider {
 Text { size: "sm", "{hue()}°" }"#;
 
 const ALPHA_SLIDER: &str = r#"let mut alpha = use_signal(|| 0.6);
+let formats = use_formats();
 
 Text { size: "sm", "Opacity" }
 AlphaSlider {
@@ -44,7 +45,7 @@ AlphaSlider {
     oninput: move |event: SliderChangeEvent| alpha.set(event.value()),
     aria_label: "Opacity",
 }
-Text { size: "sm", "{(alpha() * 100.0).round()}%" }"#;
+Text { size: "sm", {formats.write_percent(&(alpha() * 100.0).round().to_string())} }"#;
 
 const COLOR_SWATCH: &str = r#"let mut picked = use_signal(|| false);
 
@@ -318,6 +319,7 @@ fn HueSliderPreview() -> Element {
 #[component]
 fn AlphaSliderPreview() -> Element {
     let mut alpha = use_signal(|| 0.6);
+    let formats = use_formats();
     rsx! {
         Flex { direction: "column", gap: "xs", sx: libero::sx::sx().width("240px"),
             Text { size: "sm", "Opacity" }
@@ -327,7 +329,7 @@ fn AlphaSliderPreview() -> Element {
                 oninput: move |event: SliderChangeEvent| alpha.set(event.value()),
                 aria_label: "Opacity",
             }
-            Text { size: "sm", "{(alpha() * 100.0).round()}%" }
+            Text { size: "sm", {formats.write_percent(&(alpha() * 100.0).round().to_string())} }
         }
     }
 }

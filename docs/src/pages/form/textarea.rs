@@ -99,6 +99,7 @@ pub fn TextareaPage() -> Element {
             // snippet: let mut value = use_signal(String::new);
             Demo {
                 component: "Textarea",
+                pinned_preview: true,
                 children_text: "",
                 fixed: vec![
                     "value: value()".to_string(),

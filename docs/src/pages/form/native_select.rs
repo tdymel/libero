@@ -128,6 +128,7 @@ pub fn NativeSelectPage() -> Element {
             // snippet: let mut value = use_signal(|| Some(FontSize::Small));
             Demo {
                 component: "NativeSelect",
+                pinned_preview: true,
                 children_text: "",
                 // Printed above the snippet: the list is the enum, so the
                 // code block is a lie without it.

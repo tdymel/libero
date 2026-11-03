@@ -332,6 +332,7 @@ pub fn MultiSelectPage() -> Element {
             },
             Demo {
                 component: "MultiSelect",
+                pinned_preview: true,
                 children_text: "",
                 // `filter` and the custom rows share one helper, printed for either switch.
                 wrap: Wrap(|values: &DemoValues, source: &str| {

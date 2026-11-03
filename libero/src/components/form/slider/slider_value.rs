@@ -106,9 +106,10 @@ impl SliderValue for f64 {
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
-/// # use libero::components::{Slider, SliderChangeEvent, SliderMark};
+/// # use libero::{components::{Slider, SliderChangeEvent, SliderMark}, use_formats};
 /// # fn app() -> Element {
 /// let mut volume = use_signal(|| 40.0);
+/// let formats = use_formats();
 /// rsx! {
 ///     Slider {
 ///         aria_label: "Volume",
@@ -118,7 +119,7 @@ impl SliderValue for f64 {
 ///             SliderMark::new(50.0),
 ///             SliderMark::labeled(100.0, "100"),
 ///         ],
-///         format: Callback::new(|value: f64| format!("{value}%")),
+///         format: Callback::new(move |value: f64| formats.write_percent(&value.to_string())),
 ///         oninput: move |event: SliderChangeEvent| volume.set(event.value()),
 ///     }
 /// }

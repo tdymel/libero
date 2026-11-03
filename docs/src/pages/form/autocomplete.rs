@@ -240,6 +240,7 @@ pub fn AutocompletePage() -> Element {
             // snippet: let mut picked = use_signal(|| None::<&'static str>);
             Demo {
                 component: "Autocomplete",
+                pinned_preview: true,
                 children_text: "",
                 // `country` only exists in the snippet while the rows or the
                 // pick handler call it.
