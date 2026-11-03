@@ -282,6 +282,21 @@ pub(crate) async fn join<A: Future, B: Future>(a: A, b: B) -> (A::Output, B::Out
 pub trait ElementApi {
     // Commands stay synchronous, so a renderer that only queues still honours them.
     fn focus(&self) -> Result<(), PlatformError>;
+
+    /// Focus after a pointer press: no scroll and no focus ring where the renderer can;
+    /// otherwise [`focus`](Self::focus).
+    ///
+    /// ```
+    /// # use libero::platform::{ElementApi, PlatformError};
+    /// # fn f(element: &dyn ElementApi) -> Result<(), PlatformError> {
+    /// element.focus_pressed()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn focus_pressed(&self) -> Result<(), PlatformError> {
+        self.focus()
+    }
+
     fn blur(&self) -> Result<(), PlatformError>;
     fn click(&self) -> Result<(), PlatformError>;
 

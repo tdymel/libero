@@ -1243,6 +1243,15 @@ impl ElementApi for WebElement {
         self.html()?.focus().map_err(|_| PlatformError::NotFound)
     }
 
+    fn focus_pressed(&self) -> Result<(), PlatformError> {
+        let options = web_sys::FocusOptions::new();
+        options.set_prevent_scroll(true);
+        options.set_focus_visible(false);
+        self.html()?
+            .focus_with_options(&options)
+            .map_err(|_| PlatformError::NotFound)
+    }
+
     fn blur(&self) -> Result<(), PlatformError> {
         self.html()?.blur().map_err(|_| PlatformError::NotFound)
     }

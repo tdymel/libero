@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{Input, ScaleOrCss, base_props, input_from_str, with_own},
+        common::{Input, ScaleOrCss, base_props, input_from_str, safe_area_padding, with_own},
         layout::{Float, Placement},
         overlay::Dialog,
     },
@@ -11,8 +11,8 @@ use crate::{
         SwipeClose, listener, swipe_close_sx, use_css, use_element, use_swipe_close, use_theme,
     },
     str_enum::str_enum,
-    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, Variables, sx},
-    theme::{Color, ColorShade, ColorValue, DRAWER_SIZE, Size},
+    sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, Variables, sx},
+    theme::{Color, ColorShade, ColorValue, DRAWER_SIZE, Size, SizeCss},
 };
 
 // Rides along as an extra class on `Dialog`'s own. Edge-docking is `Float`'s
@@ -30,16 +30,22 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
                 .max_width("100vw")
                 .overflow_y("auto"),
         )
-        .when("anchor-start", sx().height("100%"))
-        .when("anchor-end", sx().height("100%"))
+        .when("anchor-start", sx().height("100%").and(safe_edges(true)))
+        .when("anchor-end", sx().height("100%").and(safe_edges(false)))
         // Taller than the viewport, its far edge would sit above the scroll origin (3002).
-        .when("anchor-top", sx().width("100%").max_height("100dvh"))
+        .when(
+            "anchor-top",
+            sx().width("100%")
+                .max_height("100dvh")
+                .and(safe_sides("top")),
+        )
         // Relative: the swipe strip lies over its top padding. Follows a swipe down (3970).
         .when(
             "anchor-bottom",
             sx().width("100%")
                 .max_height("100dvh")
                 .position("relative")
+                .and(safe_sides("bottom"))
                 .and(swipe_close_sx()),
         )
         // A drawer opened from inside one must not inherit its custom size.
@@ -59,6 +65,36 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
         )
     })
 });
+
+/// A side panel clears the notch on its inline edge and the bars above and below (5443).
+fn safe_edges(start: bool) -> Sx {
+    let padding = SizeCss::SPACING.value(Size::Lg);
+    let side = |physical: &str| {
+        let property = if start {
+            "padding-inline-start"
+        } else {
+            "padding-inline-end"
+        };
+        sx().with(property, safe_area_padding(&padding, physical))
+    };
+    let (ltr, rtl) = if start {
+        ("left", "right")
+    } else {
+        ("right", "left")
+    };
+    sx().with("padding-top", safe_area_padding(&padding, "top"))
+        .with("padding-bottom", safe_area_padding(&padding, "bottom"))
+        .and(side(ltr))
+        .rtl(side(rtl))
+}
+
+/// A top or bottom panel clears the bar at its edge and the notch on both sides.
+fn safe_sides(edge: &str) -> Sx {
+    let padding = SizeCss::SPACING.value(Size::Lg);
+    sx().with(format!("padding-{edge}"), safe_area_padding(&padding, edge))
+        .with("padding-left", safe_area_padding(&padding, "left"))
+        .with("padding-right", safe_area_padding(&padding, "right"))
+}
 
 // As tall as the panel's top padding, whatever sets it: no padding, no strip.
 static DRAWER_HANDLE_SX: StaticSx = StaticSx::new(|| {

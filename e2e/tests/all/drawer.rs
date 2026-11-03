@@ -570,3 +570,93 @@ e2e::scenario!(
     macos: skip("upstream: WebKit does not focus a clicked button"),
     ios: skip("upstream: WebKit does not focus a clicked button")
 );
+
+/// Todo 5443: a docked panel pads the edge it touches and its two neighbours by the safe area,
+/// so its close button clears the status bar and its last control the home indicator.
+#[test]
+fn a_docked_panel_clears_the_safe_area() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{
+        SafeAreaInsets, SetSafeAreaInsetsOverrideParams,
+    };
+    const PADDING: &str = "(() => { const s = getComputedStyle(document.querySelector('[role=dialog]')); \
+         return [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].map(parseFloat); })()";
+
+    block_on(async {
+        let fixture = Fixture::open("/drawer/edges", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let insets = SafeAreaInsets {
+            top: Some(47),
+            bottom: Some(34),
+            left: Some(20),
+            right: Some(30),
+            ..Default::default()
+        };
+        page.execute_bounded(SetSafeAreaInsetsOverrideParams::new(insets.clone()))
+            .await
+            .unwrap();
+        // The base padding plus the inset on each padded side: top, right, bottom, left.
+        for (trigger, sides) in [
+            ("#open-top", [47.0, 30.0, 0.0, 20.0]),
+            ("#open-bottom", [0.0, 30.0, 34.0, 20.0]),
+        ] {
+            keyboard::tab_to(page, trigger, 5).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            e2e::wait::for_visible(page, DIALOG).await.unwrap();
+            let padding: [f64; 4] = page
+                .evaluate_bounded(PADDING)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let base = padding[0].min(padding[1]).min(padding[2]).min(padding[3]);
+            let extra = padding.map(|side| side - base);
+            assert_eq!(extra, sides, "{trigger}: padding {padding:?}");
+            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+            e2e::wait::for_js_true(
+                page,
+                "!document.querySelector('[role=dialog]')",
+                "the drawer to close",
+            )
+            .await
+            .unwrap();
+        }
+        fixture.close().await.unwrap();
+
+        // `/drawer` docks at the end: the right edge in LTR, the left under RTL.
+        for (dir, sides) in [
+            ("ltr", [47.0, 30.0, 34.0, 0.0]),
+            ("rtl", [47.0, 0.0, 34.0, 20.0]),
+        ] {
+            let fixture = Fixture::open("/drawer", Viewport::Mobile).await.unwrap();
+            let page = &fixture.page;
+            page.execute_bounded(SetSafeAreaInsetsOverrideParams::new(insets.clone()))
+                .await
+                .unwrap();
+            page.evaluate_bounded(format!("document.documentElement.dir = '{dir}'"))
+                .await
+                .unwrap();
+            keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            e2e::wait::for_visible(page, DIALOG).await.unwrap();
+            let padding: [f64; 4] = page
+                .evaluate_bounded(PADDING)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let base = padding[0].min(padding[1]).min(padding[2]).min(padding[3]);
+            assert_eq!(
+                padding.map(|side| side - base),
+                sides,
+                "{dir}: padding {padding:?}"
+            );
+            fixture
+                .console
+                .assert_clean(&format!("the end drawer in a safe area, {dir}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

@@ -7,27 +7,47 @@ use crate::{
         layout::{Box, Float},
     },
     sx::{StaticSx, sx},
-    theme::{NOTIFICATION_GAP, NOTIFICATION_OFFSET, NOTIFICATION_WIDTH, Placement},
+    theme::{CssVar, NOTIFICATION_GAP, NOTIFICATION_OFFSET, NOTIFICATION_WIDTH, Placement},
 };
+
+const NAVIGATION_BAR_HEIGHT_VAR: CssVar = CssVar::new("--lsx-navigation-bar-height");
+// The viewport's insets on the stack's inline sides; zero in a contained host (5442).
+const INSET_START_VAR: CssVar = CssVar::new("--lsx-notification-inset-start");
+const INSET_END_VAR: CssVar = CssVar::new("--lsx-notification-inset-end");
 
 /// One stack. It lets the pointer through: only its notifications take clicks.
 static STACK_SX: StaticSx = StaticSx::new(|| {
+    let offset = NOTIFICATION_OFFSET.value();
+    let (start, end) = (
+        INSET_START_VAR.value_or("0px"),
+        INSET_END_VAR.value_or("0px"),
+    );
+    let insets = |start: &str, end: &str| {
+        sx().var(
+            INSET_START_VAR,
+            format!("env(safe-area-inset-{start}, 0px)"),
+        )
+        .var(INSET_END_VAR, format!("env(safe-area-inset-{end}, 0px)"))
+    };
     sx().display("flex")
         .flex_direction("column")
         .width(format!(
-            "min({}, calc(100% - 2 * {}))",
+            "min({}, calc(100% - 2 * {offset} - {start} - {end}))",
             NOTIFICATION_WIDTH.value(),
-            NOTIFICATION_OFFSET.value()
         ))
         .pointer_events("none")
         // Logical margins, not `Float`'s physical offset: they flip with `end` under RTL.
         .when(
             "horizontal-start",
-            sx().margin_inline_start(NOTIFICATION_OFFSET.value()),
+            sx().margin_inline_start(format!("calc({offset} + {start})")),
         )
         .when(
             "horizontal-end",
-            sx().margin_inline_end(NOTIFICATION_OFFSET.value()),
+            sx().margin_inline_end(format!("calc({offset} + {end})")),
+        )
+        .when(
+            "fixed",
+            insets("left", "right").rtl(insets("right", "left")),
         )
 });
 
@@ -67,7 +87,7 @@ pub(super) fn NotificationStack(props: StackProps) -> Element {
         Float {
             fixed: props.fixed,
             placement: Input::Value(placement),
-            offset_y: vertical_offset(placement),
+            offset_y: vertical_offset(placement, props.fixed),
             z_index: props.z_index,
             sx: &STACK_SX,
             for (live, items) in regions {
@@ -103,15 +123,22 @@ pub(super) fn NotificationStack(props: StackProps) -> Element {
     }
 }
 
-/// `Float`'s offsets are a translate: negative from the bottom edge.
-fn vertical_offset(placement: Placement) -> String {
+/// `Float`'s offsets are a translate: negative from the bottom edge. A fixed stack clears
+/// the status bar, and a docked `NavigationBar` or else the home indicator, as the FAB does.
+fn vertical_offset(placement: Placement, fixed: bool) -> String {
     use Placement::*;
-    match placement {
-        TopStart | TopCenter | TopEnd => NOTIFICATION_OFFSET.value(),
-        BottomStart | BottomCenter | BottomEnd => {
-            format!("calc(-1 * {})", NOTIFICATION_OFFSET.value())
+    let offset = NOTIFICATION_OFFSET.value();
+    match (placement, fixed) {
+        (TopStart | TopCenter | TopEnd, false) => offset,
+        (TopStart | TopCenter | TopEnd, true) => {
+            format!("calc(env(safe-area-inset-top, 0px) + {offset})")
         }
-        CenterStart | CenterCenter | CenterEnd => "0px".to_string(),
+        (BottomStart | BottomCenter | BottomEnd, false) => format!("calc(-1 * {offset})"),
+        (BottomStart | BottomCenter | BottomEnd, true) => format!(
+            "calc(-1 * ({} + {offset}))",
+            NAVIGATION_BAR_HEIGHT_VAR.value_or("env(safe-area-inset-bottom, 0px)")
+        ),
+        (CenterStart | CenterCenter | CenterEnd, _) => "0px".to_string(),
     }
 }
 
@@ -131,5 +158,24 @@ mod tests {
             !css.contains("margin-left") && !css.contains("margin-right"),
             "{css}"
         );
+    }
+
+    /// Todos 5442, 5445: a fixed stack clears the insets and a docked bar; a contained one not.
+    #[test]
+    fn a_fixed_stack_clears_the_safe_area_and_the_navigation_bar() {
+        let css = crate::css::Stylesheet::from(&*STACK_SX);
+        let css = css.as_str();
+        assert!(css.contains("env(safe-area-inset-left, 0px)"), "{css}");
+        assert!(css.contains("env(safe-area-inset-right, 0px)"), "{css}");
+
+        let top = vertical_offset(Placement::TopEnd, true);
+        assert!(top.contains("env(safe-area-inset-top"), "{top}");
+        let bottom = vertical_offset(Placement::BottomEnd, true);
+        assert!(
+            bottom.contains("var(--lsx-navigation-bar-height, env(safe-area-inset-bottom"),
+            "{bottom}"
+        );
+        assert!(!vertical_offset(Placement::BottomEnd, false).contains("env("));
+        assert!(!vertical_offset(Placement::TopStart, false).contains("env("));
     }
 }

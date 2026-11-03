@@ -942,3 +942,166 @@ fn f8_focuses_the_newest_notification_across_hosts() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5441: a finger tap on a toast's body is no hover. Its compat `mouseenter` paused every
+/// timer until a tap elsewhere.
+#[test]
+fn a_tap_on_a_timed_notification_leaves_it_armed() {
+    const ITEM: &str = "[aria-live] li";
+
+    block_on(async {
+        let fixture = Fixture::open("/notifications", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        e2e::clock::hold(page, &[AUTO_CLOSE_MS, EXIT_MS])
+            .await
+            .unwrap();
+
+        pointer::tap(page, TIMED_TRIGGER).await.unwrap();
+        wait::for_visible(page, ITEM).await.unwrap();
+        e2e::clock::until_armed(page, AUTO_CLOSE_MS, 1, "the auto-close to arm")
+            .await
+            .unwrap();
+        pointer::tap(page, ITEM).await.unwrap();
+        e2e::clock::settle(page).await.unwrap();
+        let armed = e2e::clock::armed(page, AUTO_CLOSE_MS).await.unwrap();
+        assert_eq!(armed, 1, "a tap on the message paused the auto-close");
+        e2e::passes::focus::assert_focused(page, TIMED_TRIGGER, "a tap on the message")
+            .await
+            .unwrap();
+        e2e::clock::fire(page, AUTO_CLOSE_MS).await.unwrap();
+        e2e::clock::until_armed(page, EXIT_MS, 1, "the tapped notification to close on time")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("tapping a timed notification")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5444: a pointer close still returns focus to the trigger (423), but leaves the page
+/// where it is and shows no ring. A keyboard close is covered above.
+#[test]
+fn a_pointer_close_returns_focus_without_a_scroll_or_a_ring() {
+    block_on(async {
+        for (viewport, touch) in [(Viewport::Desktop, false), (Viewport::Mobile, true)] {
+            let at = viewport.name();
+            let fixture = Fixture::open("/notifications-snackbar", viewport)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            let press = async |selector: &str| match touch {
+                true => pointer::tap(page, selector).await,
+                false => pointer::click(page, selector).await,
+            };
+
+            press(TRIGGER).await.unwrap();
+            wait::for_visible(page, CLOSE).await.unwrap();
+            let scrolled: f64 = js(
+                page,
+                "(() => { const s = document.createElement('div'); s.style.height = '3000px'; \
+                 document.body.append(s); const e = document.scrollingElement; \
+                 e.scrollTop = 2000; return e.scrollTop; })()",
+            )
+            .await;
+            assert!(scrolled > 0.0, "at {at}: the page did not scroll");
+
+            press(CLOSE).await.unwrap();
+            wait::for_js_true(
+                page,
+                "!document.querySelector('[aria-live] li')",
+                "the snackbar to be removed",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            e2e::passes::focus::assert_focused(page, TRIGGER, "a pointer close")
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            let (top, ring): (f64, bool) = js(
+                page,
+                "[document.scrollingElement.scrollTop, document.activeElement.matches(':focus-visible')]",
+            )
+            .await;
+            assert_eq!(top, scrolled, "at {at}: the close scrolled the page");
+            assert!(!ring, "at {at}: the returned focus shows a ring");
+
+            fixture
+                .console
+                .assert_clean(&format!("a pointer close at {at}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Todos 5442, 5445: a viewport stack clears the notch, the status bar and the home indicator,
+/// and a docked `NavigationBar` instead of the last when one publishes its height.
+#[test]
+fn a_viewport_stack_clears_the_safe_area_and_a_navigation_bar() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{
+        SafeAreaInsets, SetSafeAreaInsetsOverrideParams,
+    };
+    const ITEM: &str = "[aria-live] li";
+
+    block_on(async {
+        let fixture = Fixture::open("/notifications", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let insets = SafeAreaInsets {
+            top: Some(47),
+            bottom: Some(34),
+            left: Some(20),
+            right: Some(30),
+            ..Default::default()
+        };
+        page.execute_bounded(SetSafeAreaInsetsOverrideParams::new(insets))
+            .await
+            .unwrap();
+
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, ITEM).await.unwrap();
+        // The entry slides in: measure where it lands.
+        e2e::clock::finish_animations(page, std::time::Duration::from_secs(1))
+            .await
+            .unwrap();
+        let rect = format!(
+            "(() => {{ const r = document.querySelector({ITEM:?}).getBoundingClientRect(); \
+             return [r.top, r.bottom, r.left, r.right, innerHeight, \
+             document.documentElement.clientWidth]; }})()"
+        );
+        let [top, bottom, left, right, height, width]: [f64; 6] = js(page, &rect).await;
+        let bottom_stack = top > height / 2.0;
+        match bottom_stack {
+            true => assert!(bottom <= height - 46.0 + 1.0, "bottom {bottom} of {height}"),
+            false => assert!(top >= 59.0 - 1.0, "top {top}"),
+        }
+        assert!(
+            left >= 20.0 - 1.0 && right <= width - 30.0 + 1.0,
+            "{left}..{right} of {width}"
+        );
+
+        if bottom_stack {
+            let _: bool = js(
+                page,
+                "(document.documentElement.style.setProperty('--lsx-navigation-bar-height', '100px'), true)",
+            )
+            .await;
+            let [_, bottom, ..]: [f64; 6] = js(page, &rect).await;
+            assert!(
+                bottom <= height - 112.0 + 1.0,
+                "bottom {bottom} over a 100px bar"
+            );
+        }
+
+        fixture
+            .console
+            .assert_clean("the stack in a safe area")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

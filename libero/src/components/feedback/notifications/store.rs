@@ -32,6 +32,9 @@ pub(super) struct NotificationStore {
     pub(super) return_in_host: CopyValue<bool>,
     /// Set while the store moves focus itself, so that move is no entry.
     pub(super) handing_off: CopyValue<bool>,
+    /// The last input inside a notification was a press: a close moves focus without
+    /// a scroll or a ring (5444).
+    pub(super) pressed: CopyValue<bool>,
     /// `show` may run from a timer callback outside every runtime, and creates
     /// a signal. Weak: the runtime owns the store.
     pub(super) runtime: CopyValue<Weak<Runtime>>,
@@ -52,6 +55,7 @@ impl NotificationStore {
             return_to: CopyValue::new_in_scope(None, owner),
             return_in_host: CopyValue::new_in_scope(false, owner),
             handing_off: CopyValue::new_in_scope(false, owner),
+            pressed: CopyValue::new_in_scope(false, owner),
             runtime: CopyValue::new_in_scope(Rc::downgrade(&Runtime::current()), owner),
             owner,
             id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
@@ -157,9 +161,13 @@ impl NotificationStore {
         // Spawned: this may run inside the close button's click dispatch.
         let mut handing_off = self.handing_off;
         handing_off.set(true);
+        let pressed = self.pressed.try_peek().is_ok_and(|pressed| *pressed);
         runtime.in_scope(self.owner, || {
             spawn(async move {
-                let _ = target.focus();
+                let _ = match pressed {
+                    true => target.focus_pressed(),
+                    false => target.focus(),
+                };
                 handing_off.set(false);
             })
         });

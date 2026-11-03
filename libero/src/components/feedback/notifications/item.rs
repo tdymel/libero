@@ -156,12 +156,17 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
                     }
                 });
             // Nothing before the host, or no way to ask: where focus came from.
+            let pressed = store.pressed.try_peek().is_ok_and(|pressed| *pressed);
+            let focus = |target: &dyn ElementApi| match pressed {
+                true => target.focus_pressed(),
+                false => target.focus(),
+            };
             match (before, return_to) {
                 (Some(before), _) => {
-                    let _ = before.focus();
+                    let _ = focus(&*before);
                 }
                 (None, Some(target)) => {
-                    let _ = target.focus();
+                    let _ = focus(&*target);
                 }
                 (None, None) => {}
             }
@@ -201,6 +206,8 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
     let states: Input<States> = States::default().with("leaving", leaving).into();
     let mut hovered = store.hovered;
     let mut elements = store.elements;
+    let mut pressed = store.pressed;
+    let mut finger = use_hook(|| CopyValue::new(false));
 
     use_box()
         .framework_sx(&ITEM_SX)
@@ -213,13 +220,30 @@ pub(super) fn NotificationItem(props: ItemProps) -> Element {
             own.replace(Some(event.data()));
             elements.write().insert(id, event.data());
         })
-        .event("onmouseenter", move |_: Event<MouseData>| {
-            hovered.set(Some(id))
+        // A mouse only: a tap's compat `mouseenter` had no `mouseleave` until a tap elsewhere (5441).
+        .event("onpointerenter", move |event: Event<PointerData>| {
+            if event.data().pointer_type() == "mouse" {
+                hovered.set(Some(id))
+            }
         })
-        .event("onmouseleave", move |_: Event<MouseData>| {
+        .event("onpointerleave", move |_: Event<PointerData>| {
             if *hovered.peek() == Some(id) {
                 hovered.set(None);
             }
+        })
+        .event("onpointerdown", move |event: Event<PointerData>| {
+            pressed.set(true);
+            finger.set(event.data().pointer_type() != "mouse");
+        })
+        // A finger on the body focuses nothing, so nothing pauses (5441, 576); a control still takes it.
+        .event("onmousedown", move |event: Event<MouseData>| {
+            if finger.replace(false) && !platform::nested_interactive(&event, "[data-notification]")
+            {
+                event.prevent_default();
+            }
+        })
+        .event("onkeydown", move |_: Event<KeyboardData>| {
+            pressed.set(false)
         })
         .event("onfocusin", focus.focusin(0))
         .event("onfocusout", focus.focusout(0))
