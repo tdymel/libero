@@ -171,7 +171,7 @@ fn step_tabs(
             onselect,
             color: base_color("Tabs", None),
             full_width: true,
-            placement: TabsPlacement::Top,
+            placement: TabsPlacement::Top.into(),
             manual: false,
             focusable,
             // The picker's first control takes focus.

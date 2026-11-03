@@ -677,6 +677,14 @@ pub(crate) fn media_query() -> Option<&'static dyn MediaQueryApi> {
     return webview::media_query();
 }
 
+/// Only the web: the server's hydration data script ran before the app.
+pub(crate) fn hydrating() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return web::hydrating();
+    #[cfg(not(target_arch = "wasm32"))]
+    return false;
+}
+
 /// Cmd on Apple platforms, read from the browser's platform on the web.
 pub(crate) fn mod_is_meta() -> bool {
     #[cfg(target_arch = "wasm32")]

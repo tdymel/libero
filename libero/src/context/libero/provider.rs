@@ -6,6 +6,7 @@ use super::{
     LiberoContext,
     outlets::{StyleOutlet, ThemeStyle},
     stylesheet_registry::StylesheetRegistry,
+    viewport::use_viewport_provider,
 };
 use crate::{
     context::{ModalHost, PortalHost, PortalOutlet, WindowHost, window::ZLayers},
@@ -69,6 +70,7 @@ pub fn LiberoProvider(
     let outer_css = outer.as_ref().map(|outer| outer.theme_css);
     // Only the outermost provider owns the root's `lang`: two would race for it.
     let outermost = outer_css.is_none();
+    use_viewport_provider(outermost);
     let localization = use_signal(|| localization);
     let formats = use_signal(|| formats);
     // For the label fns, which sit below this layer.

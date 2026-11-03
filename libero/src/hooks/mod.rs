@@ -68,6 +68,7 @@ mod presence;
 mod presence_tests;
 #[cfg(feature = "use-push-subscription")]
 mod push_subscription;
+mod responsive;
 mod ripple;
 #[cfg(feature = "use-element")]
 mod scroll_lock;
@@ -199,6 +200,7 @@ pub(crate) use portal::{use_portal, use_portal_slot};
 pub(crate) use presence::use_presence;
 #[cfg(feature = "use-push-subscription")]
 pub use push_subscription::{PushSubscription, use_push_subscription};
+pub use responsive::use_responsive;
 pub(crate) use ripple::{child_ripple_sx, ripple_sx, use_ripple};
 #[cfg(feature = "use-element")]
 pub(crate) use scroll_lock::use_scroll_lock;

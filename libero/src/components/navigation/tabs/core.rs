@@ -11,7 +11,9 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{ElementHandle, id_selector, use_element, use_focus_within, use_range_css},
+    hooks::{
+        ElementHandle, id_selector, use_element, use_focus_within, use_range_css, use_responsive,
+    },
     platform::{ElementApi, focus_selector, logical_key, when_laid_out},
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -178,6 +180,16 @@ fn vertical_sx() -> crate::sx::Sx {
         )
 }
 
+/// A responsive placement's copy for one run: nothing for `top`, the column and its side else.
+fn placement_sx(placement: TabsPlacement) -> crate::sx::Sx {
+    match placement {
+        TabsPlacement::Top => sx(),
+        TabsPlacement::Start => vertical_sx().and(vertical_side_sx("inline-end", "-1px", "1px")),
+        TabsPlacement::End => vertical_sx()
+            .and(vertical_side_sx("inline-start", "1px", "-1px").flex_direction("row-reverse")),
+    }
+}
+
 /// One vertical side: the strip's inset line (physical, flipped in RTL), the tabs'
 /// indicator on `edge`, and the panel's gap on the far side.
 fn vertical_side_sx(edge: &str, ltr: &str, rtl: &str) -> crate::sx::Sx {
@@ -237,7 +249,7 @@ pub(crate) struct TabsView {
     pub color: ThemeAwareValue,
     pub full_width: bool,
     /// `start` or `end` make a vertical strip, moved by Up and Down.
-    pub placement: TabsPlacement,
+    pub placement: Responsive<TabsPlacement>,
     /// Arrows move the focus only; the tab's own click (Enter, Space) selects.
     pub manual: bool,
     /// `false` keeps the tabs out of the tab order, for a picker in a dropdown.
@@ -276,15 +288,20 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     } = view;
 
     let root_element = use_element();
-    let vertical = placement != TabsPlacement::Top;
+    // The keys and `aria-orientation`; the CSS follows the breakpoints through range copies.
+    let vertical = use_responsive(&placement)() != TabsPlacement::Top;
 
-    let states: Input<States> = states
+    let states = states
         .unwrap_or_default()
         .responsive(&size, |size| size.state_name())
-        .with("full-width", full_width)
-        .with("vertical", vertical)
-        .with(placement.state_name(), vertical)
-        .into();
+        .with("full-width", full_width);
+    let states: Input<States> = match placement.is_plain() {
+        true => states
+            .with("vertical", vertical)
+            .with(placement.base().state_name(), vertical),
+        false => states.responsive(&placement, |placement| placement.state_name()),
+    }
+    .into();
     // The text role, shared by the selected label and its underline.
     let variables: Input<Variables> = variables().with(TABS_COLOR, text_color(&color)).into();
 
@@ -300,10 +317,9 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     let naming = if named { naming } else { Vec::new() };
     let panel_id = selected.map(|selected| format!("{root}-panel-{selected}"));
     let panel_labelled_by = selected.map(|selected| format!("{root}-tab-{selected}"));
-    use_range_css(
-        &TABS_SX,
-        size.range_copies(|size| size.state_name(), TabsDefaults::size_sx),
-    );
+    let mut copies = size.range_copies(|size| size.state_name(), TabsDefaults::size_sx);
+    copies.extend(placement.range_copies(|placement| placement.state_name(), placement_sx));
+    use_range_css(&TABS_SX, copies);
 
     use_box()
         .framework_sx(&TABS_SX)

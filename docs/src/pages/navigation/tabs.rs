@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 use libero::components::{
     Code, Icon, Input, OptionLabel, OptionList, Options, Tabs, TabsPart, Text,
 };
+use libero::theme::{TabsPlacement, responsive};
 use libero::use_theme;
 
 /// The enum is the tab strip, so the snippet has to show it.
@@ -79,6 +80,11 @@ fn rich(section: Section) -> OptionLabel {
     )
 }
 
+/// The demo's placement from the `md` breakpoint up, `top` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn TabsPage() -> Element {
     let mut section = use_signal(|| Section::Account);
@@ -104,7 +110,7 @@ pub fn TabsPage() -> Element {
                     prop("color", "ThemeAwareValue").default(theme.tabs.color.as_str()).doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed."),
                     prop("activation", "TabsActivation").default(theme.tabs.activation.as_str()).doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
-                    prop("placement", "TabsPlacement").default("top").doc("Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down. `start` is the inline start side (left in left-to-right text), `end` the inline end side. The tablist has `aria-orientation=\"vertical\"`, and the selected tab's indicator sits on the edge facing the panel."),
+                    prop("placement", "Responsive<TabsPlacement>").default("top").doc("Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down. `start` is the inline start side (left in left-to-right text), `end` the inline end side. The tablist has `aria-orientation=\"vertical\"`, and the selected tab's indicator sits on the edge facing the panel. Or one per breakpoint, `placement: responsive(TabsPlacement::Top).md(TabsPlacement::Start)`: the layout switches with the window from the first paint, while the arrow keys and `aria-orientation` follow after mount when the page was rendered on a server."),
                     prop("panel_focusable", "bool").default("true").doc("Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed."),
                     prop("parts", "Parts<TabsPart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
@@ -179,7 +185,17 @@ pub fn TabsPage() -> Element {
                         .default(theme.tabs.activation.as_str()),
                     Control::toggle("placement", ["top", "start", "end"])
                         .labels(["Top", "Start", "End"])
-                        .default("top"),
+                        .default("start")
+                        .code(|_, values| match (responsive_on(values), values.str("placement")) {
+                            (true, placement) => vec![format!(
+                                "placement: responsive(TabsPlacement::Top).md(TabsPlacement::{:?})",
+                                TabsPlacement::from(placement.as_str())
+                            )],
+                            (false, placement) if placement == "top" => vec![],
+                            (false, placement) => vec![format!("placement: {placement:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::switch("full_width"),
                     Control::switch("panel_focusable").default("true"),
                     // The flag lives inside `options`, so the switch stands
@@ -207,7 +223,10 @@ pub fn TabsPage() -> Element {
                         full_width: values.str("full_width") == "true",
                         panel_focusable: values.str("panel_focusable") != "false",
                         activation: values.str("activation"),
-                        placement: values.str("placement"),
+                        placement: match (responsive_on(&values), TabsPlacement::from(values.str("placement").as_str())) {
+                            (true, placement) => responsive(TabsPlacement::Top).md(placement),
+                            (false, placement) => placement.into(),
+                        },
                         option_label: match values.str("labels").as_str() {
                             "renamed" => Some(Callback::new(renamed)),
                             "rich" => Some(Callback::new(rich)),

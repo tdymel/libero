@@ -8,7 +8,7 @@ use libero::{
     LiberoProvider,
     components::{Badge, Button, Options, Tabs},
     sx::ThemeAwareValue,
-    theme::{Size, Variant, responsive},
+    theme::{Size, TabsPlacement, Variant, responsive},
 };
 
 /// Any range copy or visibility rule in the page.
@@ -172,6 +172,62 @@ fn a_responsive_tabs_size_renders_its_run_words() {
     let html = render(app);
     assert!(body(&html).contains("md-:size-lg"));
     assert!(html.contains(r#"[data-state~="md-:size-lg"]"#));
+}
+
+/// Todo 5653: the CSS half is exact at SSR; the keys' half renders the base until mount.
+#[test]
+fn a_responsive_tabs_placement_draws_its_column_from_css_and_keys_from_the_base() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    aria_label: "Sections",
+                    placement: responsive(TabsPlacement::Top).md(TabsPlacement::Start),
+                    value: Section::One,
+                    panel: |_: Section| rsx! { "Panel" },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let page = body(&html);
+    let state = &attributes_of(&page, "div")["data-state"];
+    for word in ["base-md:placement-top", "md-:placement-start"] {
+        assert!(state.split(' ').any(|s| s == word), "{word} in {state}");
+    }
+    assert!(!state.split(' ').any(|s| s == "vertical"), "{state}");
+    assert!(page.contains(r#"aria-orientation="horizontal""#));
+    // `top` needs no rule; `start` gets the column under its own range.
+    assert!(!html.contains(r#"[data-state~="base-md:placement-top"]"#));
+    let copy = html
+        .find(r#"[data-state~="md-:placement-start"]"#)
+        .expect("no start copy");
+    assert!(html[copy..].contains("flex-direction:column"));
+}
+
+#[test]
+fn a_plain_tabs_placement_keeps_its_words_and_registers_nothing() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    aria_label: "Sections",
+                    placement: "end",
+                    value: Section::One,
+                    panel: |_: Section| rsx! { "Panel" },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let page = body(&html);
+    let state = &attributes_of(&page, "div")["data-state"];
+    assert!(state.split(' ').any(|s| s == "vertical"), "{state}");
+    assert!(state.split(' ').any(|s| s == "placement-end"), "{state}");
+    assert!(page.contains(r#"aria-orientation="vertical""#));
+    assert!(!has_lazy_css(&html));
 }
 
 #[test]

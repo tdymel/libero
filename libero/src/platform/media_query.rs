@@ -21,3 +21,9 @@ pub trait MediaQuerySubscription {}
 pub fn media_query() -> Option<&'static dyn MediaQueryApi> {
     backend::media_query()
 }
+
+/// Whether a fullstack server rendered this page: the client's first render must then draw
+/// what the server drew, so a media answer waits for mount. Only the web hydrates.
+pub(crate) fn hydrating() -> bool {
+    backend::hydrating()
+}

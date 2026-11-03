@@ -463,6 +463,15 @@ pub fn StylingPage() -> Element {
                     " of your own does not match such an instance: name the range word."
                 }
                 CodeBlock { source: RESPONSIVE_PROPS, label: "Responsive props", language: "rust" }
+                Text {
+                    "A prop that also changes behaviour, such as Tabs "
+                    Code { source: "placement" }
+                    " with its arrow keys, draws from CSS at once. Its Rust half reads "
+                    Code { source: "use_responsive" }
+                    ", which you can call too: a plain value costs nothing, and a responsive "
+                    "one renders its base on the server and while a client hydrates, then "
+                    "follows the window after mount."
+                }
             }
 
             DocSection {

@@ -188,6 +188,11 @@ Button { hidden_from: "md", "Menu" }
 sx().when("md-:size-lg", sx().letter_spacing("0.02em"))
 ```
 
+A prop that also changes behaviour, such as Tabs `placement` with its arrow
+keys, draws from CSS at once. Its Rust half reads `use_responsive`, which you
+can call too: a plain value costs nothing, and a responsive one renders its base
+on the server and while a client hydrates, then follows the window after mount.
+
 ## Media and container queries
 
 `media` nests styles under any `@media` query, passed through verbatim, mostly

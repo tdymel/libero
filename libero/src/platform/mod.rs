@@ -162,6 +162,7 @@ pub(crate) use keyboard::{logical_arrow, rtl_target};
 pub(crate) use keyboard::{warn_bare_chord, warn_once, warn_reserved_chord};
 pub(crate) use max_length::fit_max_length;
 pub(crate) use media::{MediaApi, MediaState, MediaSubscription, media};
+pub(crate) use media_query::hydrating;
 pub use media_query::{MediaQueryApi, MediaQuerySubscription, media_query};
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use paint::{

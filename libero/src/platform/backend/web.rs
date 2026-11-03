@@ -700,6 +700,14 @@ impl Drop for WebColorSchemeSubscription {
     }
 }
 
+/// A fullstack server writes `window.initial_dioxus_hydration_data` before the app loads.
+pub(super) fn hydrating() -> bool {
+    web_sys::window().is_some_and(|window| {
+        js_sys::Reflect::has(&window, &JsValue::from_str("initial_dioxus_hydration_data"))
+            .unwrap_or(false)
+    })
+}
+
 pub(super) fn media_query() -> Option<&'static dyn MediaQueryApi> {
     Some(&MEDIA_QUERY)
 }

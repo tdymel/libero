@@ -63,7 +63,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed. |
 | `activation` | `TabsActivation` | `automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
-| `placement` | `TabsPlacement` | `top` | Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down. `start` is the inline start side (left in left-to-right text), `end` the inline end side. The tablist has `aria-orientation="vertical"`, and the selected tab's indicator sits on the edge facing the panel. |
+| `placement` | `Responsive<TabsPlacement>` | `top` | Vertical tabs: `start` or `end` put the strip in a column beside the panel, moved by Up and Down. `start` is the inline start side (left in left-to-right text), `end` the inline end side. The tablist has `aria-orientation="vertical"`, and the selected tab's indicator sits on the edge facing the panel. Or one per breakpoint, `placement: responsive(TabsPlacement::Top).md(TabsPlacement::Start)`: the layout switches with the window from the first paint, while the arrow keys and `aria-orientation` follow after mount when the page was rendered on a server. |
 | `panel_focusable` | `bool` | `true` | Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed. |
 | `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
@@ -168,6 +168,7 @@ State tokens on the root's `data-state`, space separated.
 | `vertical` | `placement` is `start` or `end`: the strip is a column beside the panel. |
 | `placement-start` | `placement` is `start`. |
 | `placement-end` | `placement` is `end`. |
+| `<from>-<until>:placement-<placement>` | A responsive `placement`, one word per viewport range, such as `md-:placement-start`. It replaces `vertical` and `placement-*`. |
 
 The tabs carry no `data-state`. Style them through `[aria-selected="true"]`
 and `[aria-disabled="true"]`.
