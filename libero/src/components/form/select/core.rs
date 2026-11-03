@@ -26,8 +26,9 @@ use crate::{
         typeahead_match, use_element, use_localization, use_theme, use_typeahead,
     },
     platform::{
-        ElementApi, PlatformError, blur_counts, focus_is_in, focus_selector, focus_tab_from,
-        focus_without_ring, is_tab, logical_key, reads_dom_synchronously,
+        ElementApi, PlatformError, blur_counts, focus_is_in, focus_selector,
+        focus_selector_without_ring, focus_tab_from, focus_without_ring, is_tab, logical_key,
+        reads_dom_synchronously,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
@@ -297,6 +298,29 @@ impl ChipFocus {
         {
             let _ = trigger.focus();
         }
+    }
+
+    /// After an x tapped by a finger or pen with focus outside the field: focus goes to the
+    /// neighbouring chip's x, not the input, which would raise a keyboard. `false` leaves it to
+    /// [`keep_in_field`](Self::keep_in_field).
+    pub(crate) fn hand_to_neighbour(&self, index: usize) -> bool {
+        let Some(slot) = self.handles.slot.mounted() else {
+            return false;
+        };
+        if !reads_dom_synchronously() || focus_is_in(&slot) {
+            return false;
+        }
+        let next = match index + 1 < self.count {
+            true => Some(index),
+            false => index.checked_sub(1),
+        };
+        if let Some(next) = next {
+            let chip = id_selector(&self.id(next));
+            if !focus_selector_without_ring(&format!("{chip} button")) {
+                self.focus(Some(next));
+            }
+        }
+        true
     }
 
     /// The arrows walk, Backspace and Delete remove; Tab, Escape and chords pass.

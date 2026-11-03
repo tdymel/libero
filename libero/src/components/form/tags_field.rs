@@ -312,6 +312,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     );
 
     let focus = ChipFocus::new(handles, format!("{}-tag", field.id()), held.len());
+    let touched = use_hook(|| CopyValue::new(false));
     let tags = tags_field_chips(
         &held,
         &onchange,
@@ -319,6 +320,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         size,
         (disabled, readonly),
         &focus,
+        touched,
     );
 
     // Every pick would be refused, so the list says why instead of offering rows.
@@ -736,6 +738,7 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     size: Size,
     (disabled, readonly): (bool, bool),
     focus: &ChipFocus,
+    touched: CopyValue<bool>,
 ) -> Element {
     let locked = disabled || readonly;
     let chips = held.iter().cloned().enumerate().map(|(index, value)| {
@@ -750,8 +753,11 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
             };
             // Only a focused tag moves the focus: a mouse removal never focused it.
             focus.before_removal(index);
-            // A pressed x with focus outside the field hands it to the input, as on `MultiSelect`.
-            focus.keep_in_field();
+            // A finger's x hands focus on to a chip, a mouse's to the input, as on `MultiSelect`.
+            let mut touched = touched;
+            if !(touched.replace(false) && focus.hand_to_neighbour(index)) {
+                focus.keep_in_field();
+            }
             let mut next = list.clone();
             next.remove(index);
             onchange(next);
@@ -783,6 +789,10 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
                 // The default chip's guard, so a caller's `tag` has it too: a
                 // press on its x must not strand the focus on the body.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
+                onpointerdown: move |event: PointerEvent| {
+                    let mut touched = touched;
+                    touched.set(event.pointer_type() != "mouse");
+                },
                 onfocusin: {
                     let focus = focus.clone();
                     move |_| focus.entered(index)

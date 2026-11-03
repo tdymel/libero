@@ -27,6 +27,12 @@ pub(crate) fn focus_without_ring(mounted: &Rc<MountedData>) -> bool {
     backend::focus_without_ring(mounted)
 }
 
+/// Focuses the page's first match of `selector` without a focus ring; `false` where the renderer
+/// can't (off the web) or nothing matches.
+pub(crate) fn focus_selector_without_ring(selector: &str) -> bool {
+    backend::focus_selector_without_ring(selector)
+}
+
 /// [`focus_without_ring`] for a press the caller cancelled: the page stays where it is, as under
 /// the press's own focus. A browser without `focusVisible` keeps its own ring heuristic.
 pub(crate) fn focus_press_without_ring(mounted: &Rc<MountedData>) -> bool {

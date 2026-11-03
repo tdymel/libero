@@ -504,6 +504,19 @@ pub(super) fn focus_press_without_ring(mounted: &Rc<MountedData>) -> bool {
     focus_ringless(mounted, true)
 }
 
+pub(super) fn focus_selector_without_ring(selector: &str) -> bool {
+    let element = web_sys::window()
+        .and_then(|window| window.document())
+        .and_then(|document| document.query_selector(selector).ok().flatten())
+        .and_then(|element| element.dyn_into::<web_sys::HtmlElement>().ok());
+    let Some(element) = element else {
+        return false;
+    };
+    let options = web_sys::FocusOptions::new();
+    options.set_focus_visible(false);
+    element.focus_with_options(&options).is_ok()
+}
+
 fn focus_ringless(mounted: &Rc<MountedData>, prevent_scroll: bool) -> bool {
     let Some(element) = mounted.downcast::<web_sys::Element>() else {
         return false;

@@ -125,8 +125,9 @@ pub(crate) use file_dialog::pick_files;
 pub(crate) use focus::{
     FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, click_stopped,
     element_contains, focus_entered_from, focus_is_in, focus_lands_in, focus_left,
-    focus_press_without_ring, focus_pressed, focus_ring_shown, focus_selectors, focus_visible,
-    focus_without_ring, input_serial, reads_dom_synchronously, silent_focus,
+    focus_press_without_ring, focus_pressed, focus_ring_shown, focus_selector_without_ring,
+    focus_selectors, focus_visible, focus_without_ring, input_serial, reads_dom_synchronously,
+    silent_focus,
 };
 pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
 pub(crate) use fullscreen::{FullscreenApi, FullscreenSubscription, fullscreen};

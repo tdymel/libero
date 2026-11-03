@@ -794,6 +794,55 @@ fn a_tapped_x_from_outside_focuses_the_input() {
     });
 }
 
+/// Todo 5409: a finger's tap on a tag's x with focus outside the field moves focus to the
+/// neighbouring tag's x, ringless and without the input (a keyboard); none left leaves it be.
+#[test]
+fn a_touched_x_from_outside_focuses_the_neighbouring_x() {
+    use e2e::passes::focus::wait_for_focus;
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/cursor", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let away = || async {
+            page.evaluate_bounded("document.querySelector('#away').focus()")
+                .await
+                .unwrap();
+            wait_for_focus(page, "#away", "focusing Away")
+                .await
+                .unwrap();
+        };
+        let ringed = || async {
+            page.evaluate_bounded("document.activeElement.matches(':focus-visible')")
+                .await
+                .unwrap()
+                .into_value::<bool>()
+                .unwrap()
+        };
+        let taps = [
+            ("wasm", Some("css"), ["rust", "dioxus", "css"].as_slice()),
+            ("css", Some("dioxus"), ["rust", "dioxus"].as_slice()),
+            ("rust", Some("dioxus"), ["dioxus"].as_slice()),
+            ("dioxus", None, [].as_slice()),
+        ];
+        for (tapped, lands, left) in taps {
+            away().await;
+            pointer::tap(page, &chip(tapped)).await.unwrap();
+            let want = lands.map(chip).unwrap_or_else(|| "#away".to_string());
+            wait_for_focus(page, &want, &format!("a tap on the x of {tapped}"))
+                .await
+                .unwrap();
+            assert!(
+                lands.is_none() || !ringed().await,
+                "no ring after a tap on the x of {tapped}"
+            );
+            assert_eq!(tags(page).await, left, "after a tap on the x of {tapped}");
+        }
+        fixture.console.assert_clean("a touched x").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 const QUERY: &str = "#query";
 
 /// Todo 5356: `onquery` is told every draft change but not the mount, the caller's prefiltered
