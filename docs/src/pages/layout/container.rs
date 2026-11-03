@@ -1,10 +1,31 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::theme::{Responsive, Size, responsive};
 use libero::{
     components::{Code, Container, Text},
     sx::sx,
     use_theme,
 };
+
+/// `xs` gutters below `md`, the chosen ones from it, while the `responsive` switch is on.
+fn responsive_gutters(values: &DemoValues) -> Responsive<Size> {
+    let gutters = Size::from(values.str("gutters").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Xs).md(gutters),
+        false => gutters.into(),
+    }
+}
+
+fn gutters_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("gutters")) {
+        (true, gutters) => vec![format!(
+            "gutters: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(gutters.as_str())
+        )],
+        (false, gutters) if gutters == control.default => vec![],
+        (false, gutters) => vec![format!("gutters: {gutters:?}")],
+    }
+}
 
 /// A `section` is a landmark only once it has a name.
 const SECTION_LABEL: &str = "Page content";
@@ -26,12 +47,12 @@ pub fn ContainerPage() -> Element {
                 prop("component", "HtmlTag")
                     .default("div")
                     .doc("The element to render."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default(theme.container.size.as_str())
-                    .doc("Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length."),
-                prop("gutters", "ThemeAwareValue")
+                    .doc("Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length. Or one per breakpoint, `size: responsive(Size::Sm).lg(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                prop("gutters", "Responsive<ThemeAwareValue>")
                     .default(theme.container.gutters.as_str())
-                    .doc("Horizontal padding, a spacing step or a CSS length. It ignores the safe area: a full-bleed `Container` at the screen edge pads the notch itself, with `env(safe-area-inset-left)` and `-right` in its `sx`."),
+                    .doc("Horizontal padding, a spacing step or a CSS length. It ignores the safe area: a full-bleed `Container` at the screen edge pads the notch itself, with `env(safe-area-inset-left)` and `-right` in its `sx`. Or one per breakpoint, `gutters: responsive(Size::Xs).md(Size::Lg)`."),
                 prop("children", "Element").doc("The container's content."),
             ])],
             accessibility: a11y()
@@ -66,7 +87,11 @@ pub fn ContainerPage() -> Element {
                     // The px stop shows a cap at phone width, where every breakpoint is wider.
                     Control::slider("size", ["240px", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.container.size.as_str()),
-                    Control::sizes("gutters").default(theme.container.gutters.as_str()),
+                    Control::sizes("gutters")
+                        .default(theme.container.gutters.as_str())
+                        .code(gutters_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // No `main`: the docs page is one already, and a page has one main.
                     Control::toggle("component", ["div", "section"])
                         .labels(["Div", "Section"])
@@ -81,7 +106,7 @@ pub fn ContainerPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Container {
                         size: values.str("size"),
-                        gutters: values.str("gutters"),
+                        gutters: responsive_gutters(&values),
                         component: values.str("component"),
                         aria_label: (values.str("component") == "section").then_some(SECTION_LABEL),
                         sx: sx().background("muted.1").padding_top("16px").padding_bottom("16px"),

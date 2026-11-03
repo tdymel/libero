@@ -3,14 +3,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            Cut, HtmlTag, Input, States, Truncate, base_color, base_props, gradient_text_sx,
-            text_color, truncate_sx, variables,
+            Cut, HtmlTag, Input, States, Truncate, base_color, base_props, clamp_height_sx,
+            clamp_sx, gradient_text_sx, text_color, truncate_sx, variables, with_own,
         },
         layout::use_box,
     },
-    hooks::{use_gradient_style, use_theme},
+    hooks::{use_gradient_style, use_range_css, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, Gradient, Size, TEXT_LINE_HEIGHT, TextDefaults},
+    theme::{CssVar, Gradient, Responsive, Size, TEXT_LINE_HEIGHT, TextDefaults},
 };
 
 static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -29,8 +29,9 @@ const TEXT_COLOR: CssVar = CssVar::new("--lsx-text-color");
 
 base_props! {
     pub struct TextProps {
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// The element to render, `p` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
@@ -49,8 +50,9 @@ base_props! {
         truncate: Input<Truncate>,
         /// Cuts the text after this many lines with an ellipsis; over `truncate`, and `0`
         /// is off. Blitz has no line clamp: it cuts at the line height, without an ellipsis.
-        #[props(default)]
-        line_clamp: Option<u32>,
+        /// Per breakpoint too, `responsive(2).md(0)`, where `0` lifts the clamp in that range.
+        #[props(default, into)]
+        line_clamp: Input<Responsive<u32>>,
         children: Element,
     }
 }
@@ -71,7 +73,7 @@ base_props! {
 #[component]
 pub fn Text(props: TextProps) -> Element {
     let theme = use_theme();
-    let chosen_size = props.size.copied_or(theme.text.size);
+    let sizes = props.size.copied_or(theme.text.size.into());
     let color = props.color.as_ref();
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
@@ -86,7 +88,7 @@ pub fn Text(props: TextProps) -> Element {
     let colored = plain.is_some();
     let style = gradient.or_else(|| colored.then(|| variables().with(TEXT_COLOR, plain).render()));
 
-    let cut = Cut::of(&props.truncate, props.line_clamp);
+    let cut = Cut::of(&props.truncate, &props.line_clamp);
     let states: Input<States> = cut
         .states()
         .into_iter()
@@ -94,13 +96,21 @@ pub fn Text(props: TextProps) -> Element {
             props
                 .states
                 .unwrap_or_default()
-                .with(chosen_size.state_name(), true)
+                .responsive(&sizes, |size| size.state_name())
                 .with("colored", colored)
                 .with("gradient", props.gradient.is_some()),
             |states, (state, on)| states.with(state, on),
         )
         .into();
     let lines = cut.variables();
+    let sx = with_own(clamp_sx(&props.line_clamp), &props.sx);
+    use_range_css(
+        &TEXT_BASE_SX,
+        sizes.range_copies(
+            |size| size.state_name(),
+            |size| TextDefaults::size_sx(size).and(clamp_height_sx(TEXT_LINE_HEIGHT, size)),
+        ),
+    );
     let children = match cut.is_start() {
         true => rsx! { bdi { {props.children} } },
         false => props.children,
@@ -109,7 +119,7 @@ pub fn Text(props: TextProps) -> Element {
     use_box()
         .framework_sx(&TEXT_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .variables(&lines)
         .style(style)

@@ -56,7 +56,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `side` | `SidebarSide` | `start` | The side the panel sits on, with its border on the edge facing the content, and whether `size` is a width or a height. `start` is the right side under `dir="rtl"`. It does not move the panel, so put it at the matching end of the DOM. |
-| `size` | `ThemeAwareValue` | `md` | The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: "18rem"`. With a top or bottom side the parent needs `direction: "column"`. |
+| `size` | `Responsive<ThemeAwareValue>` | `md` | The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: "18rem"`. With a top or bottom side the parent needs `direction: "column"`. Or one per breakpoint, `size: responsive(Size::Sm).lg(Size::Md)`. |
 | `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
 | `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
 | `parts` | `Parts<SidebarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

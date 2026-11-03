@@ -62,7 +62,16 @@ impl From<bool> for Input<FlexWrap> {
     }
 }
 
+impl From<bool> for Input<Responsive<FlexWrap>> {
+    fn from(value: bool) -> Self {
+        FlexWrap::from(value).into()
+    }
+}
+
 input_from_str!(FlexWrap);
+
+// One wrap, or one per breakpoint: `wrap: responsive(FlexWrap::NoWrap).md(FlexWrap::Wrap)`.
+crate::sx::input::input_from_responsive!(str FlexWrap);
 
 // `gap` folds in after `row`, so it beats either axis's default spacing.
 // The per-instance vars reset to `initial` so a nested Flex does not inherit them.
@@ -89,8 +98,21 @@ fn flex_variables(props: &FlexProps) -> Variables {
         .with(FLEX_JUSTIFY_VAR, props.justify.resolve(None))
         .with(
             FLEX_WRAP_VAR,
-            props.wrap.as_ref().map(|wrap| wrap.as_str().to_string()),
+            props
+                .wrap
+                .as_ref()
+                .filter(|wrap| wrap.is_plain())
+                .map(|wrap| wrap.base().as_str().to_string()),
         )
+}
+
+/// A per-breakpoint wrap, in the user layer: an inline var would beat its breakpoints.
+fn wrap_sx(wrap: &Input<Responsive<FlexWrap>>) -> Option<Sx> {
+    let wrap = wrap.as_ref().filter(|wrap| !wrap.is_plain())?;
+    let base = sx().var(FLEX_WRAP_VAR, wrap.base().as_str());
+    Some(wrap.breakpoints().fold(base, |base, (size, wrap)| {
+        base.breakpoint(size, sx().var(FLEX_WRAP_VAR, wrap.as_str()))
+    }))
 }
 
 base_props! {
@@ -114,8 +136,9 @@ base_props! {
         #[props(default, into)]
         direction: Input<Responsive<FlexDirection>>,
         /// `true` or `FlexWrap::Wrap` wraps; `FlexWrap::WrapReverse` stacks the new lines before the first.
+        /// Per breakpoint too: `responsive(FlexWrap::Wrap).md(FlexWrap::NoWrap)`.
         #[props(default, into)]
-        wrap: Input<FlexWrap>,
+        wrap: Input<Responsive<FlexWrap>>,
         children: Element,
     }
 }
@@ -200,6 +223,7 @@ pub fn Flex(props: FlexProps) -> Element {
     }
     let states: Input<States> = states.into();
     let sx = layout_sx(props.direction.as_ref(), props.gap.as_ref(), &props.sx);
+    let sx = with_own(wrap_sx(&props.wrap), &sx);
 
     use_box()
         .framework_sx(&FLEX_BASE_SX)
@@ -234,7 +258,7 @@ mod tests {
         assert_eq!(direction, Input::from("row"));
     }
 
-    fn flex_props(wrap: Input<FlexWrap>, align: Input<ThemeAwareValue>) -> FlexProps {
+    fn flex_props(wrap: Input<Responsive<FlexWrap>>, align: Input<ThemeAwareValue>) -> FlexProps {
         FlexProps {
             component: Input::None,
             class: Default::default(),
@@ -266,6 +290,26 @@ mod tests {
         let variables = flex_variables(&props).to_string();
 
         assert_eq!(variables, format!("{}:center;", FLEX_ALIGN_VAR.name()));
+    }
+
+    #[test]
+    fn a_wrap_per_breakpoint_rides_the_user_layer() {
+        let props = flex_props(
+            crate::theme::responsive(FlexWrap::Wrap)
+                .md(FlexWrap::NoWrap)
+                .into(),
+            Input::None,
+        );
+
+        assert_eq!(flex_variables(&props).to_string(), "");
+        assert_eq!(
+            wrap_sx(&props.wrap),
+            Some(
+                sx().var(FLEX_WRAP_VAR, "wrap")
+                    .breakpoint(Size::Md, sx().var(FLEX_WRAP_VAR, "nowrap"))
+            )
+        );
+        assert_eq!(wrap_sx(&true.into()), None);
     }
 
     #[test]

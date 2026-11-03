@@ -34,7 +34,7 @@ impl KbdDefaults {
         color: "var(--lsx-muted-7)",
     };
 
-    fn size_sx(size: Size) -> Sx {
+    pub(crate) fn size_sx(size: Size) -> Sx {
         sx().font_size(KBD_FONT_SIZE.value(size))
     }
 

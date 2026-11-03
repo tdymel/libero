@@ -1,13 +1,34 @@
 use crate::components::{
     Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, gradient_controls, gradient_value,
-    indent, or_unset, prop, props,
+    indent, prop, props,
 };
 use dioxus::prelude::*;
+use libero::theme::{Responsive, Size, responsive};
 use libero::{
     components::{Anchor, Box, Code, Header, Input, ScrollArea, Text},
     sx::{Sx, sx},
     use_theme,
 };
+
+/// `sm` below `md`, the chosen size from it, while the `responsive` switch is on.
+fn responsive_size(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Sm).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Sm).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 /// The frame scrolls, with more content than height, so `sticky` and `static` differ.
 /// A stacking context, so a native window clips the z-indexed header to it too (881).
@@ -67,9 +88,9 @@ pub fn HeaderPage() -> Element {
                 prop("publish_height", "bool")
                     .default("false")
                     .doc("Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky banner. A `fixed` header always does. Set it on the page's own banner only. Only one window per thread publishes: in a desktop app with several windows, the last publishing header mounted wins."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default(theme.header.size.as_str())
-                    .doc("Minimum height. The header grows when its content wraps."),
+                    .doc("Minimum height. The header grows when its content wraps. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; a published height follows."),
                 prop("color", "ThemeAwareValue")
                     .default("none, a neutral background")
                     .doc("A theme color fills the header with shade 6 and a readable text color. A literal CSS color is used as given, with black or white text, links and focus rings, whichever reads better on it. With `glass`, a translucent tint of it, as on `Paper`. Under a gradient, its first stop."),
@@ -121,7 +142,9 @@ pub fn HeaderPage() -> Element {
                 controls: vec![
                     Control::toggle("position", ["sticky", "static"]).labels(["Sticky", "Static"]),
                     Control::sizes("size")
-                        .default(theme.header.size.as_str()),
+                        .default(theme.header.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // Unset is the paper surface, the real default, so that prints nothing.
                     Control::color("color").with_unset()
                     .code(|_, values| match values.str("color").as_str() {
@@ -153,7 +176,7 @@ pub fn HeaderPage() -> Element {
                             aria_label: "Header demo",
                             Header {
                                 position: values.str("position"),
-                                size: or_unset(values.str("size")),
+                                size: responsive_size(&values),
                                 color: match values.str("color").as_str() {
                                     UNSET => Input::None,
                                     color => Input::from(color),

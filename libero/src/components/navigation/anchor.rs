@@ -11,9 +11,9 @@ use crate::{
         },
     },
     context::IconSlot,
-    hooks::{use_css, use_localization, use_theme},
+    hooks::{use_css, use_localization, use_range_css, use_theme},
     sx::{StaticSx, Sx, sx},
-    theme::{AnchorDefaults, Size},
+    theme::{AnchorDefaults, Responsive, Size, TextDefaults},
 };
 
 use crate::components::layout::{box_style, listener_attribute, render_anchor};
@@ -121,8 +121,9 @@ parts_enum! {
 base_props! {
     parts(AnchorPart);
     pub struct AnchorProps {
+        /// Text's size scale. Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// A path/URL or a typed route (`Route::Foo {}`); router navigation when mounted.
         /// Unset, a `<button>` with the link look, for an action.
         #[props(default, into)]
@@ -161,15 +162,19 @@ base_props! {
 #[component]
 pub fn Anchor(props: AnchorProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.anchor.size);
+    let sizes = props.size.copied_or(theme.anchor.size.into());
     let underline = props.underline.copied_or(theme.anchor.underline);
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with(underline.state_name(), true)
         .into();
+    use_range_css(
+        &ANCHOR_BASE_SX,
+        sizes.range_copies(|size| size.state_name(), TextDefaults::size_sx),
+    );
 
     // Resolved here: an `InternalAnchor` scope would re-render with `children`.
     let mut merged = None;

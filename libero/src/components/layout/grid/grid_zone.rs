@@ -2,14 +2,16 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, ScaleOrCss, States, as_length, base_props, css_px, variables},
+        common::{
+            HtmlTag, Input, ScaleOrCss, States, as_length, base_props, css_px, variables, with_own,
+        },
         layout::use_box,
     },
     hooks::{use_cache, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR,
-        GRID_ZONE_GAP, GRID_ZONE_MASONRY_GAP, SizeCss,
+        GRID_ZONE_GAP, GRID_ZONE_MASONRY_GAP, Responsive, SizeCss,
     },
     utils::use_warn_once,
 };
@@ -108,9 +110,10 @@ base_props! {
         /// Between items: a size word or any CSS, as `gap: "12px"`. Masonry packs by a
         /// `px` or `rem` length, counting a `rem` as 16px; another CSS value packs by the
         /// theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's
-        /// vertical gap with it; a plain row gap keeps its size.
+        /// vertical gap with it; a plain row gap keeps its size. Per breakpoint too,
+        /// `gap: responsive(Size::Xs).md(Size::Lg)`; masonry packs by the base gap.
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
         component: Input<HtmlTag>,
     }
@@ -154,9 +157,14 @@ pub fn GridZone(props: GridZoneProps) -> Element {
         });
     } else if let Some(grid) = grid.as_ref()
         && area.is_set()
-        && !grid.template.read().contains(&area)
+        && !grid.template.read().base_ref().contains(&area)
+        && !grid
+            .template
+            .read()
+            .breakpoints()
+            .any(|(_, template)| template.contains(&area))
     {
-        if grid.template.read().0.source == area.source {
+        if grid.template.read().base_ref().0.source == area.source {
             warned.once("unknown-area", || {
                 format!(
                     "GridZone: area `{}` is not in the parent Grid's template.",
@@ -172,6 +180,19 @@ pub fn GridZone(props: GridZoneProps) -> Element {
                 )
             });
         }
+    } else if let Some(grid) = grid.as_ref()
+        && area.is_set()
+        && grid.template.read().breakpoints().any(|(_, template)| {
+            !template.contains(&area) || !grid.template.read().base_ref().contains(&area)
+        })
+    {
+        warned.once("missing-at-a-breakpoint", || {
+            format!(
+                "GridZone: area `{}` is missing from one of the parent Grid's breakpoint \
+                 templates; there it is placed after the template's rows.",
+                area.name
+            )
+        });
     } else if grid.is_some() && !area.is_set() {
         warned.once("no-area", || {
             "GridZone: a zone inside a Grid needs an `area`, or it is placed by auto-flow and \
@@ -180,7 +201,23 @@ pub fn GridZone(props: GridZoneProps) -> Element {
         });
     }
 
-    let gap = ScaleOrCss::new(props.gap.as_ref(), theme.grid.zone_gap);
+    let gap = ScaleOrCss::new(
+        props.gap.as_ref().map(Responsive::base_ref),
+        theme.grid.zone_gap,
+    );
+    // Each breakpoint's gap overrides the inline base in the user layer, as `ImageList`'s does.
+    let breakpoint_gaps = props
+        .gap
+        .as_ref()
+        .filter(|gaps| !gaps.is_plain())
+        .map(|gaps| {
+            gaps.breakpoints().fold(sx(), |rules, (size, value)| {
+                let css =
+                    ScaleOrCss::new(Some(&value), theme.grid.zone_gap).resolve(SizeCss::SPACING);
+                rules.breakpoint(size, sx().var(GRID_ZONE_GAP.override_var(), as_length(css)))
+            })
+        });
+    let own_sx = with_own(breakpoint_gaps, &props.sx);
     let custom = gap.custom_css(SizeCss::SPACING);
     let measured = custom.as_deref().and_then(css_px);
     if props.masonry
@@ -269,7 +306,7 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     use_box()
         .framework_sx(&GRID_ZONE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&own_sx)
         .states(&states)
         .style(Some(style))
         .prepare()

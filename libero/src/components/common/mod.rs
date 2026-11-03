@@ -96,7 +96,9 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use print_exact::print_exact_sx;
 pub(crate) use rail::{Rail, RailInset};
-pub(crate) use responsive_sx::{ScaleOrCss, as_length, css_px, responsive_sx, with_own};
+pub(crate) use responsive_sx::{
+    ScaleOrCss, as_length, css_px, responsive_sx, responsive_var_sx, with_own,
+};
 #[cfg(all(feature = "use-element", feature = "table"))]
 pub(crate) use reveal_inline::reveal_unique;
 #[cfg(feature = "use-element")]
@@ -115,7 +117,7 @@ pub(crate) use toolbar_context::{
 #[cfg(any(feature = "text", feature = "title"))]
 pub use truncate::Truncate;
 #[cfg(any(feature = "text", feature = "title"))]
-pub(crate) use truncate::{Cut, truncate_sx};
+pub(crate) use truncate::{Cut, clamp_height_sx, clamp_sx, truncate_sx};
 pub(crate) use util::{
     NAVIGATION_BAR_HEIGHT_VAR, SAFE_AREA_INLINE_END_VAR, SAFE_AREA_INLINE_START_VAR, attr,
     css_string, safe_area_padding, safe_inline_padding,

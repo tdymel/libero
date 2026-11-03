@@ -3,13 +3,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            Cut, HtmlTag, Input, States, Truncate, base_props, gradient_text_sx, truncate_sx,
+            Cut, HtmlTag, Input, States, Truncate, base_props, clamp_height_sx, clamp_sx,
+            gradient_text_sx, truncate_sx, with_own,
         },
         layout::use_box,
     },
-    hooks::{use_gradient_style, use_theme},
+    hooks::{use_gradient_style, use_range_css, use_theme},
     sx::{StaticSx, sx},
-    theme::{Gradient, Size, TITLE_LINE_HEIGHT, TitleDefaults},
+    theme::{Gradient, Responsive, Size, TITLE_LINE_HEIGHT, TitleDefaults},
     utils::{Warned, use_warn_once},
 };
 
@@ -61,8 +62,9 @@ fn warn_unless_heading(warned: &Warned, component: HtmlTag) {
 
 base_props! {
     pub struct TitleProps {
+        /// Per breakpoint too: `responsive(Size::Lg).md(Size::Xxl)`; the tag follows the base size.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Unset, `size`'s heading tag. Set it to keep the outline order under another size;
         /// a tag other than h1 to h6 warns in debug builds.
         #[props(default, into)]
@@ -77,8 +79,9 @@ base_props! {
         truncate: Input<Truncate>,
         /// Cuts the title after this many lines with an ellipsis; over `truncate`, and `0`
         /// is off. Blitz has no line clamp: it cuts at the line height, without an ellipsis.
-        #[props(default)]
-        line_clamp: Option<u32>,
+        /// Per breakpoint too, `responsive(2).md(0)`, where `0` lifts the clamp in that range.
+        #[props(default, into)]
+        line_clamp: Input<Responsive<u32>>,
         children: Element,
     }
 }
@@ -99,7 +102,7 @@ base_props! {
 #[component]
 pub fn Title(props: TitleProps) -> Element {
     let theme = use_theme();
-    let chosen_size = props.size.copied_or(theme.title.size);
+    let sizes = props.size.copied_or(theme.title.size.into());
     let style = use_gradient_style(
         props.gradient.as_ref(),
         None,
@@ -107,7 +110,7 @@ pub fn Title(props: TitleProps) -> Element {
         true,
     );
 
-    let cut = Cut::of(&props.truncate, props.line_clamp);
+    let cut = Cut::of(&props.truncate, &props.line_clamp);
     let states: Input<States> = cut
         .states()
         .into_iter()
@@ -115,12 +118,20 @@ pub fn Title(props: TitleProps) -> Element {
             props
                 .states
                 .unwrap_or_default()
-                .with(chosen_size.state_name(), true)
+                .responsive(&sizes, |size| size.state_name())
                 .with("gradient", props.gradient.is_some()),
             |states, (state, on)| states.with(state, on),
         )
         .into();
     let lines = cut.variables();
+    let sx = with_own(clamp_sx(&props.line_clamp), &props.sx);
+    use_range_css(
+        &TITLE_BASE_SX,
+        sizes.range_copies(
+            |size| size.state_name(),
+            |size| TitleDefaults::size_sx(size).and(clamp_height_sx(TITLE_LINE_HEIGHT, size)),
+        ),
+    );
     let children = match cut.is_start() {
         true => rsx! { bdi { {props.children} } },
         false => props.children,
@@ -130,15 +141,17 @@ pub fn Title(props: TitleProps) -> Element {
         .component
         .as_ref()
         .copied()
-        // The caller's size, never the theme's: a theme must not move the outline.
-        .unwrap_or_else(|| default_component(props.size.copied_or(Size::Xxl)));
+        // The caller's base size, never the theme's: a theme must not move the outline.
+        .unwrap_or_else(|| {
+            default_component(props.size.as_ref().map_or(Size::Xxl, Responsive::base))
+        });
     let warned = use_warn_once();
     warn_unless_heading(&warned, component);
 
     use_box()
         .framework_sx(&TITLE_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .variables(&lines)
         .style(style)

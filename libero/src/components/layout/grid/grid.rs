@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, Responsive, Size, SizeCss},
+    theme::{CssVar, GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, Responsive, Size, SizeCss},
 };
 
 use super::GridTemplate;
@@ -17,7 +17,33 @@ use super::GridTemplate;
 /// run once and a plain value would stay the first render's.
 #[derive(Clone, Copy)]
 pub(crate) struct GridContext {
-    pub template: Signal<GridTemplate>,
+    pub template: Signal<Responsive<GridTemplate>>,
+}
+
+/// A template's two vars, for the inline style or a breakpoint's rule.
+fn template_vars(template: &GridTemplate) -> [(CssVar, String); 2] {
+    [
+        (GRID_AREAS_VAR, template.0.areas.clone()),
+        (GRID_COLUMNS_VAR, template.0.columns.to_string()),
+    ]
+}
+
+/// A template per breakpoint, in the user layer: an inline var would beat its breakpoints.
+fn template_sx(template: &Responsive<GridTemplate>) -> Option<Sx> {
+    if template.is_plain() {
+        return None;
+    }
+    let declare = |template: &GridTemplate| {
+        template_vars(template)
+            .into_iter()
+            .fold(sx(), |sx, (var, value)| {
+                sx.var(var, ThemeAwareValue::String(value))
+            })
+    };
+    let base = declare(template.base_ref());
+    Some(template.breakpoints().fold(base, |base, (size, template)| {
+        base.breakpoint(size, declare(&template))
+    }))
 }
 
 static GRID_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -40,8 +66,10 @@ base_props! {
     pub struct GridProps {
         /// `GridZone`s.
         children: Element,
-        /// The named-area matrix. Build it once outside the render.
-        template: GridTemplate,
+        /// The named-area matrix. Build it once outside the render. Per breakpoint too,
+        /// `template: responsive(STACKED.clone()).md(SIDE_BY_SIDE.clone())`: list every zone in each.
+        #[props(into)]
+        template: Responsive<GridTemplate>,
         /// Between zones: a size word, any CSS (`gap: "0"`) or one per breakpoint,
         /// `gap: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window.
         #[props(default, into)]
@@ -91,10 +119,15 @@ pub fn Grid(props: GridProps) -> Element {
         template.set(props.template.clone());
     }
 
-    let variables: Input<Variables> = variables()
-        .with(GRID_AREAS_VAR, props.template.0.areas.clone())
-        .with(GRID_COLUMNS_VAR, props.template.0.columns.to_string())
-        .into();
+    let variables: Input<Variables> = match props.template.is_plain() {
+        true => template_vars(props.template.base_ref())
+            .into_iter()
+            .fold(variables(), |variables, (var, value)| {
+                variables.with(var, value)
+            }),
+        false => variables(),
+    }
+    .into();
 
     let mut states = props.states.unwrap_or_default();
     if let Some(ThemeAwareValue::Size(gap)) = props.gap.as_ref().map(Responsive::base_ref) {
@@ -108,6 +141,7 @@ pub fn Grid(props: GridProps) -> Element {
             .and_then(|gap| responsive_sx(gap, Sx::gap)),
         &props.sx,
     );
+    let sx = with_own(template_sx(&props.template), &sx);
 
     use_box()
         .framework_sx(&GRID_BASE_SX)

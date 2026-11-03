@@ -2,11 +2,32 @@ use crate::components::{
     Child, Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
+use libero::theme::{Responsive, Size, responsive};
 use libero::{
     components::{Box, Divider, DividerPart, Input, Text},
     sx::sx,
     use_theme,
 };
+
+/// `xs` below `md`, the chosen size from it, while the `responsive` switch is on.
+fn responsive_size(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Xs).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 /// The label is a child, not a prop, so a control has to decide it here.
 fn label_child(values: &DemoValues) -> String {
@@ -41,13 +62,13 @@ pub fn DividerPage() -> Element {
                 prop("orientation", "Orientation")
                     .default("horizontal")
                     .doc("The direction of the rule. A vertical rule stretches to its row's height, so it needs a flex row parent; in a block parent it is 0px high and does not show."),
-                prop("size", "Size").default(theme.divider.size.as_str()).doc("Line thickness."),
+                prop("size", "Responsive<Size>").default(theme.divider.size.as_str()).doc("Line thickness. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Sm)`."),
                 prop("label_position", "LabelPosition")
                     .default(theme.divider.label_position.as_str())
                     .doc("Where the label sits along the rule: `center`, `start` or `end`."),
-                prop("spacing", "ThemeAwareValue")
+                prop("spacing", "Responsive<ThemeAwareValue>")
                     .default("none")
-                    .doc("Margin on both sides of the rule, a spacing step or a CSS length."),
+                    .doc("Margin on both sides of the rule, a spacing step or a CSS length. Or one per breakpoint, `spacing: responsive(Size::Xs).md(Size::Lg)`."),
                 prop("color", "ThemeAwareValue")
                     .default("muted.4")
                     .doc("Line color. A bare theme color like `primary` resolves to its shade 3."),
@@ -76,7 +97,9 @@ pub fn DividerPage() -> Element {
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"]),
                     Control::sizes("size")
-                        .default(theme.divider.size.as_str()),
+                        .default(theme.divider.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::switch("with_label").default("true").code(|_, _| vec![]),
                     // Meaningless without a label.
                     Control::toggle("label_position", ["start", "center", "end"])
@@ -100,7 +123,7 @@ pub fn DividerPage() -> Element {
                     let divider = rsx! {
                         Divider {
                             orientation: values.str("orientation"),
-                            size: values.str("size"),
+                            size: responsive_size(&values),
                             label_position: values.str("label_position"),
                             color: match values.str("color").as_str() {
                                 UNSET => Input::None,
@@ -110,7 +133,7 @@ pub fn DividerPage() -> Element {
                             // not "leave it to the theme".
                             spacing: match values.str("spacing").as_str() {
                                 "auto" => Input::None,
-                                spacing => Input::from(spacing),
+                                spacing => Input::<libero::theme::Responsive<libero::sx::ThemeAwareValue>>::from(spacing),
                             },
                             children: (values.str("with_label") == "true")
                                 .then(|| rsx! { "OR" }),

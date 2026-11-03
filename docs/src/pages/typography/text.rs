@@ -4,7 +4,28 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{Code, Input, Text};
 use libero::sx::sx;
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
+
+/// `sm` below `md`, the chosen size from it, while the `responsive` switch is on.
+fn responsive_size(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Sm).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Sm).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 /// Long enough to fill three lines of `CUT_WIDTH`.
 const TEXT: &str = "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. How vexingly quick daft zebras jump!";
@@ -49,9 +70,9 @@ pub fn TextPage() -> Element {
             source: "libero/src/components/typography/text.rs",
             markdown: "/md/text.md",
             properties: vec![props("Text", vec![
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(theme.text.size.as_str())
-                    .doc("Visual size, `xs` to `xxl`."),
+                    .doc("Visual size, `xs` to `xxl`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("component", "HtmlTag")
                     .default("p")
                     .doc("The element to render."),
@@ -61,8 +82,8 @@ pub fn TextPage() -> Element {
                     .doc("Paints the glyphs with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text colour in forced colours."),
                 prop("truncate", "Truncate")
                     .doc("Cuts the text on one line with an ellipsis at its `end` or `start`. The element becomes a block, so a `span` truncates too. Set a `title` if the cut text matters; the full text stays in the accessible name. `line_clamp` wins when both are set."),
-                prop("line_clamp", "u32")
-                    .doc("Cuts the text after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the text is cut at that many lines, without the ellipsis."),
+                prop("line_clamp", "Responsive<u32>")
+                    .doc("Cuts the text after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the text is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(3).md(0)`, where `0` lifts the clamp in that range."),
                 prop("children", "Element").default("required").doc("The text."),
             ])],
             accessibility: a11y()
@@ -99,7 +120,9 @@ pub fn TextPage() -> Element {
                 children_text: TEXT,
                 controls: vec![
                     Control::sizes("size")
-                        .default(theme.text.size.as_str()),
+                        .default(theme.text.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle("component", ["p", "span", "div"])
                         .labels(["P", "Span", "Div"]),
                     // Unset inherits the page's ink, or under a gradient starts at the theme's first stop.
@@ -130,7 +153,7 @@ pub fn TextPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     Text {
-                        size: values.str("size"),
+                        size: responsive_size(&values),
                         component: values.str("component"),
                         truncate: match values.str("cut").as_str() {
                             side @ ("end" | "start") => Input::from(side),

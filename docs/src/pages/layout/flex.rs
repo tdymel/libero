@@ -1,7 +1,7 @@
 use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Flex, FlexDirection, Text},
+    components::{Box, Code, Flex, FlexDirection, FlexWrap, Input, Text},
     sx::{Sx, ThemeAwareValue, sx},
     theme::{Responsive, Size, responsive},
 };
@@ -58,6 +58,18 @@ const RESPONSIVE_DIRECTION: Responsive<FlexDirection> =
     responsive(FlexDirection::Column).md(FlexDirection::Row);
 const RESPONSIVE_DIRECTION_CODE: &str =
     "direction: responsive(FlexDirection::Column).md(FlexDirection::Row)";
+
+/// The `wrap` select's last option: wraps on a phone, one line from a laptop up.
+const RESPONSIVE_WRAP: Responsive<FlexWrap> = responsive(FlexWrap::Wrap).md(FlexWrap::NoWrap);
+const RESPONSIVE_WRAP_CODE: &str = "wrap: responsive(FlexWrap::Wrap).md(FlexWrap::NoWrap)";
+
+fn wrap(values: &DemoValues) -> Input<Responsive<FlexWrap>> {
+    match values.str("wrap").as_str() {
+        "auto" => Input::None,
+        "responsive" => RESPONSIVE_WRAP.into(),
+        wrap => wrap.into(),
+    }
+}
 
 fn direction(values: &DemoValues) -> Responsive<FlexDirection> {
     match values.str("direction").as_str() {
@@ -130,12 +142,16 @@ fn controls() -> Vec<Control> {
             "Space between",
             "Space around",
         ]),
-        Control::select("wrap", ["auto", "wrap", "nowrap", "wrap-reverse"]).labels([
-            "Auto",
-            "Wrap",
-            "No wrap",
-            "Wrap reverse",
-        ]),
+        Control::select(
+            "wrap",
+            ["auto", "wrap", "nowrap", "wrap-reverse", "responsive"],
+        )
+        .labels(["Auto", "Wrap", "No wrap", "Wrap reverse", "Wrap below md"])
+        .code(|_, values| match values.str("wrap").as_str() {
+            "auto" => vec![],
+            "responsive" => vec![RESPONSIVE_WRAP_CODE.to_string()],
+            wrap => vec![format!("wrap: \"{wrap}\"")],
+        }),
         // Swaps the children's code, so the prop list prints nothing.
         Control::switch("equal_widths").code(|_, _| vec![]),
     ]
@@ -164,9 +180,9 @@ pub fn FlexPage() -> Element {
                 prop("gap", "Responsive<ThemeAwareValue>")
                     .default("md")
                     .doc("Space between children: a size, any CSS such as `\"0\"`, or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent."),
-                prop("wrap", "FlexWrap")
+                prop("wrap", "Responsive<FlexWrap>")
                     .default("nowrap in a column, wrap in a row")
-                    .doc("Whether children wrap onto new lines; `wrap-reverse` stacks the new lines before the first. Also takes a `bool`."),
+                    .doc("Whether children wrap onto new lines; `wrap-reverse` stacks the new lines before the first. Also takes a `bool`, or one per breakpoint, `wrap: responsive(FlexWrap::Wrap).md(FlexWrap::NoWrap)`."),
                 prop("children", "Element").doc("The flex's children."),
             ])],
             accessibility: a11y()
@@ -217,7 +233,7 @@ pub fn FlexPage() -> Element {
                         gap: gap(&values),
                         align: or_unset(values.str("align")),
                         justify: or_unset(values.str("justify")),
-                        wrap: or_unset(values.str("wrap")),
+                        wrap: wrap(&values),
                         if shows_wrap(&values) {
                             for word in ROW_WORDS {
                                 Box { key: "{word}", sx: child_sx(&values), "{word}" }

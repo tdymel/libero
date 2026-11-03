@@ -1,7 +1,7 @@
 use crate::{
     components::common::{Variables, variables},
     sx::{Input, Sx, ThemeAwareValue, sx},
-    tokens::{Responsive, Size, SizeCss},
+    tokens::{CssVar, Responsive, Size, SizeCss},
 };
 
 /// The part of a size-or-CSS prop the state classes cannot carry: a custom base and every
@@ -105,6 +105,23 @@ impl ScaleOrCss {
     }
 }
 
+/// A per-breakpoint value prop that rides a var: its base and every breakpoint, through `scale`,
+/// for the user layer, since an inline var would beat the breakpoints. `None` when plain.
+pub(crate) fn responsive_var_sx(
+    value: &Responsive<ThemeAwareValue>,
+    var: CssVar,
+    scale: Option<SizeCss>,
+) -> Option<Sx> {
+    if value.is_plain() {
+        return None;
+    }
+    let css = |value: &ThemeAwareValue| value.resolve(scale).unwrap_or_else(|| "initial".into());
+    let base = sx().var(var.clone(), css(value.base_ref()));
+    Some(value.breakpoints().fold(base, |base, (size, value)| {
+        base.breakpoint(size, sx().var(var.clone(), css(&value)))
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,6 +167,28 @@ mod tests {
     fn a_bare_zero_becomes_a_length() {
         assert_eq!(as_length("0".into()), "0px");
         assert_eq!(as_length("2px".into()), "2px");
+    }
+
+    #[test]
+    fn a_var_value_declares_its_base_and_breakpoints_only_when_responsive() {
+        const VAR: CssVar = CssVar::new("--x");
+        let value = responsive(ThemeAwareValue::from(Size::Sm)).md("2rem".into());
+
+        assert!(
+            responsive_var_sx(
+                &Responsive::new(Size::Sm.into()),
+                VAR,
+                Some(SizeCss::SPACING)
+            )
+            .is_none()
+        );
+        assert_eq!(
+            responsive_var_sx(&value, VAR, Some(SizeCss::SPACING)),
+            Some(
+                sx().var(VAR, SizeCss::SPACING.value(Size::Sm))
+                    .breakpoint(Size::Md, sx().var(VAR, "2rem"))
+            )
+        );
     }
 
     #[test]

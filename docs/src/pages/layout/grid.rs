@@ -81,6 +81,14 @@ static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
         .row(|row| row.cell(PageArea::Sidebar).cells(PageArea::Content, 3))
 });
 
+/// Below `md` the areas stack, so the sidebar is not a sliver on a phone (4642).
+static STACKED: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
+    template
+        .row(|row| row.cell(PageArea::Header))
+        .row(|row| row.cell(PageArea::Sidebar))
+        .row(|row| row.cell(PageArea::Content))
+});
+
 const TEMPLATE_SOURCE: &str = r#"#[derive(Clone, Copy, PartialEq)]
 enum PageArea { Header, Sidebar, Content }
 
@@ -102,11 +110,19 @@ static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
         .row(|row| row.cell(PageArea::Sidebar).cells(PageArea::Content, 3))
 });
 
+// On a phone the areas stack, one per row.
+static STACKED: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
+    template
+        .row(|row| row.cell(PageArea::Header))
+        .row(|row| row.cell(PageArea::Sidebar))
+        .row(|row| row.cell(PageArea::Content))
+});
+
 // Written in reading order. The template places each zone by name, so any
 // order looks the same, but screen readers and Tab follow this one.
 rsx! {
     Grid {
-        template: PAGE.clone(),
+        template: responsive(STACKED.clone()).md(PAGE.clone()),
         sx: sx().background("muted.1").padding("12px").border_radius("sm"),
         GridZone {
             area: PageArea::Header,
@@ -184,7 +200,7 @@ pub fn GridPage() -> Element {
             markdown: "/md/grid.md",
             properties: vec![
                 props("Grid", vec![
-                    prop("template", "GridTemplate").default("required").doc("The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static."),
+                    prop("template", "Responsive<GridTemplate>").default("required").doc("The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static. Or one per breakpoint, `template: responsive(STACKED.clone()).md(PAGE.clone())`, listing every zone in each; breakpoints follow the window."),
                     prop("gap", "Responsive<ThemeAwareValue>").default("md").doc("Space between zones, or any CSS, e.g. `gap: \"0\"`, per breakpoint too."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridZone`s."),
@@ -193,7 +209,7 @@ pub fn GridPage() -> Element {
                     prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is a size container (`container-type: inline-size`), not a containing block: a `position: fixed` descendant, such as a `fixed` `Header`, stays on the viewport, and an absolutely positioned one needs `position: relative` on its `GridItem`. Omit it to use the zone on its own, without a `Grid`, and give it a width."),
                     prop("dense", "bool").default("false").doc("Fills the gaps a wider item left, so an item may move up or sideways out of source order."),
                     prop("masonry", "bool").default("false").doc("Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again. The first measure can log `ResizeObserver loop completed with undelivered notifications`: benign, the layout settles a frame later, so an error reporter can ignore it."),
-                    prop("gap", "ThemeAwareValue").default("md").doc("Space between items, or any CSS, e.g. `gap: \"12px\"`. Masonry packs by a `px` or `rem` gap, counting a `rem` as 16px; other CSS packs by the theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's vertical gap with it; a plain row gap keeps its size."),
+                    prop("gap", "Responsive<ThemeAwareValue>").default("md").doc("Space between items, or any CSS, e.g. `gap: \"12px\"`. Masonry packs by a `px` or `rem` gap, counting a `rem` as 16px; other CSS packs by the theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's vertical gap with it; a plain row gap keeps its size. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`; masonry packs by the base gap."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridItem`s."),
                 ]),
@@ -210,7 +226,7 @@ pub fn GridPage() -> Element {
                     "Write the zones in reading order: the template places them anywhere, but screen readers and Tab follow the code.",
                     "Use `dense` only where order means nothing, such as a photo wall: a later item fills an earlier gap and shows before items it follows in the code.",
                     "Give two landmarks of the same kind an `aria-label` each, such as two `Aside` zones. An `Aside` zone inside `main` needs one to be a landmark at all.",
-                    "Use `responsive(..)` for a span that must stack on a narrow screen: a fixed `GridSpan` and the named-area template keep their fractions at 320 px, where a `Quarter` is under 74 px wide.",
+                    "Use `responsive(..)` for a span or a template that must stack on a narrow screen: a fixed `GridSpan` and a plain template keep their fractions at 320 px, where a `Quarter` is under 74 px wide.",
                 ])
                 .example("A page `Grid` with a header, a main zone and two `Aside` zones named \"Filters\" and \"Related\": a screen reader lists the two complementary landmarks apart, and Tab follows the code order."),
             lead: rsx! {
@@ -239,7 +255,7 @@ pub fn GridPage() -> Element {
                 render: move |values: DemoValues| match values.str("layout").as_str() {
                     "page" => rsx! {
                         Grid {
-                            template: PAGE.clone(),
+                            template: responsive(STACKED.clone()).md(PAGE.clone()),
                             sx: sx().width("100%").background("muted.1").padding("12px").border_radius("sm"),
                             GridZone {
                                 area: PageArea::Header,

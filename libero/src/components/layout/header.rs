@@ -11,7 +11,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, base_props, fill_color, input_from_str,
-            literal_contrast, safe_area_padding, variables,
+            literal_contrast, responsive_var_sx, safe_area_padding, variables, with_own,
         },
         layout::use_box,
     },
@@ -23,8 +23,8 @@ use crate::{
     theme::{
         ANCHOR_COLOR, AnchorDefaults, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GLASS_SHEEN,
         GRADIENT_CONTRAST, GlassTint, Gradient, HEADER_DEFAULT_HEIGHT, HEADER_HEIGHT,
-        HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults, SURFACE_LABEL, Size,
-        SizeCss, Z_INDEX_HEADER, gradient_surface_sx,
+        HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults, Responsive,
+        SURFACE_LABEL, Size, SizeCss, Z_INDEX_HEADER, gradient_surface_sx,
     },
 };
 
@@ -136,10 +136,32 @@ fn publish_css(id: &str, height: &str) -> String {
 }
 
 /// The size lands in a raw sheet, so one that leaves its declaration falls back to the theme's.
-fn banner_height(size: &Input<ThemeAwareValue>, theme_size: Size) -> String {
-    size.resolve(Some(HEADER_HEIGHT))
+fn banner_height(size: Option<&ThemeAwareValue>, theme_size: Size) -> String {
+    size.and_then(|size| size.resolve(Some(HEADER_HEIGHT)))
         .filter(|height| stays_in_declaration(height))
         .unwrap_or_else(|| HEADER_HEIGHT.value(theme_size))
+}
+
+/// [`publish_css`] for the base height, then each breakpoint's from its width up.
+fn publish_ranges_css(
+    id: &str,
+    size: &Input<Responsive<ThemeAwareValue>>,
+    theme_size: Size,
+) -> String {
+    let base = publish_css(
+        id,
+        &banner_height(size.as_ref().map(Responsive::base_ref), theme_size),
+    );
+    size.as_ref()
+        .map_or(Vec::new(), |size| size.breakpoints().collect())
+        .into_iter()
+        .fold(base, |css, (at, height)| {
+            let rule = publish_css(id, &banner_height(Some(&height), theme_size));
+            format!(
+                "{css}@media (min-width: {}){{{rule}}}",
+                at.breakpoint_value()
+            )
+        })
 }
 
 /// A `Fixed` banner always covers the content below it, so it always publishes (2.4.11).
@@ -236,9 +258,14 @@ fn header_variables(props: &HeaderProps, tint: Option<GlassTint>) -> Variables {
     variables()
         .with(PAPER_TINT_SHARE, share)
         .with(GLASS_SHEEN, sheen)
+        // A per-breakpoint size rides the user layer: an inline var would beat its breakpoints.
         .with(
             HEADER_HEIGHT.override_var(),
-            props.size.resolve(Some(HEADER_HEIGHT)),
+            props
+                .size
+                .as_ref()
+                .filter(|size| size.is_plain())
+                .and_then(|size| size.base_ref().resolve(Some(HEADER_HEIGHT))),
         )
         // Through the fill ramp: `blue.6` under white text was 3.56:1 (todo 239).
         .with(HEADER_BACKGROUND_VAR, fill.clone())
@@ -262,8 +289,9 @@ base_props! {
         #[props(default, into)]
         position: Input<HeaderPosition>,
         /// Minimum height, a size or any CSS length. Unset, `theme.header.size`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`; the published height follows.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
         /// Banner fill; a bare color takes shade 6. The first stop under a `gradient`.
         /// A literal CSS colour is used as given, its text, link and focus colours black or white.
         #[props(default, into)]
@@ -345,9 +373,11 @@ pub fn Header(props: HeaderProps) -> Element {
         })
     });
     let publishes = publishes_height(position, props.publish_height);
-    let height = banner_height(&props.size, theme.header.size);
     use_css(
-        publishes.then(|| Stylesheet::from(publish_css(&published.id, &height).as_str())),
+        publishes.then(|| {
+            let css = publish_ranges_css(&published.id, &props.size, theme.header.size);
+            Stylesheet::from(css.as_str())
+        }),
         CssLayer::Framework,
     );
     published.wanted.set(publishes);
@@ -361,10 +391,17 @@ pub fn Header(props: HeaderProps) -> Element {
         }
     });
 
+    let sx = with_own(
+        props.size.as_ref().and_then(|size| {
+            responsive_var_sx(size, HEADER_HEIGHT.override_var(), Some(HEADER_HEIGHT))
+        }),
+        &props.sx,
+    );
+
     use_box()
         .framework_sx(&HEADER_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .variables(&variables)
         .style(gradient)
@@ -452,11 +489,33 @@ mod tests {
     fn a_size_that_leaves_its_declaration_cannot_reach_the_raw_sheet() {
         let theme = HEADER_HEIGHT.value(Size::Md);
         for attack in ["0}body{display:none", "1px;x:y", "calc(1px"] {
-            let size: Input<ThemeAwareValue> = ThemeAwareValue::String(attack.into()).into();
-            assert_eq!(banner_height(&size, Size::Md), theme, "{attack}");
+            let size = ThemeAwareValue::String(attack.into());
+            assert_eq!(banner_height(Some(&size), Size::Md), theme, "{attack}");
         }
-        let size: Input<ThemeAwareValue> = ThemeAwareValue::String("72px".into()).into();
-        assert_eq!(banner_height(&size, Size::Md), "72px");
+        let size = ThemeAwareValue::String("72px".into());
+        assert_eq!(banner_height(Some(&size), Size::Md), "72px");
+    }
+
+    #[test]
+    fn a_responsive_size_publishes_each_breakpoint_from_its_width_up() {
+        let plain: Input<Responsive<ThemeAwareValue>> = "72px".into();
+        assert_eq!(
+            publish_ranges_css("lsx-7", &plain, Size::Md),
+            publish_css("lsx-7", "72px")
+        );
+        let size: Input<Responsive<ThemeAwareValue>> =
+            crate::theme::responsive(ThemeAwareValue::from("48px"))
+                .md("64px".into())
+                .into();
+        assert_eq!(
+            publish_ranges_css("lsx-7", &size, Size::Md),
+            format!(
+                "{}@media (min-width: {}){{{}}}",
+                publish_css("lsx-7", "48px"),
+                Size::Md.breakpoint_value(),
+                publish_css("lsx-7", "64px")
+            )
+        );
     }
 
     #[test]

@@ -4,16 +4,17 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, ScaleOrCss, States, Variables, attr, base_props,
-            literal_contrast, parts_enum, variables,
+            literal_contrast, parts_enum, responsive_sx, variables,
         },
         layout::use_box,
     },
-    hooks::use_theme,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    hooks::{use_range_css, use_theme},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         ANCHOR_COLOR, AnchorDefaults, BLOCKQUOTE_BACKGROUND, BLOCKQUOTE_BORDER_COLOR,
         BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR, BlockquoteDefaults, Color, ColorShade,
-        ColorValue, FOCUS_RING_HALO, NamedColorCss, SURFACE_LABEL, Size, SizeCss, TEXT_FONT_SIZE,
+        ColorValue, FOCUS_RING_HALO, NamedColorCss, Responsive, SURFACE_LABEL, Size, SizeCss,
+        TEXT_FONT_SIZE,
     },
 };
 
@@ -104,7 +105,13 @@ static BLOCKQUOTE_SX: StaticSx = StaticSx::new(|| {
 
 /// Size per step: a sibling of the quote, an `em` here would resolve against the `<figure>`.
 /// Dims the ink, not the layer: `opacity` took a link in `attribution` to 2.4:1 (todo 2484).
-static FIGCAPTION_SX: StaticSx = StaticSx::new(|| {
+static FIGCAPTION_SX: StaticSx = StaticSx::new(|| caption_base_sx().per_size(caption_size_sx));
+
+fn caption_size_sx(size: Size) -> Sx {
+    sx().font_size(format!("calc({} * 0.85)", TEXT_FONT_SIZE.value(size)))
+}
+
+fn caption_base_sx() -> Sx {
     sx().margin_top("0.5rem")
         .color(format!(
             "color-mix(in srgb, currentColor calc({} * 100%), transparent)",
@@ -114,8 +121,7 @@ static FIGCAPTION_SX: StaticSx = StaticSx::new(|| {
         .overflow_wrap("break-word")
         // A link in the caption's colour needs its underline too (1.4.1).
         .and(AnchorDefaults::underline_at_rest())
-        .per_size(|size| sx().font_size(format!("calc({} * 0.85)", TEXT_FONT_SIZE.value(size))))
-});
+}
 
 parts_enum! {
     /// [`Blockquote`]'s inner parts, for its `parts` prop. The root is the `<figure>`, a
@@ -134,15 +140,17 @@ base_props! {
     parts(BlockquotePart);
     pub struct BlockquoteProps {
         /// Body font size, line height, padding and the accent bar's width.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// The accent bar, and the background tint derived from it. A literal colour, or a
         /// shade from 6 up, is a solid fill with no separate bar or tint.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Rounds the corners away from the bar: a size word or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Who said it, in a `<figcaption>` outside the quote. Plain text, not a `<cite>`.
         #[props(default)]
         attribution: Option<Element>,
@@ -178,23 +186,51 @@ base_props! {
 #[component]
 pub fn Blockquote(props: BlockquoteProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.blockquote.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.blockquote.radius);
+    let sizes = props.size.copied_or(theme.blockquote.size.into());
+    let fallback = theme.blockquote.radius;
+    let radius = ScaleOrCss::new(props.radius.as_ref().map(Responsive::base_ref), fallback);
+    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
+    let radius_steps = match radii {
+        Some(radii) => radii.map(|value| ScaleOrCss::new(Some(&value), fallback).size),
+        None => radius.size.into(),
+    };
+    // Custom CSS per breakpoint rides the override var in the user layer, as on `Button`.
+    let radius_sx: Input<Sx> = radii
+        .and_then(|radii| {
+            responsive_sx(radii, |sx, value| {
+                let css = ScaleOrCss::new(Some(&value), fallback)
+                    .custom_css(SizeCss::RADIUS)
+                    .unwrap_or_else(|| "initial".into());
+                sx.var(SizeCss::RADIUS.override_var(), css)
+            })
+        })
+        .into();
 
     let quote_states: Input<States> = States::default()
-        .with(size.state_name(), true)
-        .with(radius.size.radius_state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
+        .responsive(&radius_steps, |size| size.radius_state_name())
         .into();
     let quote_variables: Input<Variables> =
         blockquote_variables(props.color.as_ref(), theme.blockquote.color)
             .with(
                 SizeCss::RADIUS.override_var(),
-                radius.custom_css(SizeCss::RADIUS),
+                radii.map_or_else(|| radius.custom_css(SizeCss::RADIUS), |_| None),
             )
             .into();
+    let mut copies = sizes.range_copies(|size| size.state_name(), BlockquoteDefaults::size_sx);
+    copies.extend(radius_steps.range_copies(
+        |size| size.radius_state_name(),
+        BlockquoteDefaults::radius_sx,
+    ));
+    use_range_css(&BLOCKQUOTE_SX, copies);
+    use_range_css(
+        &FIGCAPTION_SX,
+        sizes.range_copies(|size| size.state_name(), caption_size_sx),
+    );
 
     let quote = use_box()
         .framework_sx(&BLOCKQUOTE_SX)
+        .sx(&radius_sx)
         .states(&quote_states)
         .variables(&quote_variables)
         .prepare()
@@ -208,7 +244,9 @@ pub fn Blockquote(props: BlockquoteProps) -> Element {
             props.children,
         );
 
-    let caption_states: Input<States> = States::default().with(size.state_name(), true).into();
+    let caption_states: Input<States> = States::default()
+        .responsive(&sizes, |size| size.state_name())
+        .into();
     let caption_style = use_box()
         .framework_sx(&FIGCAPTION_SX)
         .states(&caption_states)

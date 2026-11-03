@@ -5,9 +5,9 @@ use crate::{
         common::{HtmlTag, Input, States, base_props},
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_range_css, use_theme},
     sx::StaticSx,
-    theme::{KbdDefaults, Size},
+    theme::{KbdDefaults, Responsive, Size},
 };
 
 static KBD_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -22,8 +22,9 @@ static KBD_BASE_SX: StaticSx = StaticSx::new(|| {
 base_props! {
     pub struct KbdProps {
         /// Font size; the rest of the look is `Theme::kbd`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         children: Element,
     }
 }
@@ -46,13 +47,17 @@ base_props! {
 #[component]
 pub fn Kbd(props: KbdProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.kbd.size);
+    let sizes = props.size.copied_or(theme.kbd.size.into());
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .into();
+    use_range_css(
+        &KBD_BASE_SX,
+        sizes.range_copies(|size| size.state_name(), KbdDefaults::size_sx),
+    );
 
     use_box()
         .framework_sx(&KBD_BASE_SX)

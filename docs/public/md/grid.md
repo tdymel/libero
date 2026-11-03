@@ -45,7 +45,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `template` | `GridTemplate` | required | The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static. |
+| `template` | `Responsive<GridTemplate>` | required | The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static. Or one per breakpoint, `template: responsive(STACKED.clone()).md(PAGE.clone())`, listing every zone in each; breakpoints follow the window. |
 | `gap` | `Responsive<ThemeAwareValue>` | `md` | Space between zones, or any CSS, e.g. `gap: "0"`, per breakpoint too. |
 | `component` | `HtmlTag` | `div` | The element to render. |
 | `children` | `Element` | required | `GridZone`s. |
@@ -57,7 +57,7 @@ fn Demo() -> Element {
 | `area` | `AreaName` | - | The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is a size container (`container-type: inline-size`), not a containing block: a `position: fixed` descendant, such as a `fixed` `Header`, stays on the viewport, and an absolutely positioned one needs `position: relative` on its `GridItem`. Omit it to use the zone on its own, without a `Grid`, and give it a width. |
 | `dense` | `bool` | `false` | Fills the gaps a wider item left, so an item may move up or sideways out of source order. |
 | `masonry` | `bool` | `false` | Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again. The first measure can log `ResizeObserver loop completed with undelivered notifications`: benign, the layout settles a frame later, so an error reporter can ignore it. |
-| `gap` | `ThemeAwareValue` | `md` | Space between items, or any CSS, e.g. `gap: "12px"`. Masonry packs by a `px` or `rem` gap, counting a `rem` as 16px; other CSS packs by the theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's vertical gap with it; a plain row gap keeps its size. |
+| `gap` | `Responsive<ThemeAwareValue>` | `md` | Space between items, or any CSS, e.g. `gap: "12px"`. Masonry packs by a `px` or `rem` gap, counting a `rem` as 16px; other CSS packs by the theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's vertical gap with it; a plain row gap keeps its size. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`; masonry packs by the base gap. |
 | `component` | `HtmlTag` | `div` | The element to render. |
 | `children` | `Element` | required | `GridItem`s. |
 
@@ -90,9 +90,9 @@ Like every component, all three also take the shared props `sx`, `class`,
 - Give two landmarks of the same kind an `aria-label` each, such as two
   `Aside` zones. An `Aside` zone inside `main` needs one to be a landmark at
   all.
-- Use `responsive(..)` for a span that must stack on a narrow screen: a fixed
-  `GridSpan` and the named-area template keep their fractions at 320 px, where
-  a `Quarter` is under 74 px wide.
+- Use `responsive(..)` for a span or a template that must stack on a narrow
+  screen: a fixed `GridSpan` and a plain template keep their fractions at 320 px,
+  where a `Quarter` is under 74 px wide.
 
 ### Example
 

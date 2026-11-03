@@ -3,8 +3,11 @@ use crate::{
     platform::clamps_lines,
     str_enum::str_enum,
     sx::{Sx, sx},
-    theme::{CssVar, FOCUS_RING_WIDTH, Size, SizeCss},
+    theme::{CssVar, FOCUS_RING_WIDTH, Responsive, Size, SizeCss},
 };
+
+// A line count, or one per breakpoint: `line_clamp: responsive(1).md(3)`.
+crate::sx::input::input_from_responsive!(u32);
 
 str_enum! {
     /// Which end of a one-line text is cut with an ellipsis.
@@ -22,20 +25,28 @@ const LINES_VAR: CssVar = CssVar::new("--lsx-lines");
 
 const LINE_CLAMP_STATE: &str = "line-clamp";
 
-/// The one cut a text takes: `line_clamp` wins over `truncate`, and `Some(0)` is off.
+/// The one cut a text takes: `line_clamp` wins over `truncate`, and `0` is off.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Cut {
     None,
     Line(Truncate),
     Lines(u32),
+    /// A count per breakpoint, which [`clamp_sx`] declares.
+    LinesPerRange,
 }
 
 impl Cut {
-    pub(crate) fn of(truncate: &Input<Truncate>, line_clamp: Option<u32>) -> Self {
-        match (line_clamp.filter(|&lines| lines > 0), truncate.as_ref()) {
-            (Some(lines), _) => Self::Lines(lines),
-            (None, Some(&cut)) => Self::Line(cut),
-            (None, None) => Self::None,
+    pub(crate) fn of(truncate: &Input<Truncate>, line_clamp: &Input<Responsive<u32>>) -> Self {
+        let clamp = line_clamp.as_ref();
+        let ranged = clamp.is_some_and(|clamp| {
+            !clamp.is_plain() && (clamp.base() > 0 || clamp.breakpoints().any(|(_, n)| n > 0))
+        });
+        let lines = clamp.map(Responsive::base).filter(|&lines| lines > 0);
+        match (ranged, lines, truncate.as_ref()) {
+            (true, _, _) => Self::LinesPerRange,
+            (false, Some(lines), _) => Self::Lines(lines),
+            (false, None, Some(&cut)) => Self::Line(cut),
+            (false, None, None) => Self::None,
         }
     }
 
@@ -51,7 +62,10 @@ impl Cut {
                 self == Self::Line(Truncate::End),
             ),
             (Truncate::Start.state_name(), self.is_start()),
-            (LINE_CLAMP_STATE, matches!(self, Self::Lines(_))),
+            (
+                LINE_CLAMP_STATE,
+                matches!(self, Self::Lines(_) | Self::LinesPerRange),
+            ),
         ]
     }
 
@@ -62,6 +76,20 @@ impl Cut {
         };
         variables().with(LINES_VAR, lines).into()
     }
+}
+
+/// A per-breakpoint `line_clamp`'s counts, for the user layer (an inline var would beat the
+/// breakpoints); `none` lifts the clamp where the count is `0`. `None` when plain.
+pub(crate) fn clamp_sx(line_clamp: &Input<Responsive<u32>>) -> Option<Sx> {
+    let clamp = line_clamp.as_ref().filter(|clamp| !clamp.is_plain())?;
+    let lines = |n: u32| match n {
+        0 => "none".to_string(),
+        n => n.to_string(),
+    };
+    let base = sx().var(LINES_VAR, lines(clamp.base()));
+    Some(clamp.breakpoints().fold(base, |base, (size, n)| {
+        base.breakpoint(size, sx().var(LINES_VAR, lines(n)))
+    }))
 }
 
 // Clip, not hidden: focus cannot scroll a clip box, so a tabbed-to link leaves the line in place (5462).
@@ -78,6 +106,22 @@ fn one_line_sx() -> Sx {
         .display("block")
         .text_overflow("ellipsis")
         .white_space("nowrap")
+}
+
+fn clamp_height(line_height: SizeCss, size: Size) -> Sx {
+    sx().max_height(format!(
+        "calc({} * {} * 1em)",
+        line_height.value(size),
+        LINES_VAR.value()
+    ))
+}
+
+/// Blitz's clamp height at `size`, for a size's range copy; nothing where line clamp works.
+pub(crate) fn clamp_height_sx(line_height: SizeCss, size: Size) -> Sx {
+    match clamps_lines() {
+        true => sx(),
+        false => sx().when(LINE_CLAMP_STATE, clamp_height(line_height, size)),
+    }
 }
 
 /// The rules of [`Cut`]'s states, for a text whose line height is `line_height` per size.
@@ -97,14 +141,7 @@ pub(crate) fn truncate_sx(line_height: SizeCss) -> Sx {
         false => Size::ALL
             .into_iter()
             .fold(clamp.display("block"), |clamp, size| {
-                clamp.when(
-                    size.state_name(),
-                    sx().max_height(format!(
-                        "calc({} * {} * 1em)",
-                        line_height.value(size),
-                        LINES_VAR.value()
-                    )),
-                )
+                clamp.when(size.state_name(), clamp_height(line_height, size))
             }),
     };
     sx().when(Truncate::End.state_name(), one_line_sx())
@@ -122,10 +159,31 @@ mod tests {
     #[test]
     fn a_line_clamp_wins_over_a_truncate_and_zero_is_off() {
         let end = Input::from(Truncate::End);
-        assert_eq!(Cut::of(&end, Some(3)), Cut::Lines(3));
-        assert_eq!(Cut::of(&end, Some(0)), Cut::Line(Truncate::End));
-        assert_eq!(Cut::of(&end, None), Cut::Line(Truncate::End));
-        assert_eq!(Cut::of(&Input::None, Some(0)), Cut::None);
+        assert_eq!(Cut::of(&end, &3.into()), Cut::Lines(3));
+        assert_eq!(Cut::of(&end, &0.into()), Cut::Line(Truncate::End));
+        assert_eq!(Cut::of(&end, &Input::None), Cut::Line(Truncate::End));
+        assert_eq!(Cut::of(&Input::None, &0.into()), Cut::None);
+    }
+
+    #[test]
+    fn a_clamp_per_breakpoint_declares_each_count_and_lifts_it_at_zero() {
+        let clamp: Input<Responsive<u32>> = crate::theme::responsive(0).md(3).into();
+        let cut = Cut::of(&Input::None, &clamp);
+
+        assert_eq!(cut, Cut::LinesPerRange);
+        assert_eq!(cut.variables(), Input::from(variables()));
+        assert_eq!(
+            clamp_sx(&clamp),
+            Some(
+                sx().var(LINES_VAR, "none")
+                    .breakpoint(Size::Md, sx().var(LINES_VAR, "3"))
+            )
+        );
+        assert_eq!(clamp_sx(&3.into()), None);
+        assert_eq!(
+            Cut::of(&Input::None, &crate::theme::responsive(0).md(0).into()),
+            Cut::None
+        );
     }
 
     #[test]

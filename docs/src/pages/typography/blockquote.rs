@@ -1,9 +1,30 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
+use libero::theme::{Responsive, Size, responsive};
 use libero::{
     components::{Blockquote, BlockquotePart, Code, Text},
     use_theme,
 };
+
+/// `sm` below `md`, the chosen size from it, while the `responsive` switch is on.
+fn responsive_size(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Sm).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Sm).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 /// Long enough to wrap: the padding and the line height only read against two
 /// or three lines.
@@ -21,15 +42,15 @@ pub fn BlockquotePage() -> Element {
             source: "libero/src/components/typography/blockquote.rs",
             markdown: "/md/blockquote.md",
             properties: vec![props("Blockquote", vec![
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(theme.blockquote.size.as_str())
-                    .doc("Text size, line height, padding and the accent bar's width."),
+                    .doc("Text size, line height, padding and the accent bar's width. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.blockquote.color.as_str())
                     .doc("The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too, and a CSS color or a shade from 6 up fills the quote solid, with no separate bar or tint."),
-                prop("radius", "ThemeAwareValue")
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.blockquote.radius.as_str())
-                    .doc("Rounds the two corners away from the accent bar, or any CSS, e.g. `radius: \"0\"`."),
+                    .doc("Rounds the two corners away from the accent bar, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`."),
                 prop("attribution", "Element")
                     .doc("Who said it, shown under the quote. For any join other than a comma, pass the whole line here."),
                 prop("work", "String")
@@ -74,7 +95,9 @@ pub fn BlockquotePage() -> Element {
                 children_text: QUOTE,
                 controls: vec![
                     Control::sizes("size")
-                        .default(theme.blockquote.size.as_str()),
+                        .default(theme.blockquote.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::color("color")
                     .default(theme.blockquote.color.as_str()),
                     Control::sizes("radius")
@@ -95,7 +118,7 @@ pub fn BlockquotePage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     Blockquote {
-                        size: values.str("size"),
+                        size: responsive_size(&values),
                         color: values.str("color"),
                         radius: values.str("radius"),
                         attribution: (values.str("attribution") == "true")

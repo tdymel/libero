@@ -36,7 +36,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Text size. |
+| `size` | `Responsive<Size>` | `md` | Text size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `to` | `NavigationTarget` | - | A path, a URL or a typed route (`Route::Foo {}`). Unset, the anchor renders a `<button type="button">` with the same look, for an action such as "Show details"; `target`, `new_tab_hint` and `new_tab_icon` then do nothing. With a router mounted and `target` unset, an internal target navigates without a page reload; with `"_blank"` it opens a new tab with a full page load. A `javascript:`, `data:` or `vbscript:` URL is blocked, in every link `to` and in `MenuItem::href`: the element renders without an `href`, so a click does nothing, and a warning is logged. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Runs on a click, or on Enter and Space without `to`. With `to` it runs too, after the router's own navigation. |
 | `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a hidden "(opens in a new tab)". |

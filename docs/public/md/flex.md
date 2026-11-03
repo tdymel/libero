@@ -48,7 +48,7 @@ fn Demo() -> Element {
 | `align` | `ThemeAwareValue` | `stretch` in a column, `center` in a row | Cross-axis alignment. |
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
 | `gap` | `Responsive<ThemeAwareValue>` | `md` | Space between children: a size, any CSS such as `"0"`, or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent. |
-| `wrap` | `FlexWrap` | `nowrap` in a column, `wrap` in a row | Whether children wrap onto new lines; `wrap-reverse` stacks the new lines before the first. Also takes a `bool`. |
+| `wrap` | `Responsive<FlexWrap>` | `nowrap` in a column, `wrap` in a row | Whether children wrap onto new lines; `wrap-reverse` stacks the new lines before the first. Also takes a `bool`, or one per breakpoint, `wrap: responsive(FlexWrap::Wrap).md(FlexWrap::NoWrap)`. |
 | `children` | `Element` | required | The flex's children. |
 
 `FlexDirection` is `row`, `column`, `row-reverse` or `column-reverse`, `FlexWrap` is `wrap`, `nowrap` or `wrap-reverse`. A row

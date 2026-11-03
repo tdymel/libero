@@ -5,14 +5,14 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Part, SAFE_AREA_INLINE_END_VAR, SAFE_AREA_INLINE_START_VAR, ScaleOrCss,
-            States, Variables, base_props, input_from_str, names_itself, parts_enum,
-            safe_inline_padding, variables,
+            States, Variables, base_props, input_from_str, names_itself, parts_enum, responsive_sx,
+            safe_inline_padding, variables, with_own,
         },
         layout::{ScrollArea, use_box},
     },
-    hooks::use_theme,
+    hooks::{use_range_css, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size, SizeCss},
+    theme::{ColorCss, ColorShade, Responsive, SIDEBAR_SIZE, Size, SizeCss},
 };
 
 pub use crate::theme::SidebarSide;
@@ -75,6 +75,13 @@ static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
+/// A size's block for a range copy, under its run word.
+fn size_copy_sx(size: Size) -> Sx {
+    let value = SIDEBAR_SIZE.overridable(size);
+    sx().when("side-start || side-end", sx().width(value.clone()))
+        .when("side-top || side-bottom", sx().height(value))
+}
+
 parts_enum! {
     /// [`Sidebar`]'s inner parts, for its `parts` prop.
     pub enum SidebarPart {
@@ -90,9 +97,10 @@ base_props! {
         /// `start` and `end` clear that side's safe area, unless a drawer around it does; `top` and `bottom` leave the insets to the `Header` or `NavigationBar`.
         #[props(default, into)]
         side: Input<SidebarSide>,
-        /// The width (or height, on `top` or `bottom`): a size word or any CSS, as `size: "18rem"`.
+        /// The width (or height, on `top` or `bottom`): a size word or any CSS, as `size: "18rem"`,
+        /// or one per breakpoint, `size: responsive(Size::Sm).lg(Size::Md)`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
         /// Element to render as; `aside` (the `complementary` landmark) by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
@@ -121,17 +129,42 @@ base_props! {
 pub fn Sidebar(props: SidebarProps) -> Element {
     let side = props.side.copied_or_default();
     let theme = use_theme();
-    let size = ScaleOrCss::new(props.size.as_ref(), theme.sidebar.size);
+    let fallback = theme.sidebar.size;
+    let size = ScaleOrCss::new(props.size.as_ref().map(Responsive::base_ref), fallback);
+    let ranged = props.size.as_ref().filter(|sizes| !sizes.is_plain());
+    let steps = match ranged {
+        Some(sizes) => sizes.map(|value| ScaleOrCss::new(Some(&value), fallback).size),
+        None => size.size.into(),
+    };
+    // Custom CSS per breakpoint rides the override var in the user layer, as on `Button`.
+    let sx = with_own(
+        ranged.and_then(|sizes| {
+            responsive_sx(sizes, |sx, value| {
+                let css = ScaleOrCss::new(Some(&value), fallback)
+                    .custom_css(SIDEBAR_SIZE)
+                    .unwrap_or_else(|| "initial".into());
+                sx.var(SIDEBAR_SIZE.override_var(), css)
+            })
+        }),
+        &props.sx,
+    );
     let variables: Input<Variables> = variables()
-        .with(SIDEBAR_SIZE.override_var(), size.custom_css(SIDEBAR_SIZE))
+        .with(
+            SIDEBAR_SIZE.override_var(),
+            ranged.map_or_else(|| size.custom_css(SIDEBAR_SIZE), |_| None),
+        )
         .into();
+    use_range_css(
+        &SIDEBAR_BASE_SX,
+        steps.range_copies(|size| size.state_name(), size_copy_sx),
+    );
     let component = props.component.copied_or(HtmlTag::Aside);
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .active(side.state_name())
-        .active(size.size.state_name())
+        .responsive(&steps, |size| size.state_name())
         .into();
 
     // A blank name names nothing: it is dropped, not copied to the tab stop.
@@ -156,7 +189,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
     use_box()
         .framework_sx(&SIDEBAR_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .parts(&props.parts)
         .states(&states)
         .variables(&variables)

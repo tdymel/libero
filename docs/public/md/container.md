@@ -35,8 +35,8 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `component` | `HtmlTag` | `div` | The element to render. |
-| `size` | `ThemeAwareValue` | `lg` | Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length. |
-| `gutters` | `ThemeAwareValue` | `md` | Horizontal padding, a spacing step or a CSS length. It ignores the safe area: a full-bleed `Container` at the screen edge pads the notch itself, with `env(safe-area-inset-left)` and `-right` in its `sx`. |
+| `size` | `Responsive<ThemeAwareValue>` | `lg` | Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length. Or one per breakpoint, `size: responsive(Size::Sm).lg(Size::Lg)`. Breakpoints follow the window, not the parent. |
+| `gutters` | `Responsive<ThemeAwareValue>` | `md` | Horizontal padding, a spacing step or a CSS length. It ignores the safe area: a full-bleed `Container` at the screen edge pads the notch itself, with `env(safe-area-inset-left)` and `-right` in its `sx`. Or one per breakpoint, `gutters: responsive(Size::Xs).md(Size::Lg)`. |
 | `children` | `Element` | required | The container's content. |
 
 Like every component, `Container` also takes the shared props `sx`, `class`,

@@ -5,6 +5,33 @@ use libero::{
     sx::sx,
     use_theme,
 };
+use libero::{
+    sx::ThemeAwareValue,
+    theme::{Responsive, Size, responsive},
+};
+
+/// `xs` below `md`, the chosen size from it, while the `responsive` switch is on.
+fn responsive_size(values: &DemoValues) -> Responsive<ThemeAwareValue> {
+    let size = ThemeAwareValue::from(values.str("size"));
+    match values.str("responsive") == "true" {
+        true => responsive(ThemeAwareValue::from(Size::Xs)).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) if size.ends_with("rem") => vec![format!(
+            "size: responsive(ThemeAwareValue::from(Size::Xs)).md({size:?}.into())"
+        )],
+        (true, size) => vec![format!(
+            "size: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 const CONTENT: &str = r#"Text { "Navigation" }"#;
 const REST: &str = r#"Flex {
@@ -49,7 +76,7 @@ pub fn SidebarPage() -> Element {
                 prop("side", "SidebarSide")
                     .default("start")
                     .doc("The side the panel sits on, with its border on the edge facing the content, and whether `size` is a width or a height. `start` is the right side under `dir=\"rtl\"`. It does not move the panel, so put it at the matching end of the DOM."),
-                prop("size", "ThemeAwareValue").default(theme.sidebar.size.as_str()).doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: \"18rem\"`. With a top or bottom side the parent needs `direction: \"column\"`."),
+                prop("size", "Responsive<ThemeAwareValue>").default(theme.sidebar.size.as_str()).doc("The panel's width, or its height on a `top` or `bottom` side. A start or end panel takes half its parent's width at most, a top or bottom one half its height, when the parent's height is set. A size word or any CSS, e.g. `size: \"18rem\"`. With a top or bottom side the parent needs `direction: \"column\"`. Or one per breakpoint, `size: responsive(Size::Sm).lg(Size::Md)`."),
                 prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
                 prop("parts", "Parts<SidebarPart>")
@@ -96,13 +123,16 @@ pub fn SidebarPage() -> Element {
                         .labels(["Start", "End", "Top", "Bottom"]),
                     // `24rem` is plain CSS, next to the size scale.
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl", "24rem"])
-                        .default(theme.sidebar.size.as_str()),
+                        .default(theme.sidebar.size.as_str())
+                        .code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| {
                     let panel = rsx! {
                         Sidebar {
                             side: values.str("side"),
-                            size: values.str("size"),
+                            size: responsive_size(&values),
                             Text { "Navigation" }
                         }
                     };

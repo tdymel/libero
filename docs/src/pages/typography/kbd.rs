@@ -1,7 +1,28 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Kbd, Text};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
+
+/// `sm` below `md`, the chosen size from it, while the `responsive` switch is on.
+fn responsive_size(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Sm).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Sm).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 #[component]
 pub fn KbdPage() -> Element {
@@ -12,9 +33,9 @@ pub fn KbdPage() -> Element {
             source: "libero/src/components/typography/kbd.rs",
             markdown: "/md/kbd.md",
             properties: vec![props("Kbd", vec![
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(theme.kbd.size.as_str())
-                    .doc("Font size. The rest of the look comes from the theme."),
+                    .doc("Font size. The rest of the look comes from the theme. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("children", "Element").default("required").doc("The key label."),
             ])],
             accessibility: a11y()
@@ -43,10 +64,12 @@ pub fn KbdPage() -> Element {
                 children_text: "Ctrl",
                 controls: vec![
                     Control::sizes("size")
-                        .default(theme.kbd.size.as_str()),
+                        .default(theme.kbd.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    Kbd { size: values.str("size"), "Ctrl" }
+                    Kbd { size: responsive_size(&values), "Ctrl" }
                 },
             }
         }

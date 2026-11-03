@@ -6,15 +6,15 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Orientation, Part, Variables, base_props, input_from_str, names_itself,
-            parts_enum, variables,
+            parts_enum, responsive_var_sx, variables, with_own,
         },
         layout::use_box,
     },
-    hooks::{use_css, use_id, use_theme},
+    hooks::{use_css, use_id, use_range_css, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ColorCss, ColorShade, ColorValue, CssVar, DIVIDER_LINE, DividerDefaults, LabelPosition,
-        Size, SizeCss,
+        Responsive, Size, SizeCss,
     },
 };
 
@@ -162,14 +162,15 @@ base_props! {
         #[props(default, into)]
         orientation: Input<Orientation>,
         /// Line thickness. Defaults to the theme's `divider.size`, `xs` out of the box.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Sm)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Unset, the theme's `divider.label_position`, `center` out of the box.
         #[props(default, into)]
         label_position: Input<LabelPosition>,
-        /// Margin on both sides of the line.
+        /// Margin on both sides of the line, or one per breakpoint, `spacing: responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
-        spacing: Input<ThemeAwareValue>,
+        spacing: Input<Responsive<ThemeAwareValue>>,
         /// A bare color is tinted to its shade 3.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -199,20 +200,36 @@ pub fn Divider(props: DividerProps) -> Element {
     let has_label = props.children.is_some();
     let theme = use_theme();
     let label_position = props.label_position.copied_or(theme.divider.label_position);
-    let size = props.size.copied_or(theme.divider.size);
+    let sizes = props.size.copied_or(theme.divider.size.into());
 
     let divider_states = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with("vertical", vertical)
         .with("horizontal", !vertical)
         .with("label", has_label)
         .with("label-start", label_position == LabelPosition::Start)
         .with("label-end", label_position == LabelPosition::End);
 
-    let variables: Input<Variables> =
-        divider_variables(props.color.as_ref(), props.spacing.as_ref()).into();
+    // A per-breakpoint spacing rides the user layer: an inline var would beat its breakpoints.
+    let spacing = props.spacing.as_ref();
+    let plain_spacing = spacing.filter(|spacing| spacing.is_plain());
+    let variables: Input<Variables> = divider_variables(
+        props.color.as_ref(),
+        plain_spacing.map(Responsive::base_ref),
+    )
+    .into();
+    let sx = with_own(
+        spacing.and_then(|spacing| {
+            responsive_var_sx(spacing, DIVIDER_SPACING_VAR, Some(SizeCss::SPACING))
+        }),
+        &props.sx,
+    );
+    use_range_css(
+        &DIVIDER_BASE_SX,
+        sizes.range_copies(|size| size.state_name(), DividerDefaults::size_sx),
+    );
     let data_state = divider_states.data_state();
 
     // A static class, not a component: `use_css` always, the span only with a label.
@@ -246,7 +263,7 @@ pub fn Divider(props: DividerProps) -> Element {
     use_box()
         .framework_sx(&DIVIDER_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .parts(&props.parts)
         .variables(&variables)
         .prepare()

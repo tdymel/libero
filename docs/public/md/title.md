@@ -35,11 +35,11 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `xxl` | Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set. |
+| `size` | `Responsive<Size>` | `xxl` | Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set. Or one per breakpoint, `size: responsive(Size::Lg).md(Size::Xxl)`; the tag follows the base size. Breakpoints follow the window, not the parent. |
 | `component` | `HtmlTag` | follows `size` | The heading tag. The size's look stays. With `size` unset it is `h1`, whatever the theme's size. A debug build warns for a tag other than `h1` to `h6`. |
 | `gradient` | `Gradient` | - | Paints the glyphs with a gradient from the theme's first stop to a second, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text color in forced colors. |
 | `truncate` | `Truncate` | - | Cuts the title on one line with an ellipsis at its `end` or `start`. `line_clamp` wins when both are set. |
-| `line_clamp` | `u32` | - | Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis. |
+| `line_clamp` | `Responsive<u32>` | - | Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(2).md(0)`, where `0` lifts the clamp in that range. |
 | `children` | `Element` | required | The heading text. An `Anchor` inside it takes the title's font, size and weight. |
 
 Like every component, `Title` also takes the shared props `sx`, `class`, `style`,

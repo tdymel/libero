@@ -34,7 +34,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Font size. The rest of the look comes from the theme. |
+| `size` | `Responsive<Size>` | `md` | Font size. The rest of the look comes from the theme. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `children` | `Element` | required | The key label. |
 
 Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,

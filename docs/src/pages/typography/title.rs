@@ -5,7 +5,28 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{Anchor, Code, HtmlTag, Input, Text, Title};
 use libero::sx::sx;
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
+
+/// `lg` below `md`, the chosen size from it, while the `responsive` switch is on.
+fn responsive_size(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Lg).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Lg).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 /// Long enough to fill three lines of `CUT_WIDTH` at the default size.
 const TEXT: &str = "The quick brown fox jumps over the lazy dog and keeps running";
@@ -48,9 +69,9 @@ pub fn TitlePage() -> Element {
             source: "libero/src/components/typography/title.rs",
             markdown: "/md/title.md",
             properties: vec![props("Title", vec![
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(theme.title.size.as_str())
-                    .doc("Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set."),
+                    .doc("Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set. Or one per breakpoint, `size: responsive(Size::Lg).md(Size::Xxl)`; the tag follows the base size. Breakpoints follow the window, not the parent."),
                 prop("component", "HtmlTag")
                     .default("follows size")
                     .doc("The heading tag. The size's look stays. With `size` unset it is `h1`, whatever the theme's size. A debug build warns for a tag other than `h1` to `h6`."),
@@ -58,8 +79,8 @@ pub fn TitlePage() -> Element {
                     .doc("Paints the glyphs with a gradient from the theme's first stop to a second, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text color in forced colors."),
                 prop("truncate", "Truncate")
                     .doc("Cuts the title on one line with an ellipsis at its `end` or `start`. `line_clamp` wins when both are set."),
-                prop("line_clamp", "u32")
-                    .doc("Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis."),
+                prop("line_clamp", "Responsive<u32>")
+                    .doc("Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(2).md(0)`, where `0` lifts the clamp in that range."),
                 prop("children", "Element").default("required").doc("The heading text. An `Anchor` inside it takes the title's font, size and weight."),
             ])],
             accessibility: a11y()
@@ -112,7 +133,9 @@ pub fn TitlePage() -> Element {
                     }),
                     controls: vec![
                         Control::sizes("size")
-                            .default(theme.title.size.as_str()),
+                            .default(theme.title.size.as_str()).code(size_code),
+                        // On, so the breakpoint switch shows without another switch: resize the window.
+                        Control::switch("responsive").default("true").code(|_, _| vec![]),
                         // An h2: the page's own title is its one h1 (todo 4850).
                         Control::slider(
                             "component",
@@ -151,7 +174,7 @@ pub fn TitlePage() -> Element {
                     ],
                     render: move |values: DemoValues| rsx! {
                         Title {
-                            size: values.str("size"),
+                            size: responsive_size(&values),
                             truncate: match values.str("truncate").as_str() {
                                 UNSET => Input::None,
                                 end => Input::from(end),

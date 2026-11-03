@@ -36,9 +36,9 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `orientation` | `Orientation` | `horizontal` | The direction of the rule. A vertical rule stretches to its row's height, so it needs a flex row parent; in a block parent it is 0px high and does not show. |
-| `size` | `Size` | `xs` | Line thickness. |
+| `size` | `Responsive<Size>` | `xs` | Line thickness. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Sm)`. |
 | `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
-| `spacing` | `ThemeAwareValue` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. |
+| `spacing` | `Responsive<ThemeAwareValue>` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. Or one per breakpoint, `spacing: responsive(Size::Xs).md(Size::Lg)`. |
 | `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color like `primary` resolves to its shade 3. |
 | `children` | `Element` | - | An optional label in the line. |
 | `parts` | `Parts<DividerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

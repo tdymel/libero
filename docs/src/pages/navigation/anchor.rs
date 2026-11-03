@@ -1,7 +1,28 @@
 use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Anchor, AnchorPart, Code, Text};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
+
+/// `xs` below `md`, the chosen size from it, while the `responsive` switch is on.
+fn responsive_size(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Xs).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 const HREF: &str = "https://dioxuslabs.com";
 const EXTERNAL_LABEL: &str = "Read the Dioxus docs";
@@ -28,7 +49,7 @@ pub fn AnchorPage() -> Element {
             source: "libero/src/components/navigation/anchor.rs",
             markdown: "/md/anchor.md",
             properties: vec![props("Anchor", vec![
-                prop("size", "Size").default(theme.anchor.size.as_str()).doc("Text size."),
+                prop("size", "Responsive<Size>").default(theme.anchor.size.as_str()).doc("Text size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("to", "NavigationTarget")
                     .doc("A path, a URL or a typed route (`Route::Foo {}`). Unset, the anchor renders a `<button type=\"button\">` with the same look, for an action such as \"Show details\"; `target`, `new_tab_hint` and `new_tab_icon` then do nothing. With a router mounted and `target` unset, an internal target navigates without a page reload; with `\"_blank\"` it opens a new tab with a full page load. A `javascript:`, `data:` or `vbscript:` URL is blocked, in every link `to` and in `MenuItem::href`: the element renders without an `href`, so a click does nothing, and a warning is logged."),
                 prop("onclick", "EventHandler<MouseEvent>")
@@ -139,11 +160,13 @@ pub fn AnchorPage() -> Element {
                             value => vec![format!("underline: {value:?}")],
                         }),
                     Control::sizes("size")
-                        .default(theme.anchor.size.as_str()),
+                        .default(theme.anchor.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| {
                     let underline = values.str("underline");
-                    let size = values.str("size");
+                    let size = responsive_size(&values);
                     let new_tab_hint = values.str("new_tab_hint") == "true";
                     let new_tab_icon = values.str("new_tab_icon") == "true";
                     if values.str("action") == "true" {
