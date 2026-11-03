@@ -1,7 +1,7 @@
 use super::palette::theme_ends;
 use crate::{
     css::Stylesheet,
-    theme::{HexColor, NamedColorCss, RIPPLE_KEYFRAMES, Theme, ThemeSet},
+    theme::{HexColor, NamedColorCss, PaperDefaults, RIPPLE_KEYFRAMES, Theme, ThemeSet},
     tokens::TEXT_CONTRAST,
 };
 
@@ -804,4 +804,96 @@ fn print_takes_the_light_theme_over_every_block() {
         .expect("the pinned dark block");
     assert!(pinned_dark < print, "{css}");
     assert!(css[print..].contains("color-scheme:light"), "{css}");
+}
+
+static CUSTOM_LIGHT: Theme = Theme {
+    paper: PaperDefaults {
+        background: "#f1f1f1",
+        ..PaperDefaults::DEFAULT
+    },
+    ..Theme::DEFAULT
+};
+
+static CUSTOM_DARK: Theme = Theme {
+    primary: HexColor::new(0x39BAE6),
+    paper: PaperDefaults {
+        background: "#0d1017",
+        ..PaperDefaults::DARK
+    },
+    ..Theme::DARK
+};
+
+/// The vars of the block that opens with `header`, as the sheet ships it.
+fn block_vars(css: &str, header: &str) -> std::collections::HashMap<String, String> {
+    let (_, rest) = css
+        .split_once(header)
+        .unwrap_or_else(|| panic!("a `{header}` block"));
+    let (block, _) = rest.split_once('}').expect("a closed block");
+    block
+        .split(';')
+        .filter_map(|declaration| declaration.split_once(':'))
+        .map(|(name, value)| (name.to_string(), value.to_string()))
+        .collect()
+}
+
+/// Todo 5650: a scheme block holds only vars the two themes disagree on, yet `:root` under each
+/// block reads as that theme's full declarations.
+#[test]
+fn the_scheme_blocks_carry_only_the_vars_the_themes_disagree_on() {
+    use super::declarations::theme_declarations;
+    use crate::sx::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE};
+
+    let css = Stylesheet::from(&ThemeSet::pair("Custom", &CUSTOM_LIGHT, &CUSTOM_DARK))
+        .as_str()
+        .to_string();
+    let root = block_vars(&css, ":root{");
+    let dark_vars: std::collections::HashMap<_, _> = theme_declarations(&CUSTOM_DARK)
+        .into_iter()
+        .map(|declaration| {
+            (
+                declaration.property().to_string(),
+                declaration.value().to_string(),
+            )
+        })
+        .collect();
+    let blocks = [
+        (
+            format!("@media {DARK_SCHEME_QUERY}{{:root:not([{THEME_ATTRIBUTE}]){{"),
+            &CUSTOM_DARK,
+        ),
+        (
+            format!(":root[{THEME_ATTRIBUTE}=\"{}\"]{{", ThemeSet::LIGHT),
+            &CUSTOM_LIGHT,
+        ),
+        (
+            format!(":root[{THEME_ATTRIBUTE}=\"{}\"]{{", ThemeSet::DARK),
+            &CUSTOM_DARK,
+        ),
+        ("@media print{:root:root:root{".to_string(), &CUSTOM_LIGHT),
+    ];
+
+    for (header, theme) in blocks {
+        let block = block_vars(&css, &header);
+        assert!(block.len() < root.len() / 2, "{header}: {}", block.len());
+        for (name, value) in &block {
+            if name != "color-scheme" {
+                let shared = root.get(name) == Some(value) && dark_vars.get(name) == Some(value);
+                assert!(!shared, "{header} repeats {name}");
+            }
+        }
+        for declaration in theme_declarations(theme) {
+            let name = declaration.property();
+            let shipped = block.get(name).or_else(|| root.get(name));
+            assert_eq!(
+                shipped.map(String::as_str),
+                Some(declaration.value()),
+                "{header}: {name}"
+            );
+        }
+    }
+
+    let dark = block_vars(&css, &format!(":root[{THEME_ATTRIBUTE}=\"dark\"]{{"));
+    assert!(dark.contains_key("--lsx-paper-background"), "{dark:?}");
+    assert!(!dark.contains_key("--lsx-spacing-md"), "{dark:?}");
+    assert!(root.contains_key("--lsx-spacing-md"));
 }

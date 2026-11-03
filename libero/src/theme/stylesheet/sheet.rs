@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::rc::Rc;
 
@@ -44,7 +45,8 @@ impl From<&ThemeSet> for Stylesheet {
     /// @media print { :root:root:root { … } } /* the light theme, whatever shows */
     /// ```
     ///
-    /// Each block pins its theme's `color-scheme`, so a pinned theme paints native parts in its
+    /// `:root` holds every var; the other blocks hold only the vars the two themes disagree on,
+    /// each pinning its theme's `color-scheme`, so a pinned theme paints native parts in its
     /// own scheme against the OS. Without a dark theme, one theme's sheet. [`ThemeSet::named`] themes are not in
     /// here: selecting one rebuilds the sheet.
     fn from(set: &ThemeSet) -> Self {
@@ -53,20 +55,37 @@ impl From<&ThemeSet> for Stylesheet {
             return Stylesheet::from(light);
         };
 
-        let mut css = pair_block(":root", light);
+        let light_declarations = theme_declarations(light);
+        let dark_declarations = theme_declarations(dark);
+        let light_only = differing(&light_declarations, &dark_declarations);
+        let dark_only = differing(&dark_declarations, &light_declarations);
+
+        let mut css = pair_block(":root", light_declarations, light);
         // The system case; `:not(..)` lets an explicit choice win, as `@media` adds no specificity.
         let _ = write!(
             css,
             "@media {DARK_SCHEME_QUERY}{{{}}}",
-            pair_block(&format!(":root:not([{THEME_ATTRIBUTE}])"), dark)
+            pair_block(
+                &format!(":root:not([{THEME_ATTRIBUTE}])"),
+                dark_only.clone(),
+                dark
+            )
         );
-        css.push_str(&pair_block(&theme_selector(ThemeSet::LIGHT), light));
-        css.push_str(&pair_block(&theme_selector(ThemeSet::DARK), dark));
+        css.push_str(&pair_block(
+            &theme_selector(ThemeSet::LIGHT),
+            light_only.clone(),
+            light,
+        ));
+        css.push_str(&pair_block(
+            &theme_selector(ThemeSet::DARK),
+            dark_only,
+            dark,
+        ));
         // Paper is white: a dark theme's light ink printed at 2.8:1. Three `:root`s outrank every block above.
         let _ = write!(
             css,
             "@media print{{{}}}",
-            pair_block(":root:root:root", light)
+            pair_block(":root:root:root", light_only, light)
         );
 
         // From the light theme: its colours are vars, and `font_smoothing` is not a scheme choice.
@@ -127,10 +146,22 @@ fn root_block(selector: &str, theme: &Theme) -> String {
         .to_string()
 }
 
-/// [`root_block`] that also pins `color-scheme`, so a pinned theme paints native parts in its
-/// own scheme whatever the OS prefers.
-fn pair_block(selector: &str, theme: &Theme) -> String {
-    let mut declarations = theme_declarations(theme);
+/// The declarations of `of` that `against` does not repeat as they are (a changed value or an
+/// absent var).
+fn differing(of: &[CssDeclaration], against: &[CssDeclaration]) -> Vec<CssDeclaration> {
+    let against: HashMap<&str, &str> = against
+        .iter()
+        .map(|declaration| (declaration.property(), declaration.value()))
+        .collect();
+    of.iter()
+        .filter(|declaration| against.get(declaration.property()) != Some(&declaration.value()))
+        .cloned()
+        .collect()
+}
+
+/// A block of `declarations` that also pins `color-scheme`, so a pinned theme paints native parts
+/// in its own scheme whatever the OS prefers.
+fn pair_block(selector: &str, mut declarations: Vec<CssDeclaration>, theme: &Theme) -> String {
     declarations.push(CssDeclaration::new(
         "color-scheme",
         theme.surface.color_scheme(),

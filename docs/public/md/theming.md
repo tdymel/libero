@@ -138,6 +138,14 @@ While a theme is pinned (the pair's, a named one or a lone one) the document roo
 carries `data-lsx-scheme="light|dark"`, taken from the theme's `surface`; `Sx::dark`
 and `Sx::light` key on it. It is absent while the system decides.
 
+The sheet declares every var once, at `:root`. The dark, pinned and print blocks
+repeat only the vars the two themes disagree on (plus `color-scheme`), about a third
+of the sheet. So an unlayered `:root { --lsx-spacing-md: 12px }` placed after the theme sheet
+now also wins over a pinned theme and over print for every var the themes share. Before,
+the pinned and print blocks outranked it. A var the themes differ on (a colour, a
+shadow) still follows the pinned theme and print; override those inside
+`:root[data-lsx-theme="dark"]` or a `Theme` of your own.
+
 ## Reading the theme
 
 `use_theme()` returns the active theme, for a value you need in Rust rather than
