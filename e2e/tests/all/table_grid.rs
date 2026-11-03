@@ -1,7 +1,7 @@
 //! `Table` with `cell_focus` (1156 D1-D5): one header or body cell is the tab stop,
 //! the first header cell at first, and the arrows, Home, End and the page keys move it.
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
@@ -228,9 +228,10 @@ e2e::scenario!(
     android: skip("958: roving keys are inert in the emulator's WebView")
 );
 
-/// The stop cell's number, the row's id in the windowed grid.
-async fn stop_id<D: Driver>(d: &mut D) -> Result<u32> {
-    Ok(d.text(STOP).await?.trim().parse()?)
+/// The stop cell's number, the row's id in the windowed grid; `None` while the stop is a
+/// header or a cell mid-render (3946: a Windows WebView read it between renders).
+async fn stop_id<D: Driver>(d: &mut D) -> Result<Option<u32>> {
+    Ok(d.text(STOP).await?.trim().parse().ok())
 }
 
 /// 300px of 40px rows under a header: a view is about six rows.
@@ -238,16 +239,16 @@ async fn page_down<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     into_body(d, 1).await?;
     d.press(keyboard::PAGE_DOWN).await?;
     eventually(d, "PageDown to move a view", async |d| {
-        Ok(stop_id(d).await? > 1 && d.is_focused(STOP).await?)
+        Ok(stop_id(d).await?.is_some_and(|id| id > 1) && d.is_focused(STOP).await?)
     })
     .await?;
-    let moved = stop_id(d).await?;
+    let moved = stop_id(d).await?.context("the stop left the body")?;
     if !(4..=9).contains(&moved) {
         bail!("PageDown moved to row {moved}, not about one view down");
     }
     d.press(keyboard::PAGE_UP).await?;
     eventually(d, "PageUp back to the first row", async |d| {
-        Ok(stop_id(d).await? == 1 && d.is_focused(STOP).await?)
+        Ok(stop_id(d).await? == Some(1) && d.is_focused(STOP).await?)
     })
     .await
 }
@@ -271,10 +272,10 @@ async fn page_down_between_the_sticky_edges<D: Driver>(d: &mut D, _route: &str) 
     }
     d.press(keyboard::PAGE_DOWN).await?;
     eventually(d, "PageDown to move a view", async |d| {
-        Ok(stop_id(d).await? > 1 && d.is_focused(STOP).await?)
+        Ok(stop_id(d).await?.is_some_and(|id| id > 1) && d.is_focused(STOP).await?)
     })
     .await?;
-    let moved = stop_id(d).await? as i64 - 1;
+    let moved = stop_id(d).await?.context("the stop left the body")? as i64 - 1;
     if (moved - page).abs() > 1 {
         bail!("PageDown moved {moved} rows, not the {page} between the sticky edges");
     }
@@ -294,7 +295,7 @@ async fn reveals<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     into_body(d, 1).await?;
     d.press_ctrl(keyboard::END).await?;
     eventually(d, "Ctrl+End on the last row, shown", async |d| {
-        if stop_id(d).await? != 250_000 || !d.is_focused(STOP).await? {
+        if stop_id(d).await? != Some(250_000) || !d.is_focused(STOP).await? {
             return Ok(false);
         }
         let (cell, area) = (d.rect(STOP).await?, d.rect(AREA).await?);
@@ -322,7 +323,7 @@ async fn reveals<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         d,
         "ArrowDown on the first row, below the header",
         async |d| {
-            if stop_id(d).await? != 1 || !d.is_focused(STOP).await? {
+            if stop_id(d).await? != Some(1) || !d.is_focused(STOP).await? {
                 return Ok(false);
             }
             let (cell, head) = (d.rect(STOP).await?, d.rect("thead").await?);
@@ -371,7 +372,7 @@ async fn reveals_both_axes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     }
     d.press_ctrl(keyboard::END).await?;
     eventually(d, "Ctrl+End shows the far cell whole", async |d| {
-        if stop_id(d).await? != 250_000 || !d.is_focused(STOP).await? {
+        if stop_id(d).await? != Some(250_000) || !d.is_focused(STOP).await? {
             return Ok(false);
         }
         let (cell, area) = (d.rect(STOP).await?, d.rect(AREA).await?);
