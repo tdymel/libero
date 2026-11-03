@@ -150,10 +150,25 @@ fn page_area(open: bool, area: ScrollAreaHandle, page: Element) -> Element {
                 // Default `min-width: auto` let the longest code line push the row
                 // wider instead of that block scrolling.
                 .min_width("0")
-                .and(page_layer_sx()),
+                .and(page_layer_sx())
+                .and(print_flow_sx())
+                .media(
+                    "print",
+                    sx().selector("& > [data-slot='scrollbars']", sx().display("none")),
+                ),
             {page}
         }
     }
+}
+
+/// The shell's viewport-tall, clipped boxes grow with the page, so print paginates it.
+fn print_flow_sx() -> Sx {
+    sx().media(
+        "print",
+        sx().height("auto !important")
+            .max_height("none !important")
+            .overflow("visible !important"),
+    )
 }
 
 /// `main` takes focus from the skip link only and no keyboard use: without Container's inset ring (5329).

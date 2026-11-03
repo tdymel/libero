@@ -114,6 +114,11 @@ fn burger_sx(home: bool) -> Sx {
     }
 }
 
+/// Chrome that has no place on paper: the nav and the header's buttons.
+fn print_hidden_sx() -> Sx {
+    sx().media("print", sx().display("none !important"))
+}
+
 /// One joined control.
 fn site_tools(search: SpotlightHandle) -> Element {
     rsx! {
@@ -122,7 +127,7 @@ fn site_tools(search: SpotlightHandle) -> Element {
             size: "sm",
             // Logical, so the controls stay at the end under RTL. From `Sm` up the
             // search field takes the free space instead.
-            sx: sx()
+            sx: print_hidden_sx()
                 .margin_inline_start("auto")
                 .breakpoint(
                     Size::Sm,
@@ -170,7 +175,7 @@ fn search_button(search: SpotlightHandle, modifier: &'static str) -> Element {
             variant: "standard",
             aria_label: "Search",
             "aria-keyshortcuts": "Control+K Meta+K",
-            sx: sx()
+            sx: print_hidden_sx()
                 .display("none")
                 .color("muted.7")
                 // A placeholder's weight, not a button label's.
