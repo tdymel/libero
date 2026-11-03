@@ -39,6 +39,19 @@ const CITIES: [(&str, &str); 6] = [
     ("Cologne", "Germany"),
 ];
 
+fn cities() -> Vec<String> {
+    CITIES.iter().map(|(city, _)| city.to_string()).collect()
+}
+
+fn country(city: &str) -> &'static str {
+    CITIES
+        .iter()
+        .find(|(name, _)| *name == city)
+        .map(|(_, country)| *country)
+        .unwrap_or("")
+}
+// demo-code: cities end
+
 fn loading_options(values: &DemoValues) -> bool {
     values.str("loading_options") == "true"
 }
@@ -56,19 +69,6 @@ fn pending_source(source: &str) -> String {
         })
         .collect()
 }
-
-fn cities() -> Vec<String> {
-    CITIES.iter().map(|(city, _)| city.to_string()).collect()
-}
-
-fn country(city: &str) -> &'static str {
-    CITIES
-        .iter()
-        .find(|(name, _)| *name == city)
-        .map(|(_, country)| *country)
-        .unwrap_or("")
-}
-// demo-code: cities end
 
 fn custom(values: &DemoValues) -> bool {
     values.str("custom") == "true"
