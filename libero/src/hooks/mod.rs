@@ -133,6 +133,9 @@ pub(crate) use drag::{
     edge_scroll_step, sideways_drag_sx, use_distance_drag, use_distance_drag_cancel,
     use_drag_cancel, use_drag_with, use_early_measure, use_sideways_drag, use_sideways_drag_if,
 };
+// Only an edge swipe reads a claim.
+#[cfg(all(feature = "use-swipe", feature = "charts"))]
+pub(crate) use drag::claim_press;
 #[cfg(feature = "use-element")]
 pub use element::{ElementHandle, use_element};
 #[cfg(feature = "use-element")]

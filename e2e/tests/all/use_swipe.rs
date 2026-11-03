@@ -118,6 +118,48 @@ async fn a_band_drag_handle_keeps_its_press<D: Driver>(d: &mut D, _route: &str) 
     Ok(())
 }
 
+/// Where the brief's month swipe and brush start, inside the band.
+const CLAIM_X: f64 = 60.0;
+
+/// Todos 5553, 5554: a Calendar's month swipe and a Chart's brush from the band page the
+/// month and brush the points; the drawer stays shut and focus stays where it was.
+async fn band_swipes_keep_their_press<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    let (vw, _) = d.viewport().await?;
+    let (x, dx) = match route.ends_with("-rtl") {
+        true => (vw - CLAIM_X, -120.0),
+        false => (CLAIM_X, 120.0),
+    };
+    let grid = "#calendar [role=grid]";
+    d.focus("#calendar [data-date='2026-03-18']").await?;
+    let days = d.rect(grid).await?;
+    d.swipe_from(x, days.y + days.height / 2.0, dx, 0.0).await?;
+    eventually(d, "the calendar to page to February", async |d| {
+        Ok(d.attr(grid, "aria-label").await?.as_deref() == Some("February 2026"))
+    })
+    .await?;
+    d.settle().await?;
+    text_is(d, "#opens", "0").await?;
+    let owner = d.focus_owner().await?;
+    assert!(d.is_focused("#calendar *").await?, "focus went to {owner}");
+    let layer = "#chart [data-chart-layer]";
+    d.focus(layer).await?;
+    let plot = d.rect(layer).await?;
+    assert!(
+        plot.x < x && x < plot.x + plot.width,
+        "the chart's layer {plot:?} misses x {x}"
+    );
+    d.swipe_from(x, plot.y + plot.height / 2.0, dx, 0.0).await?;
+    eventually(d, "the brush to report a range", async |d| {
+        Ok(!d.text("#range").await?.is_empty())
+    })
+    .await?;
+    d.settle().await?;
+    text_is(d, "#opens", "0").await?;
+    let owner = d.focus_owner().await?;
+    assert!(d.is_focused(layer).await?, "focus went to {owner}");
+    Ok(())
+}
+
 /// Todo 4800: a swipe on an app's `touch-action: none` canvas in the band draws on
 /// it and never opens the drawer; one from a plain spot of the band still does.
 async fn a_band_canvas_keeps_its_press<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -398,6 +440,18 @@ e2e::scenario!(
     a_touch_swipe_on_a_band_canvas_never_opens_the_drawer,
     "/use-swipe/drawer-canvas",
     a_band_canvas_keeps_its_press,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    a_band_month_swipe_or_brush_never_opens_the_drawer,
+    "/use-swipe/drawer-claims",
+    band_swipes_keep_their_press,
+    desktop: skip("1126: no touch input under Xvfb")
+);
+e2e::scenario!(
+    a_band_month_swipe_or_brush_never_opens_the_drawer_under_rtl,
+    "/use-swipe/drawer-claims-rtl",
+    band_swipes_keep_their_press,
     desktop: skip("1126: no touch input under Xvfb")
 );
 e2e::scenario!(

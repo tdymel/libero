@@ -104,7 +104,7 @@ fn Item(index: usize, name: &'static str, horizontal: bool) -> Element {
     }
 }
 
-/// A bare icon button with the 24px target size of WCAG 2.5.8.
+/// A bare icon button with the 24px target size of WCAG 2.5.8, 44px for a finger as libero's own.
 fn control_sx(base: Sx) -> Sx {
     base.display("inline-flex")
         .align_items("center")
@@ -118,4 +118,8 @@ fn control_sx(base: Sx) -> Sx {
         .color("inherit")
         .cursor("pointer")
         .selector(":disabled", sx().opacity("0.4").cursor("default"))
+        .media(
+            "(pointer: coarse)",
+            sx().min_width("44px").min_height("44px"),
+        )
 }

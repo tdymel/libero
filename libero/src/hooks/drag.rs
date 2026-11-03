@@ -260,7 +260,7 @@ thread_local! {
 
 /// Claims `pointer_id`'s press for the press's own dispatch only: a press released
 /// elsewhere or vetoed leaves no claim for a later press with that id (5008).
-fn claim_press(pointer_id: i32) {
+pub(crate) fn claim_press(pointer_id: i32) {
     CLAIMED.set(Some(pointer_id));
     // Tasks run after the dispatch, once every ancestor saw the press.
     dioxus::core::spawn_forever(async move { release_press_claim(pointer_id) });

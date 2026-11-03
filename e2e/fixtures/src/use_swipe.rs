@@ -4,7 +4,10 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Box, ScrollArea, Scroller, ScrollerControls},
+    chrono::NaiveDate,
+    components::{
+        Box, ChartRange, ChronoPicker, LineChart, ScrollArea, Scroller, ScrollerControls, Series,
+    },
     hooks::{
         DragMove, DragOptions, EdgeSwipeOptions, SwipeDirection, SwipeEvent, SwipeOptions,
         drag_handle_sx, edge_swipe_sx, use_drag, use_edge_swipe, use_element, use_swipe,
@@ -23,8 +26,37 @@ pub const ROUTES: Routes = &[
     ("/use-swipe/drawer", || rsx! { DrawerPage {} }),
     ("/use-swipe/drawer-drag", || rsx! { DrawerPage { handle: true } }),
     ("/use-swipe/drawer-canvas", || rsx! { DrawerPage { canvas: true } }),
+    ("/use-swipe/drawer-claims", || rsx! { DrawerPage { claims: true } }),
     ("/use-swipe/drawer-rtl", || rsx! { DrawerRtlPage {} }),
+    ("/use-swipe/drawer-claims-rtl", || rsx! { DrawerRtlPage { claims: true } }),
 ];
+
+/// A Calendar's month swipe and a Chart's brush across the band (todos 5553, 5554).
+#[component]
+fn BandClaims() -> Element {
+    let mut range = use_signal(String::new);
+    rsx! {
+        Box { id: "calendar", max_width: "320px",
+            ChronoPicker {
+                value: NaiveDate::from_ymd_opt(2026, 3, 18),
+                today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                onchange: |_: Option<NaiveDate>| {},
+            }
+        }
+        Box { max_width: "320px",
+            LineChart {
+                id: "chart",
+                title: "Visitors",
+                x: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
+                series: vec![Series::new("Visits", [3, 5, 4, 6, 8, 7, 9, 12])],
+                onrange: move |selected: Option<ChartRange>| {
+                    range.set(selected.map(|r| format!("{} {}", r.start, r.end)).unwrap_or_default())
+                },
+            }
+        }
+        p { id: "range", "{range}" }
+    }
+}
 
 /// An app's own `touch-action: none` canvas in the band, no `use_drag` (todo 4800).
 #[component]
@@ -129,7 +161,11 @@ fn EdgePage() -> Element {
 /// The docs shell's drawer: the swipe opens it mid-press and the page turns inert,
 /// so the press never ends on the page (todo 2170).
 #[component]
-fn DrawerPage(#[props(default)] handle: bool, #[props(default)] canvas: bool) -> Element {
+fn DrawerPage(
+    #[props(default)] handle: bool,
+    #[props(default)] canvas: bool,
+    #[props(default)] claims: bool,
+) -> Element {
     let mut open = use_signal(|| false);
     let mut opens = use_signal(|| 0);
     let swipe = use_edge_swipe(
@@ -157,6 +193,9 @@ fn DrawerPage(#[props(default)] handle: bool, #[props(default)] canvas: bool) ->
                 }
                 if canvas {
                     BandCanvas {}
+                }
+                if claims {
+                    BandClaims {}
                 }
                 // A code block's box: its own scroller, so the page's `touch-action` stops there.
                 div {
@@ -206,9 +245,9 @@ fn DrawerPage(#[props(default)] handle: bool, #[props(default)] canvas: bool) ->
 }
 
 #[component]
-fn DrawerRtlPage() -> Element {
+fn DrawerRtlPage(#[props(default)] claims: bool) -> Element {
     rsx! {
-        LiberoProvider { direction: Direction::Rtl, DrawerPage {} }
+        LiberoProvider { direction: Direction::Rtl, DrawerPage { claims } }
     }
 }
 

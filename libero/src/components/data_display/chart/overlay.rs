@@ -727,6 +727,11 @@ pub(super) fn ChartOverlay(props: ChartOverlayProps) -> Element {
         let mut set_active = set_active.clone();
         move |event: Event<PointerData>| {
             dragged.set(false);
+            // A scrub or a brush from the band never opens an edge swipe's drawer (5554).
+            #[cfg(feature = "use-swipe")]
+            if event.pointer_type() != "mouse" {
+                crate::hooks::claim_press(event.pointer_id());
+            }
             if gestures {
                 let point = event.element_coordinates();
                 let touch = event.pointer_type() == "touch";

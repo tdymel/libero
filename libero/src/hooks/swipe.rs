@@ -1,7 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    hooks::{DragPoint, drag::take_press_claim, use_direction, use_subscription_slot},
+    hooks::{
+        DragPoint,
+        drag::{claim_press, take_press_claim},
+        use_direction, use_subscription_slot,
+    },
     platform::{
         self, EDGE_SWIPE_MARK, EdgeBand, SCRIPT_READY, ScrollSubscription, hold_edge_pan,
         holds_edge_pan_by_pointer, refuses_edge_swipe,
@@ -143,6 +147,11 @@ pub(crate) fn swipe_direction(delta: DragPoint, distance: f64) -> Option<SwipeDi
 ///
 /// Docs: <https://libero-ui.dev/hooks/use-swipe>
 pub fn use_swipe(on_swipe: Callback<SwipeEvent>, options: SwipeOptions) -> Swipe {
+    use_swipe_inner(on_swipe, options, true)
+}
+
+/// `claims`: a tracked press is claimed from an ancestor's edge swipe, as a drag's is (5553).
+fn use_swipe_inner(on_swipe: Callback<SwipeEvent>, options: SwipeOptions, claims: bool) -> Swipe {
     let SwipeOptions { distance } = options;
     let mut track = use_signal(|| None::<Track>);
 
@@ -156,6 +165,9 @@ pub fn use_swipe(on_swipe: Callback<SwipeEvent>, options: SwipeOptions) -> Swipe
             event.pointer_id(),
             DragPoint { x: at.x, y: at.y },
         );
+        if claims && event.is_primary() && event.pointer_type() != "mouse" {
+            claim_press(event.pointer_id());
+        }
         if next != current {
             track.set(next);
         }
@@ -436,11 +448,12 @@ pub fn use_edge_swipe(on_swipe: Callback, options: EdgeSwipeOptions) -> Swipe {
             }),
         ));
     }));
-    let swipe = use_swipe(
+    let swipe = use_swipe_inner(
         on_track,
         SwipeOptions {
             distance: options.distance,
         },
+        false,
     );
 
     let mut held = use_signal(|| None::<Held>);

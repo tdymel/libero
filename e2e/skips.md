@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 760
+Scenarios: 762
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -507,6 +507,8 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `use_local_storage::the_local_area_outlives_a_relaunch` | native | Blitz has no relaunch in the driver |
 | `use_long_press::a_held_touch_fires_the_callback_once_and_swallows_the_click` | desktop | 1126: no touch input under Xvfb |
 | `use_long_press::a_short_touch_still_clicks` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::a_band_month_swipe_or_brush_never_opens_the_drawer` | desktop | 1126: no touch input under Xvfb |
+| `use_swipe::a_band_month_swipe_or_brush_never_opens_the_drawer_under_rtl` | desktop | 1126: no touch input under Xvfb |
 | `use_swipe::a_mouse_drag_is_never_a_swipe` | android | adb drags with a finger |
 | `use_swipe::a_mouse_drag_is_never_a_swipe` | ios | a touch screen has no mouse drag |
 | `use_swipe::a_touch_drag_on_a_band_handle_never_opens_the_drawer` | desktop | 1126: no touch input under Xvfb |
