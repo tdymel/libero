@@ -266,7 +266,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     }
     .into();
 
-    crate::components::form::use_state_ranges(&RADIO_GROUP_SX, Some(&states));
+    crate::hooks::use_state_ranges(&RADIO_GROUP_SX, Some(&states));
     use_range_css(
         &RADIO_GROUP_SX,
         rows.map_or_else(Vec::new, |rows| {

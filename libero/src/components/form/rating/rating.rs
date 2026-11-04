@@ -343,7 +343,7 @@ pub fn Rating(props: RatingProps) -> Element {
         .with(RATING_COLOR, color.resolve(None))
         .with(RATING_EDGE, edge)
         .into();
-    crate::components::form::use_state_ranges(&RATING_SX, Some(&states));
+    crate::hooks::use_state_ranges(&RATING_SX, Some(&states));
     let style = use_box()
         .framework_sx(&RATING_SX)
         .states(&states)

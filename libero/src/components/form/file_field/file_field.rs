@@ -347,7 +347,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     // Prepared unconditionally, the way every `use_box` must be, and used
     // only by the dropzone variant.
-    crate::components::form::use_state_ranges(&FILE_CARD_LIST_SX, Some(field.states()));
+    crate::hooks::use_state_ranges(&FILE_CARD_LIST_SX, Some(field.states()));
     let card_list_style = use_box()
         .framework_sx(&FILE_CARD_LIST_SX)
         .states(field.states())

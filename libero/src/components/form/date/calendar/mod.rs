@@ -586,7 +586,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .with("measuring", fit.measuring)
         .with("presets", has_presets)
         .into();
-    crate::components::form::use_state_ranges(&CALENDAR_SX, Some(&states));
+    crate::hooks::use_state_ranges(&CALENDAR_SX, Some(&states));
     let root_box = use_box()
         .framework_sx(&CALENDAR_SX)
         .class(&props.class)

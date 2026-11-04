@@ -318,7 +318,7 @@ impl<'a> FieldFrameBuilder<'a> {
         // Whether the press under way began on the padding. A press a slot's
         // own handler took (the multi-select chevron) must not be forwarded.
         let pending = use_hook(|| Rc::new(Cell::new(false)));
-        super::use_state_ranges(&FIELD_FRAME_SX, self.states);
+        crate::hooks::use_state_ranges(&FIELD_FRAME_SX, self.states);
         let mut frame = use_box().framework_sx(&FIELD_FRAME_SX);
         if let Some(states) = self.states {
             frame = frame.states(states);

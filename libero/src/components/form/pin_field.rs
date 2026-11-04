@@ -206,7 +206,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .with(kind.state_name(), true)
         .into();
 
-    crate::components::form::use_state_ranges(&PIN_FIELD_ROW_SX, Some(&states));
+    crate::hooks::use_state_ranges(&PIN_FIELD_ROW_SX, Some(&states));
     let row = use_box()
         .framework_sx(&PIN_FIELD_ROW_SX)
         .states(&states)

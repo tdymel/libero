@@ -16,7 +16,7 @@ use crate::{
     theme::{COMBOBOX_ROW_HEIGHT, ComboboxDefaults, Responsive, Size, SizeCss},
 };
 
-use crate::components::form::{DropdownPart, use_state_ranges};
+use crate::components::form::DropdownPart;
 
 /// Shared with the rows. Signals: a provider runs once, so plain fields would freeze.
 #[derive(Clone, Copy, PartialEq)]
@@ -276,7 +276,7 @@ pub(super) fn use_row_ranges(sizes: &Responsive<Size>, radii: &Responsive<Size>)
         .responsive(sizes, |size| size.state_name())
         .responsive(radii, |size| size.radius_state_name())
         .into();
-    use_state_ranges(&COMBOBOX_ROW_SX, Some(&states));
+    crate::hooks::use_state_ranges(&COMBOBOX_ROW_SX, Some(&states));
 }
 
 /// A row with its own responsive `size` or `radius` registers its copies; a field's rows share its.

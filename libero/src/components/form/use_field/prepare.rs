@@ -5,7 +5,6 @@ use super::{
     hook::FieldHook,
     nodes::{attribute_text, join_ids, label_node, label_row, slot_node, status_node},
     prepared::PreparedField,
-    ranges::use_state_ranges,
     styles::FIELD_SX,
 };
 use crate::{
@@ -228,7 +227,7 @@ impl FieldBuilder<'_> {
                 )
                 .into(),
         };
-        use_state_ranges(&FIELD_SX, Some(&states));
+        crate::hooks::use_state_ranges(&FIELD_SX, Some(&states));
         let own_sx =
             radius_sx.map(|radius_sx| with_own(Some(radius_sx), self.sx.unwrap_or(&Input::None)));
         let mut wrapper = use_box()

@@ -1,9 +1,13 @@
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
+mod ranges;
 mod registration;
 #[cfg(test)]
 mod registration_tests;
 
 use crate::{CssLayer, css::Stylesheet};
 
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
+pub(crate) use ranges::use_state_ranges;
 pub(crate) use registration::{
     SxSource, WordSheet, use_box_css, use_css, use_range_css, use_range_css_in,
 };

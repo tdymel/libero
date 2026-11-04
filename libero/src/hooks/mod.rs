@@ -215,6 +215,8 @@ pub use storage::{
     StorageFormat, StorageOptions, Stored, use_local_storage, use_local_storage_with,
     use_session_storage, use_session_storage_with,
 };
+#[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
+pub(crate) use stylesheet::use_state_ranges;
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{
     SxSource, WordSheet, use_box_css, use_css, use_range_css, use_range_css_in,

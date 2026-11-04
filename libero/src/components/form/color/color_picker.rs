@@ -15,7 +15,7 @@ use crate::{
             COARSE_POINTER, Glyph, HtmlTag, Input, Part, States, Variables, base_props,
             disabled_look_sx, has_shortcut_modifier, input_from_str, parts_enum, variables,
         },
-        form::{Disabled, SliderChangeEvent, use_state_ranges},
+        form::{Disabled, SliderChangeEvent},
         layout::use_box,
     },
     context::IconSlot,
@@ -302,7 +302,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         .with("disabled", disabled)
         .with("readonly", readonly && !disabled)
         .into();
-    use_state_ranges(&COLOR_PICKER_SX, Some(&states));
+    crate::hooks::use_state_ranges(&COLOR_PICKER_SX, Some(&states));
     let root_variables: Input<Variables> = variables()
         .with(
             COLOR_PICKER_SWATCHES_WIDTH,

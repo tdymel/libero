@@ -5,7 +5,6 @@ mod nodes;
 mod prefill;
 mod prepare;
 mod prepared;
-mod ranges;
 mod styles;
 
 pub(crate) use activation::Activation;
@@ -17,4 +16,3 @@ pub(super) use nodes::{
 pub(crate) use prefill::use_prefill;
 pub(super) use prepare::focus_left;
 pub(crate) use prepared::PreparedField;
-pub(crate) use ranges::use_state_ranges;

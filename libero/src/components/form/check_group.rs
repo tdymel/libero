@@ -374,7 +374,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .unwrap_or_default()
         .with("horizontal", horizontal)
         .into();
-    crate::components::form::use_state_ranges(&CHECK_GROUP_SX, Some(&states));
+    crate::hooks::use_state_ranges(&CHECK_GROUP_SX, Some(&states));
     let group = use_box()
         .framework_sx(&CHECK_GROUP_SX)
         .states(&states)

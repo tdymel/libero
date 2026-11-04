@@ -1,7 +1,6 @@
+use super::use_range_css;
 use crate::{
-    components::common::{Input, States},
-    hooks::use_range_css,
-    sx::StaticSx,
+    sx::{Input, States, StaticSx},
     theme::{Responsive, Size},
 };
 

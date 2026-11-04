@@ -13,7 +13,7 @@ use crate::{
             base_color, coarse_hit_area_sx, disabled_look_within_sx, has_shortcut_modifier,
             print_exact_sx, shadow_sx, text_color, variables,
         },
-        form::{field_parts_enum, use_state_ranges},
+        form::field_parts_enum,
         layout::use_box,
         overlay::{PressFocus, Tooltip, TooltipClear, TooltipPinned, clear_reach},
     },
@@ -1529,7 +1529,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         .with("segments", !segments.is_empty())
         .into();
 
-    use_state_ranges(&SLIDER_ROOT_SX, Some(&states));
+    crate::hooks::use_state_ranges(&SLIDER_ROOT_SX, Some(&states));
     let root_variables: Input<Variables> = slider_variables(&color).into();
     let track_class = use_css(Some(&SLIDER_TRACK_SX), CssLayer::Framework);
     let track_style = props

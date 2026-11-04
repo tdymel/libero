@@ -275,7 +275,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
         .unwrap_or_default()
         .responsive(&size, |size| size.state_name())
         .into();
-    crate::components::form::use_state_ranges(&TIME_PICKER_SX, Some(&states));
+    crate::hooks::use_state_ranges(&TIME_PICKER_SX, Some(&states));
     let root_box = use_box()
         .framework_sx(&TIME_PICKER_SX)
         .class(&props.class)

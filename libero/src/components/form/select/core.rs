@@ -599,13 +599,13 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let multiple = props.multiple;
 
     // Hooks, so prepared either way.
-    crate::components::form::use_state_ranges(&MULTI_VALUE_SX, Some(field.states()));
+    crate::hooks::use_state_ranges(&MULTI_VALUE_SX, Some(field.states()));
     let value_slot = use_box()
         .framework_sx(&MULTI_VALUE_SX)
         .focus_ring(false)
         .states(field.states())
         .prepare();
-    crate::components::form::use_state_ranges(&MULTI_CHEVRON_SX, Some(field.states()));
+    crate::hooks::use_state_ranges(&MULTI_CHEVRON_SX, Some(field.states()));
     let chevron_box = use_box()
         .framework_sx(&MULTI_CHEVRON_SX)
         .states(field.states())
@@ -647,7 +647,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .with("multiple", props.multiple)
         .into();
     // The frame draws the ring.
-    crate::components::form::use_state_ranges(&SELECT_TRIGGER_SX, Some(&trigger_states));
+    crate::hooks::use_state_ranges(&SELECT_TRIGGER_SX, Some(&trigger_states));
     let control = use_box()
         .framework_sx(&SELECT_TRIGGER_SX)
         .focus_ring(false)
