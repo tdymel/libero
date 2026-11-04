@@ -92,11 +92,16 @@ impl PickerFocus {
         }
     }
 
-    /// Focuses the field's input.
+    /// Focuses the field's input, or its trigger.
     pub(crate) fn focus_input(self) {
+        // A trigger that is no input (a `ColorField` swatch) is found by its id.
         let focused = self
             .anchor
             .query_selector("input[data-controlled]")
+            .or_else(|_| {
+                self.anchor
+                    .query_selector(&id_selector(&self.input_id.peek()))
+            })
             .and_then(|input| input.focus());
         if let Err(PlatformError::Unsupported) = focused {
             let _ = focus_selector(&id_selector(&self.input_id.peek()));

@@ -20,6 +20,7 @@ use crate::{
 };
 
 const COLOR_SWATCH_COLOR: CssVar = CssVar::new("--lsx-color-swatch-color");
+const COLOR_SWATCH_FILL: CssVar = CssVar::new("--lsx-color-swatch-fill");
 
 static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
     let color = COLOR_SWATCH_COLOR.value();
@@ -35,7 +36,10 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         .border_radius(COLOR_SWATCH_RADIUS.value())
         // A one-stop gradient layers over the checkerboard, so a translucent
         // color shows it through.
-        .background(format!("linear-gradient({color}, {color}), {CHECKERBOARD}"))
+        .background(
+            COLOR_SWATCH_FILL
+                .value_or(format!("linear-gradient({color}, {color}), {CHECKERBOARD}")),
+        )
         .border_style("none")
         // Forced colours would drop the colour and its ring: the swatch is the colour.
         .forced_color_adjust("none")
@@ -82,6 +86,10 @@ base_props! {
         /// Corner radius: a size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
+        /// Paints the swatch with any CSS `background` (a gradient, an image) instead of `color`,
+        /// which still picks the mark's black or white.
+        #[props(default, into)]
+        background: Option<String>,
         /// A faint inner ring, so a color close to the background has an edge.
         #[props(default)]
         with_shadow: Option<bool>,
@@ -134,6 +142,7 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
 
     let variables: Input<Variables> = variables()
         .with(COLOR_SWATCH_COLOR, props.color.to_rgba())
+        .with(COLOR_SWATCH_FILL, props.background.clone())
         .with(
             SizeCss::RADIUS.override_var(),
             radius.custom_css(SizeCss::RADIUS),

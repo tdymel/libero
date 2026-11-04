@@ -7,7 +7,7 @@ use crate::{
         accessibility::use_announcer,
         buttons::ActionIcon,
         common::{
-            Glyph, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss, States,
+            Glyph, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss, States, names_itself,
             navigation_chord,
         },
         form::{
@@ -98,6 +98,16 @@ const DROPDOWN_ENTRY: &str = "[tabindex='0'], button:not([tabindex='-1'])";
 static COLOR_FIELD_PREVIEW_SX: StaticSx =
     StaticSx::new(|| sx().width("1.25em").height("1.25em").min_width("1.25em"));
 
+/// What a [`ColorField`] shows to open its dropdown.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ColorFieldVariant {
+    /// A text input holding the color, with a preview and an eyedropper.
+    #[default]
+    Field,
+    /// Only a swatch button: a click opens the same dropdown, and focus returns to it.
+    Swatch,
+}
+
 field_props! {
     extends(input);
     pub struct ColorFieldProps {
@@ -164,6 +174,22 @@ field_props! {
         /// Styles the portaled dropdown and the picker in it.
         #[props(default, into)]
         dropdown_parts: Input<Parts<ColorDropdownPart>>,
+        /// `Swatch` leaves the text and the eyedropper: a swatch button opens the dropdown.
+        ///
+        /// ```no_run
+        /// # use dioxus::prelude::*;
+        /// # use libero::components::{ColorCode, ColorField, ColorFieldVariant};
+        /// # fn app() -> Element {
+        /// # let color = use_signal(ColorCode::default);
+        /// # rsx! {
+        /// ColorField { label: "Accent", value: color(), variant: ColorFieldVariant::Swatch }
+        /// # } }
+        /// ```
+        #[props(default)]
+        variant: ColorFieldVariant,
+        /// With `variant: Swatch`, any CSS `background` for the swatch, such as a hue wheel.
+        #[props(default, into)]
+        swatch_background: Option<String>,
     }
 }
 
@@ -322,8 +348,14 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .read()
         .as_deref()
         .is_some_and(|text| text.trim().is_empty());
-    let field = use_field()
-        .label_only_focuses()
+    let swatch = props.variant == ColorFieldVariant::Swatch;
+    let builder = use_field().label_only_focuses();
+    // A button is named by `aria-labelledby`: a click on its `for` label would open it.
+    let builder = match swatch {
+        true => builder.labelled_by(),
+        false => builder,
+    };
+    let field = builder
         .label(&props.label)
         .label_trailing(&props.label_trailing)
         .description(&props.description)
@@ -491,6 +523,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         });
     };
     let focus_input = move || picker_focus.focus_input();
+    let toggle = use_callback(move |_: MouseEvent| opened.set(!opened()));
     // On the Escape stack exactly while the key handler below would take
     // Escape, so a `HoverCard` around this field leaves the press to it.
     use_field_list_layer(showing, close);
@@ -639,7 +672,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             }
             _ => {}
         })
-        .render(HtmlTag::Input, props.attributes, ());
+        .render(HtmlTag::Input, props.attributes.clone(), ());
 
     // Portaled, so no `overflow: hidden` ancestor clips it. A cancelled
     // mousedown keeps focus on the text input.
@@ -781,13 +814,89 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             }
         }
     });
+    let swatch_trigger = swatch.then(|| {
+        let interactive = has_dropdown && !readonly;
+        let label_id = field.label_id();
+        let unnamed = label_id.is_none() && !names_itself(&props.attributes);
+        let own = |name: &'static str, value: Option<String>| {
+            value.map(|value| Attribute::new(name, value, None, false))
+        };
+        let mut attributes = props.attributes.clone();
+        attributes.extend(
+            [
+                own("id", Some(field.id().to_string())),
+                own("aria-labelledby", label_id),
+                own("aria-label", unnamed.then(|| labels.choose.to_string())),
+                own("aria-describedby", field.describedby()),
+                own("aria-haspopup", interactive.then(|| "dialog".to_string())),
+                own("aria-expanded", interactive.then(|| showing.to_string())),
+                own(
+                    "aria-controls",
+                    showing.then(|| format!("{}-dialog", field.id())),
+                ),
+                own("role", (!interactive).then(|| "img".to_string())),
+            ]
+            .into_iter()
+            .flatten(),
+        );
+        let radius = props.radius.as_ref().map_or_else(Input::default, |radius| {
+            Input::Value(crate::theme::Responsive::base_ref(radius).clone())
+        });
+        rsx! {
+            ColorSwatch {
+                color: preview,
+                background: props.swatch_background.clone(),
+                size,
+                radius,
+                attributes,
+                onclick: interactive.then_some(toggle),
+            }
+        }
+    });
+    let mut focused_in = focus.focusin(0);
+    let mut focused_out = focus.focusout(0);
     let control = rsx! {
         // On the wrapper, not the input: focus can also leave from the eyedropper.
         div {
             onmounted: anchor.mount(),
-            onfocusout: move |_| settle(),
+            onfocusin: move |event| {
+                if swatch {
+                    focused_in(event);
+                }
+            },
+            onfocusout: move |event| {
+                if swatch {
+                    focused_out(event);
+                }
+                settle();
+            },
+            onkeydown: move |event: KeyboardEvent| {
+                if !swatch {
+                    return;
+                }
+                match event.key() {
+                    Key::Named(NamedKey::ArrowDown)
+                        if has_dropdown
+                            && !readonly
+                            && navigation_chord(&event) != Some(NavigationChord::Browser) =>
+                    {
+                        event.prevent_default();
+                        opened.set(true);
+                        entering.set(true);
+                    }
+                    Key::Named(NamedKey::Escape) if showing => {
+                        event.prevent_default();
+                        opened.set(false);
+                    }
+                    _ => {}
+                }
+            },
             style: sheet_clearance_style(clearance),
-            {frame.render(input)}
+            if swatch {
+                {swatch_trigger}
+            } else {
+                {frame.render(input)}
+            }
             {hidden}
             {announcer.render()}
         }

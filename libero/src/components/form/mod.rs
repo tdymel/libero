@@ -116,9 +116,9 @@ pub use chip::{Chip, ChipPart, ChipProps};
 pub(crate) use clear::{clear_button, clear_button_named};
 #[cfg(feature = "color")]
 pub use color::{
-    AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,
-    ColorPicker, ColorPickerPart, ColorPickerProps, ColorSliderPart, ColorSwatch, ColorSwatchProps,
-    HueSlider, HueSliderProps, ParseColorError, Swatches,
+    AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFieldVariant,
+    ColorFormat, ColorPicker, ColorPickerPart, ColorPickerProps, ColorSliderPart, ColorSwatch,
+    ColorSwatchProps, HueSlider, HueSliderProps, ParseColorError, Swatches,
 };
 #[cfg(feature = "combobox")]
 pub(crate) use combobox::{
@@ -152,9 +152,9 @@ pub use form_value::{ByAddress, FormValue};
 #[cfg(all(feature = "visually-hidden", feature = "use-icon", feature = "use-id"))]
 pub use handle::{FormHandle, use_form, use_form_context};
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
-pub use image_cropper::{CropOptions, CropRect, CropShape, PixelRect};
+pub use image_cropper::{Backdrop, CropEvent, CropOptions, CropRect, CropShape, PixelRect};
 #[cfg(feature = "image-cropper")]
-pub use image_cropper::{ImageCropper, ImageCropperPart, ImageCropperProps};
+pub use image_cropper::{ImageCropper, ImageCropperControls, ImageCropperPart, ImageCropperProps};
 #[cfg(feature = "native-select")]
 pub use native_select::{NativeSelect, NativeSelectProps};
 #[cfg(feature = "number-field")]

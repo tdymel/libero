@@ -1,7 +1,10 @@
 //! The crop box's geometry, in fractions of the image so it needs no natural
 //! pixel size: WebView cannot read one.
 
-/// A crop, as fractions 0-1 of the image's width and height from its top-left.
+pub use crate::platform::image::Backdrop;
+
+/// A crop, as fractions of the image's width and height from its top-left: 0-1 inside
+/// the picture, past it up to the cropper's `overhang`.
 ///
 /// ```rust
 /// # use libero::components::CropRect;
@@ -17,6 +20,36 @@ pub struct CropRect {
     pub height: f64,
 }
 
+/// What `FileField`'s `oncrop` gets: the box the dialog applied and the picked file it cut.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{CropEvent, CropOptions, FileField, Files};
+/// # fn app() -> Element {
+/// let mut avatar = use_signal(Files::default);
+/// rsx! {
+///     FileField {
+///         label: "Avatar",
+///         accept: "image/*",
+///         crop: CropOptions { aspect: Some(1.0), ..Default::default() },
+///         value: avatar(),
+///         oncrop: move |event: CropEvent| {
+///             // Keep `event.original` to re-crop later; `event.rect` is the box applied.
+///             let _ = (event.rect, event.original.name());
+///         },
+///         onchange: move |files: Files| avatar.set(files),
+///     }
+/// }
+/// # }
+/// ```
+#[derive(Clone, Debug)]
+pub struct CropEvent {
+    /// The box the dialog applied, in fractions of the original.
+    pub rect: CropRect,
+    /// The file as picked, before the cut.
+    pub original: dioxus::html::FileData,
+}
+
 /// A [`CropRect`] in the source image's pixels.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct PixelRect {
@@ -24,6 +57,25 @@ pub struct PixelRect {
     pub y: u32,
     pub width: u32,
     pub height: u32,
+}
+
+impl From<CropRect> for [f64; 4] {
+    fn from(rect: CropRect) -> Self {
+        [rect.x, rect.y, rect.width, rect.height]
+    }
+}
+
+#[cfg(feature = "color")]
+impl From<crate::components::form::ColorCode> for Backdrop {
+    fn from(color: crate::components::form::ColorCode) -> Self {
+        let (red, green, blue, alpha) = color.to_rgba_channels();
+        Self::Color([
+            red,
+            green,
+            blue,
+            (alpha.clamp(0.0, 1.0) * 255.0).round() as u8,
+        ])
+    }
 }
 
 /// The mask over the image outside the crop. The crop itself stays a rectangle.
@@ -64,6 +116,10 @@ pub struct CropOptions {
     pub pan: bool,
     /// Scales the cropped image down until its longer side is at most this, in px.
     pub max_size: Option<u32>,
+    /// How far the box may reach past each side of the picture, a fraction of its size.
+    pub overhang: f64,
+    /// What fills the cut past the picture's edge.
+    pub backdrop: Backdrop,
 }
 
 impl Default for CropRect {
@@ -127,6 +183,109 @@ impl Grip {
             Grip::SouthEast => "se",
             Grip::SouthWest => "sw",
         }
+    }
+}
+
+/// The room past the picture's edge a box may use, as a fraction of the picture per side.
+/// The box moves in "stage" fractions, 0-1 over the picture plus that room, and comes back
+/// in the picture's: with no room both are the same numbers.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(super) struct Reach(f64);
+
+impl Reach {
+    pub(super) fn new(overhang: f64) -> Self {
+        Self(match overhang.is_finite() {
+            true => overhang.clamp(0.0, 1.0),
+            false => 0.0,
+        })
+    }
+
+    pub(super) fn get(self) -> f64 {
+        self.0
+    }
+
+    /// The stage's size over the picture's.
+    fn span(self) -> f64 {
+        1.0 + 2.0 * self.0
+    }
+
+    fn stage(self, rect: CropRect) -> CropRect {
+        let span = self.span();
+        CropRect {
+            x: (rect.x + self.0) / span,
+            y: (rect.y + self.0) / span,
+            width: rect.width / span,
+            height: rect.height / span,
+        }
+    }
+
+    fn unstage(self, rect: CropRect) -> CropRect {
+        let span = self.span();
+        CropRect {
+            x: rect.x * span - self.0,
+            y: rect.y * span - self.0,
+            width: rect.width * span,
+            height: rect.height * span,
+        }
+    }
+
+    pub(super) fn scaled(self, rect: CropRect, factor: f64, min: f64) -> CropRect {
+        self.unstage(self.stage(rect).scaled(factor, min / self.span()))
+    }
+
+    pub(super) fn resized(
+        self,
+        rect: CropRect,
+        grip: Grip,
+        (dx, dy): (f64, f64),
+        ratio: Option<f64>,
+        min: f64,
+    ) -> CropRect {
+        let span = self.span();
+        let staged = self.stage(rect);
+        self.unstage(staged.resized(grip, dx / span, dy / span, ratio, min / span))
+    }
+
+    pub(super) fn extreme(
+        self,
+        rect: CropRect,
+        grip: Grip,
+        greatest: bool,
+        pan: bool,
+        (ratio, min): (Option<f64>, f64),
+    ) -> CropRect {
+        let staged = self.stage(rect);
+        self.unstage(staged.extreme(grip, greatest, pan, ratio, min / self.span()))
+    }
+
+    pub(super) fn range(
+        self,
+        rect: CropRect,
+        grip: Grip,
+        pan: bool,
+        locked: (Option<f64>, f64),
+    ) -> (f64, f64) {
+        let value = |greatest| {
+            self.extreme(rect, grip, greatest, pan, locked)
+                .value(grip, pan)
+        };
+        (value(false), value(true))
+    }
+
+    /// Pan mode: `dx`, `dy` are fractions of the cropper, so they need no scaling.
+    pub(super) fn panned(self, rect: CropRect, dx: f64, dy: f64) -> CropRect {
+        self.unstage(self.stage(rect).panned(dx, dy))
+    }
+
+    pub(super) fn zoomed(
+        self,
+        rect: CropRect,
+        factor: f64,
+        from: (f64, f64),
+        to: (f64, f64),
+        min: f64,
+    ) -> CropRect {
+        self.unstage(self.stage(rect).zoomed(factor, from, to, min / self.span()))
     }
 }
 
@@ -338,6 +497,7 @@ impl CropRect {
     }
 
     /// The least and greatest of `grip`'s [`Self::value`].
+    #[cfg(test)]
     pub(super) fn range(self, grip: Grip, pan: bool, ratio: Option<f64>, min: f64) -> (f64, f64) {
         let value = |greatest| {
             self.extreme(grip, greatest, pan, ratio, min)

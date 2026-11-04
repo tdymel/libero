@@ -6,7 +6,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{
-    Code, ColorCode, ColorField, Flex, Input, SliderChangeEvent, Swatches, Text,
+    Code, ColorCode, ColorField, ColorFieldVariant, Flex, Input, SliderChangeEvent, Swatches, Text,
 };
 use libero::theme::{Size, responsive};
 use libero::use_theme;
@@ -40,6 +40,8 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
 fn responsive_on(values: &DemoValues) -> bool {
     values.str("responsive") == "true"
 }
+
+const HUE_WHEEL: &str = "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)";
 
 #[component]
 pub fn ColorFieldPage() -> Element {
@@ -86,6 +88,11 @@ pub fn ColorFieldPage() -> Element {
                     prop("name", "FieldName<ColorCode>")
                         .doc("What the field posts as: its color in `format`, from a hidden input as `ColorPicker` posts it, never the text being typed. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
+                    prop("variant", "ColorFieldVariant")
+                        .default("Field")
+                        .doc("`Swatch` leaves the text, the preview and the eyedropper: a swatch button opens the same dropdown, `Escape` and a picked swatch bring focus back to it, and the label names it. A swatch holding no dropdown is a plain image."),
+                    prop("swatch_background", "String")
+                        .doc("With `variant: Swatch`, any CSS `background` for the swatch, such as a conic gradient for a hue wheel, in place of the color. The dropdown still edits `value`."),
                     prop("size", "Responsive<Size>").default(theme.color_field.size.as_str()).doc("Control height, font size and the dropdown's picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open picker keeps the base size."),
                     prop("radius", "Responsive<ThemeAwareValue>").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("label", "Caption").doc("The field's caption."),
@@ -118,7 +125,8 @@ pub fn ColorFieldPage() -> Element {
             accessibility: a11y()
                 .key(["Down", "Alt+Down"], "Opens the dropdown and moves focus into the picker, onto the saturation area or the first swatch, where the `ColorPicker` keys apply.")
                 .key(["Enter"], "On text that does not parse: announces the refusal and keeps the text. On text that parses: sends `End`, which typing alone does not. A revert on blur is announced too.")
-                .key(["Escape"], "Closes the dropdown. From inside it, moves focus back to the text.")
+                .key(["Escape"], "Closes the dropdown. From inside it, moves focus back to the text, or to the swatch with `variant: Swatch`.")
+                .key(["Enter", "Space"], "On the swatch of `variant: Swatch`: opens the dropdown, or closes it when open.")
                 .key(["Tab", "Shift+Tab"], "Past the dropdown's last stop: moves on as Tab from the text would. Before its first stop: back to the text.")
                 .handles([
                     "Focus alone does not open the dropdown, so tabbing through the form changes nothing. A click opens it and stays in the text, so typing works at once.",
@@ -128,6 +136,7 @@ pub fn ColorFieldPage() -> Element {
                     "Leaving text that does not parse announces the localization's `color.invalid`, whether `fix_on_blur` reverts it or keeps it. It is said once, so a blur after Enter does not repeat it.",
                     "A mouse click in the dropdown leaves focus in the text.",
                     "Android's Back button closes the dropdown rather than the app. Focus in the dropdown goes back to the text.",
+                    "With `variant: Swatch` the swatch is a button that names the dropdown (`aria-haspopup`, `aria-expanded`), named by the label, or by the localization's `color.choose` when there is none.",
                 ])
                 .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."])
                 .example("A brand color field, `ColorField { label: \"Brand color\" }`: type `#228be6` at once, click to open the dropdown with the caret staying in the text, or press Down to open it and move into the picker. Escape brings focus back to the text."),
@@ -168,6 +177,16 @@ pub fn ColorFieldPage() -> Element {
                         .to_string(),
                 ],
                 controls: [vec![
+                    Control::toggle("variant", ["field", "swatch"])
+                        .labels(["Field", "Swatch"])
+                        .default("field")
+                        .code(|_, values| match values.str("variant").as_str() {
+                            "swatch" => vec![
+                                "variant: ColorFieldVariant::Swatch".to_string(),
+                                format!("swatch_background: {HUE_WHEEL:?}"),
+                            ],
+                            _ => vec![],
+                        }),
                     Control::sizes("size").default(theme.color_field.size.as_str())
                         .code(|control, values| match (responsive_on(values), values.str("size")) {
                             (true, size) => vec![format!(
@@ -245,6 +264,13 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
     let field = field_props::<BrandCopy>(&values);
     let mut color = use_signal(|| ColorCode::hex(0x228be6));
 
+    let swatch_variant = match values.str("variant").as_str() {
+        "swatch" => ColorFieldVariant::Swatch,
+        _ => ColorFieldVariant::Field,
+    };
+    // The field's own swatch is the variant's demo while the control is on `field`.
+    let mut wheel = use_signal(|| ColorCode::hex(0x40c057));
+
     let swatches = match is_on(&values, "swatches") {
         true => Swatches::labelled(SWATCHES),
         false => Swatches::default(),
@@ -264,6 +290,10 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
                     "default" => Input::None,
                     format => Input::from(format.to_string()),
                 },
+                variant: swatch_variant,
+                swatch_background: swatch_variant
+                    .eq(&ColorFieldVariant::Swatch)
+                    .then(|| HUE_WHEEL.to_string()),
                 with_alpha: is_on(&values, "with_alpha"),
                 swatches,
                 recent_colors: is_on(&values, "recent_colors").then_some(6),
@@ -284,6 +314,16 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
                 readonly: is_on(&values, "readonly").then_some(true),
             }
             Text { size: "sm", "value: {color().to_hexa()}" }
+            if swatch_variant == ColorFieldVariant::Field {
+                ColorField {
+                    label: "As a swatch",
+                    variant: ColorFieldVariant::Swatch,
+                    swatch_background: HUE_WHEEL,
+                    swatches: Swatches::labelled(SWATCHES),
+                    value: wheel(),
+                    oninput: move |event: SliderChangeEvent<ColorCode>| wheel.set(event.value()),
+                }
+            }
         }
     }
 }

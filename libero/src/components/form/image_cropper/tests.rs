@@ -1,6 +1,8 @@
-use super::crop::{CropRect, Grip};
+use super::crop::{CropRect, Grip, Reach};
 use super::image_cropper::{min_side, press_message, slider_zoom, spoken_percent, value_text};
+use super::{ImageCropper, ImageCropperControls};
 use crate::localization::{Formats, ImageCropperLabels};
+use crate::platform::image::Backdrop;
 
 fn rect(x: f64, y: f64, width: f64, height: f64) -> CropRect {
     CropRect {
@@ -332,4 +334,165 @@ fn the_zoom_slider_says_the_box_zoom_its_snapped_value_stands_for() {
     assert_eq!(percent(slider_zoom(0.98, exact)), 267.0);
     // A value a step away is its own zoom.
     assert_eq!(slider_zoom(0.99, exact), 0.99_f64.exp());
+}
+
+#[derive(Clone, Copy, Default, PartialEq)]
+struct Setup {
+    controls: ImageCropperControls,
+    pan: bool,
+    overhang: f64,
+    backdrop: Backdrop,
+}
+
+fn render(setup: Setup) -> String {
+    use dioxus::prelude::*;
+    #[component]
+    fn Host(setup: Setup) -> Element {
+        rsx! {
+            crate::LiberoProvider {
+                ImageCropper {
+                    src: "/photo.jpg",
+                    alt: "Photo",
+                    controls: setup.controls,
+                    pan: setup.pan,
+                    overhang: setup.overhang,
+                    backdrop: setup.backdrop,
+                    onchange: |_| {},
+                }
+            }
+        }
+    }
+    let mut dom = VirtualDom::new_with_props(Host, HostProps { setup });
+    dom.rebuild_in_place();
+    dioxus_ssr::render(&dom)
+}
+
+#[test]
+fn no_overhang_is_the_plain_geometry() {
+    let reach = Reach::new(0.0);
+    let start = rect(0.2, 0.2, 0.4, 0.4);
+    assert_eq!(
+        reach.resized(start, Grip::SouthEast, (0.1, 0.2), None, 0.05),
+        start.resized(Grip::SouthEast, 0.1, 0.2, None, 0.05)
+    );
+    assert_eq!(reach.scaled(start, 1.5, 0.05), start.scaled(1.5, 0.05));
+    // Not a number, or out of range: none, or all of it.
+    assert_eq!(Reach::new(f64::NAN).get(), 0.0);
+    assert_eq!(Reach::new(-1.0).get(), 0.0);
+    assert_eq!(Reach::new(5.0).get(), 1.0);
+}
+
+#[test]
+fn an_overhang_lets_the_box_move_past_the_edge_by_that_much() {
+    let reach = Reach::new(0.25);
+    let start = rect(0.1, 0.1, 0.5, 0.5);
+    assert_close(
+        reach.resized(start, Grip::Move, (1.0, -1.0), None, 0.05),
+        rect(0.75, -0.25, 0.5, 0.5),
+    );
+}
+
+#[test]
+fn an_overhang_lets_the_box_grow_past_the_picture() {
+    let reach = Reach::new(0.25);
+    let start = rect(0.2, 0.2, 0.4, 0.4);
+    assert_close(
+        reach.scaled(start, 10.0, 0.05),
+        rect(-0.25, -0.25, 1.5, 1.5),
+    );
+    // An edge grip reaches the room's end, a locked corner keeps its ratio there.
+    assert_close(
+        reach.resized(start, Grip::East, (2.0, 0.0), None, 0.05),
+        rect(0.2, 0.2, 1.05, 0.4),
+    );
+    let locked = reach.resized(start, Grip::NorthWest, (-2.0, -2.0), Some(1.0), 0.05);
+    assert!((locked.width - locked.height).abs() < 1e-9, "{locked:?}");
+    assert!(
+        locked.x >= -0.25 - 1e-9 && locked.y >= -0.25 - 1e-9,
+        "{locked:?}"
+    );
+}
+
+#[test]
+fn a_pan_can_zoom_out_to_show_the_overhang() {
+    let reach = Reach::new(0.5);
+    let crop = CropRect::starting(Some(1.0));
+    let out = reach.zoomed(crop, 0.01, (0.5, 0.5), (0.5, 0.5), 0.05);
+    assert_close(out, rect(-0.5, -0.5, 2.0, 2.0));
+    assert!(out.image_transform().0 < 1.0);
+    // Without room the same zoom stops at the picture.
+    let plain = Reach::new(0.0).zoomed(crop, 0.01, (0.5, 0.5), (0.5, 0.5), 0.05);
+    assert_close(plain, rect(0.0, 0.0, 1.0, 1.0));
+}
+
+#[test]
+fn a_slider_range_reaches_into_the_overhang() {
+    let reach = Reach::new(0.25);
+    let (least, greatest) = reach.range(rect(0.2, 0.3, 0.4, 0.4), Grip::Move, false, (None, 0.05));
+    assert!(
+        (least + 0.25).abs() < 1e-9 && (greatest - 0.85).abs() < 1e-9,
+        "{least} {greatest}"
+    );
+}
+
+#[test]
+fn controls_none_removes_the_buttons_and_false_hides_them() {
+    let cropper = |controls: ImageCropperControls| {
+        render(Setup {
+            controls,
+            ..Setup::default()
+        })
+    };
+    assert!(cropper(ImageCropperControls::Shown).contains(r#"data-slot="controls""#));
+    let state = |html: &str| {
+        let from = html.find(r#"data-state=""#).unwrap() + r#"data-state=""#.len();
+        html[from..].split('"').next().unwrap().to_string()
+    };
+    let hidden = cropper(false.into());
+    assert!(
+        hidden.contains(r#"data-slot="controls""#) && state(&hidden).contains("hidden-controls")
+    );
+    let none = cropper(ImageCropperControls::None);
+    assert!(
+        !none.contains(r#"data-slot="controls""#) && !state(&none).contains("hidden-controls"),
+        "{none}"
+    );
+    assert!(none.contains(r#"role="slider""#), "the keys stay: {none}");
+}
+
+#[test]
+fn controls_none_removes_the_pan_zoom_bar_too() {
+    let pan = |controls: ImageCropperControls| {
+        render(Setup {
+            controls,
+            pan: true,
+            ..Setup::default()
+        })
+    };
+    assert!(pan(ImageCropperControls::Shown).contains(r#"data-slot="zoom""#));
+    assert!(!pan(ImageCropperControls::None).contains(r#"data-slot="zoom""#));
+}
+
+#[test]
+fn a_backdrop_is_drawn_only_with_an_overhang_or_a_colour() {
+    let html = |overhang: f64, backdrop: Backdrop| {
+        render(Setup {
+            overhang,
+            backdrop,
+            ..Setup::default()
+        })
+    };
+    let slot = r#"data-slot="backdrop""#;
+    assert!(!html(0.0, Backdrop::Checkerboard).contains(slot));
+    let over = html(0.25, Backdrop::Checkerboard);
+    assert!(
+        over.contains(slot) && over.contains("--lsx-image-cropper-over:0.25"),
+        "{over}"
+    );
+    assert!(over.contains("repeating-conic-gradient"));
+    let flat = html(0.0, Backdrop::rgb(255, 0, 0));
+    assert!(
+        flat.contains(slot) && flat.contains("rgba(255, 0, 0, 1)"),
+        "{flat}"
+    );
 }

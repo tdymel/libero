@@ -2,7 +2,10 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use crate::samples::SAMPLE_IMAGE;
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, CropRect, CropShape, Flex, ImageCropper, ImageCropperPart, Text},
+    components::{
+        Backdrop, Box, Code, CropRect, CropShape, Flex, ImageCropper, ImageCropperControls,
+        ImageCropperPart, Text,
+    },
     sx::sx,
 };
 
@@ -62,9 +65,15 @@ pub fn ImageCropperPage() -> Element {
                     prop("pan", "bool")
                         .default("false")
                         .doc("Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch, the wheel or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image."),
-                    prop("controls", "bool")
-                        .default("true")
-                        .doc("`false` hides the buttons under the image, and with `pan` the zoom bar, from sight only: they show again while focus is inside them, so a keyboard and a screen reader keep them. The box's keys stay."),
+                    prop("controls", "ImageCropperControls")
+                        .default("Shown")
+                        .doc("The buttons under the image, and with `pan` the zoom bar. `HiddenUntilFocus` (what `false` converts to) hides them from sight only: they show again while focus is inside them, so a keyboard and a screen reader keep them. `None` removes them; the box's keys stay."),
+                    prop("overhang", "f64")
+                        .default("0.0")
+                        .doc("How far the box may reach past each side of the picture, a fraction of its size, 0 to 1: room to centre a logo or zoom out on a square. The cropper reserves that room round the picture and draws `backdrop` in it; `value` leaves 0 to 1 by as much."),
+                    prop("backdrop", "Backdrop")
+                        .default("Checkerboard")
+                        .doc("What shows past the picture's edge, and behind its see-through pixels: a `Checkerboard` or a flat `Color` (`Backdrop::rgb(255, 255, 255)`). A flat colour is also what the cut paints there; a checkerboard leaves it transparent."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Dims the cropper and takes no input."),
@@ -75,6 +84,7 @@ pub fn ImageCropperPage() -> Element {
                 ])
                 .parts("ImageCropperPart", vec![
                     (ImageCropperPart::Image, "The image."),
+                    (ImageCropperPart::Backdrop, "The checkerboard or colour behind the picture and its overhang; drawn with an `overhang` or a flat colour."),
                     (ImageCropperPart::Mask, "The dimmed image outside the box; a drag on it moves the box."),
                     (ImageCropperPart::Box, "The crop box, a tab stop."),
                     (ImageCropperPart::Frame, "Over the box: takes its drags and holds the handles."),
@@ -95,6 +105,24 @@ pub fn ImageCropperPage() -> Element {
                     prop("pan", "bool").default("false").doc("As `pan` above."),
                     prop("max_size", "Option<u32>")
                         .doc("Scales the crop down so its longer side is at most this many pixels."),
+                    prop("overhang", "f64").default("0.0").doc("As `overhang` above."),
+                    prop("backdrop", "Backdrop").default("Checkerboard").doc("As `backdrop` above; also what fills the cut past the picture."),
+                ])
+                .without_base_props(),
+                props("CropEvent", vec![
+                    prop("rect", "CropRect").doc("The box the `FileField` crop dialog applied."),
+                    prop("original", "FileData").doc("The file as picked, before the cut."),
+                ])
+                .without_base_props(),
+                props("libero::platform::image", vec![
+                    prop("file_from_bytes(name, content_type, bytes)", "Option<FileData>")
+                        .doc("The bytes as a file a form can post. `None` where no page holds files: a server render, Blitz."),
+                    prop("crop_image(file, rect, max_size, backdrop).await", "Option<FileData>")
+                        .doc("The file cut to a `CropRect`, past the picture's edge too, filled by `backdrop`; the longer side scaled down to `max_size`. A PNG, JPEG or WebP keeps its type, anything else comes back a PNG. `None` where no page can cut it: a server render, so call it from an event."),
+                    prop("on_square(file, margin, backdrop).await", "Option<FileData>")
+                        .doc("The picture centred on a square canvas, `margin` of its longer side free on every side, the rest `backdrop`."),
+                    prop("has_transparency(file).await", "Option<bool>")
+                        .doc("Whether any pixel is not fully opaque; `None` when the picture would not decode."),
                 ])
                 .without_base_props(),
             ],
@@ -112,7 +140,7 @@ pub fn ImageCropperPage() -> Element {
                     "On a touch screen a finger on the image, on the box or beside it, drags the box without scrolling the page; a disabled cropper lets the page scroll. Two fingers pinch the box larger or smaller around its centre; so do Ctrl or Cmd with the mouse wheel and a trackpad pinch over the image. A plain wheel scrolls the page.",
                     "With `pan` the whole cropper takes touches: one finger pans the image, two zoom it around their midpoint. The mouse wheel and a trackpad pinch zoom it around the pointer. Its value adds the zoom: \"40% by 80%, at 30%, 10%, zoom 100%\".",
                     "With `pan` a slider named \"Zoom\" under the image zooms around the box's centre, by one pointer or its keys, so no pinch is needed (WCAG 2.5.1). Every step zooms by the same factor. Its value is the zoom, \"100%\", the same number the box says. Minus and plus glyphs, hidden from assistive tech, mark its ends; a press on one zooms a step, as - and + do, and leaves focus where it is. One that would change nothing dims.",
-                    "Under the image a group named \"Crop area controls\" holds buttons for every drag (WCAG 2.5.7): \"Move left\", \"Move up\", \"Move down\" and \"Move right\" move the box 5% of the image, with `pan` the image under it; \"Smaller\" and \"Larger\" scale the box around its centre, without `pan`. A button whose press would leave the box as it is, such as \"Move left\" at the left edge, is `aria-disabled` and stays focusable. With `controls: false` the buttons and the zoom bar stay out of sight until focus reaches them.",
+                    "Under the image a group named \"Crop area controls\" holds buttons for every drag (WCAG 2.5.7): \"Move left\", \"Move up\", \"Move down\" and \"Move right\" move the box 5% of the image, with `pan` the image under it; \"Smaller\" and \"Larger\" scale the box around its centre, without `pan`. A button whose press would leave the box as it is, such as \"Move left\" at the left edge, is `aria-disabled` and stays focusable. With `controls: false` the buttons and the zoom bar stay out of sight until focus reaches them; with `ImageCropperControls::None` they are gone and only the keys remain.",
                     "With an `aspect`, a corner key resizes both sides together.",
                     "The box and the corners describe their keys.",
                 ])
@@ -126,6 +154,7 @@ pub fn ImageCropperPage() -> Element {
                     "A screen reader hears where the box is, not what it shows.",
                     "Under Blitz a `FileField` with `crop` passes an AVIF through uncropped, with no dialog.",
                     "Under Blitz a cut WebP is lossless, so it can be larger than the browser's lossy one.",
+                    "The overhang is room round the picture, so it takes layout space the picture's own size does not: a picture fills the container less by that much.",
                 ]),
             lead: rsx! {
                 Text {
@@ -176,8 +205,31 @@ pub fn ImageCropperPage() -> Element {
                             "circle" => vec!["shape: CropShape::Circle".to_string()],
                             _ => vec![],
                         }),
+                    Control::toggle("overhang", ["none", "25", "50"])
+                        .labels(["None", "25%", "50%"])
+                        .default("25")
+                        .code(|_, values| match values.str("overhang").as_str() {
+                            "25" => vec!["overhang: 0.25".to_string()],
+                            "50" => vec!["overhang: 0.5".to_string()],
+                            _ => vec![],
+                        }),
+                    Control::toggle("backdrop", ["checkerboard", "white", "dark"])
+                        .labels(["Checkerboard", "White", "Dark"])
+                        .default("checkerboard")
+                        .code(|_, values| match values.str("backdrop").as_str() {
+                            "white" => vec!["backdrop: Backdrop::rgb(255, 255, 255)".to_string()],
+                            "dark" => vec!["backdrop: Backdrop::rgb(34, 36, 40)".to_string()],
+                            _ => vec![],
+                        }),
+                    Control::toggle("controls", ["shown", "hidden", "none"])
+                        .labels(["Shown", "Hidden until focus", "None"])
+                        .default("shown")
+                        .code(|_, values| match values.str("controls").as_str() {
+                            "hidden" => vec!["controls: false".to_string()],
+                            "none" => vec!["controls: ImageCropperControls::None".to_string()],
+                            _ => vec![],
+                        }),
                     Control::switch("pan"),
-                    Control::switch("controls").default("true"),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -215,7 +267,21 @@ fn ImageCropperDemo(values: DemoValues) -> Element {
                     _ => CropShape::Rect,
                 },
                 pan: values.str("pan") == "true",
-                controls: values.str("controls") != "false",
+                controls: match values.str("controls").as_str() {
+                    "hidden" => ImageCropperControls::HiddenUntilFocus,
+                    "none" => ImageCropperControls::None,
+                    _ => ImageCropperControls::Shown,
+                },
+                overhang: match values.str("overhang").as_str() {
+                    "25" => 0.25,
+                    "50" => 0.5,
+                    _ => 0.0,
+                },
+                backdrop: match values.str("backdrop").as_str() {
+                    "white" => Backdrop::rgb(255, 255, 255),
+                    "dark" => Backdrop::rgb(34, 36, 40),
+                    _ => Backdrop::Checkerboard,
+                },
                 disabled: values.str("disabled") == "true",
                 value: rect,
                 onchange: move |next: CropRect| crop.set(Some((key.clone(), next))),

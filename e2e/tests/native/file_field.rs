@@ -6,7 +6,7 @@ use dioxus::CapturedError;
 use dioxus::html::{FileData, NativeFileData, bytes::Bytes};
 use dioxus::prelude::*;
 use e2e::native::{Key, mount};
-use libero::components::{CropOptions, CropRect, FileField, FileTriggerArgs, Files};
+use libero::components::{CropEvent, CropOptions, FileField, FileTriggerArgs, Files};
 use libero::platform::fake_file_dialog;
 
 struct FakeFile(&'static str);
@@ -175,7 +175,8 @@ fn cropping() -> Element {
             accept: "image/*",
             crop: CropOptions { aspect: Some(1.0), max_size: Some(16), ..CropOptions::default() },
             value: files(),
-            oncrop: move |crop: CropRect| {
+            oncrop: move |event: CropEvent| {
+                let crop = event.rect;
                 let percent = |fraction: f64| (fraction * 100.0).round();
                 rect.set(format!(
                     "{},{},{},{}",

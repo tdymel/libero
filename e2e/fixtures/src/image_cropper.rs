@@ -4,10 +4,16 @@
 //! `/broken` has a `src` that fails, `#error` counts its `onerror` calls.
 //! `/start` is free and unset, as the docs demo starts (1343). `/pan` is
 //! square, unset and in pan mode (1368). `/bare` is free and pan with
-//! `controls: false` (2112).
+//! `controls: false` (2112). `/overhang` has a 0.25 overhang on white and a cropper
+//! with `ImageCropperControls::None` (free_ball). `/helpers` runs `platform::image`'s
+//! helpers on two 2 x 1 pictures.
 
 use dioxus::prelude::*;
-use libero::components::{Button, CropRect, CropShape, Flex, ImageCropper};
+use dioxus::html::FileData;
+use libero::{
+    components::{Button, CropRect, CropShape, Flex, ImageCropper, ImageCropperControls},
+    platform::image::{Backdrop, crop_image, file_from_bytes, has_transparency, on_square},
+};
 
 use crate::Routes;
 
@@ -24,6 +30,8 @@ pub const ROUTES: Routes = &[
     ("/image-cropper/start", || rsx! { StartCropperPage {} }),
     ("/image-cropper/pan", || rsx! { PanCropperPage {} }),
     ("/image-cropper/bare", || rsx! { BareCropperPage {} }),
+    ("/image-cropper/overhang", || rsx! { OverhangCropperPage {} }),
+    ("/image-cropper/helpers", || rsx! { HelpersPage {} }),
 ];
 
 const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23339af0'/%3E%3Ccircle cx='200' cy='100' r='60' fill='%23ffd43b'/%3E%3C/svg%3E";
@@ -229,6 +237,91 @@ fn BareCropperPage() -> Element {
                 controls: false,
                 onchange: |_: CropRect| {},
             }
+        }
+    }
+}
+
+#[component]
+fn OverhangCropperPage() -> Element {
+    let mut crop = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            ImageCropper {
+                id: "over",
+                src: PICTURE,
+                alt: "A sun on blue",
+                overhang: 0.25,
+                backdrop: Backdrop::rgb(255, 255, 255),
+                onchange: move |next| crop.set(reading(next)),
+            }
+            p { id: "crop", "{crop}" }
+            ImageCropper {
+                id: "none",
+                src: PICTURE,
+                alt: "A sun on blue, without buttons",
+                controls: ImageCropperControls::None,
+                onchange: |_: CropRect| {},
+            }
+        }
+    }
+}
+
+/// A 2 x 1 RGBA PNG whose left pixel is see-through, and a 2 x 1 RGB one.
+const SEE_THROUGH: &[u8] = &[
+    137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 2, 0, 0, 0, 1, 8, 6, 0, 0,
+    0, 244, 34, 127, 138, 0, 0, 0, 15, 73, 68, 65, 84, 120, 156, 99, 248, 207, 0, 2, 255, 255, 3, 0,
+    10, 254, 2, 254, 95, 45, 130, 53, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
+];
+const OPAQUE: &[u8] = &[
+    137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 2, 0, 0, 0, 1, 8, 2, 0, 0,
+    0, 123, 64, 232, 221, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 207, 0, 4, 255, 1, 7, 0, 1,
+    255, 226, 35, 158, 89, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
+];
+
+/// A PNG's size from its IHDR, big-endian from byte 16.
+async fn size(file: Option<FileData>) -> String {
+    let Some(file) = file else {
+        return "none".to_string();
+    };
+    let bytes = file.read_bytes().await.unwrap_or_default();
+    let at = |from: usize| {
+        bytes
+            .get(from..from + 4)
+            .map_or(0, |b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+    };
+    format!("{}x{}", at(16), at(20))
+}
+
+#[component]
+fn HelpersPage() -> Element {
+    let mut out = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            Button {
+                id: "run",
+                onclick: move |_| {
+                    spawn(async move {
+                        let see = file_from_bytes("see.png", "image/png", SEE_THROUGH.to_vec());
+                        let flat = file_from_bytes("flat.png", "image/png", OPAQUE.to_vec());
+                        let (Some(see), Some(flat)) = (see, flat) else {
+                            out.set("no files".to_string());
+                            return;
+                        };
+                        let rect = CropRect { x: -0.5, y: 0.0, width: 2.0, height: 1.0 };
+                        out.set(format!(
+                            "{:?} {:?} {} {}",
+                            has_transparency(&see).await,
+                            has_transparency(&flat).await,
+                            size(on_square(&flat, 0.5, Backdrop::default()).await).await,
+                            size(crop_image(&flat, rect, None, Backdrop::rgb(255, 255, 255)).await).await,
+                        ));
+                    });
+                },
+                "Run"
+            }
+            p { id: "helpers", "{out}" }
         }
     }
 }

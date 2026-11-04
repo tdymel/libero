@@ -10,7 +10,7 @@ mod swatches;
 
 pub use alpha_slider::{AlphaSlider, AlphaSliderProps};
 pub use color_code::{ColorCode, ParseColorError};
-pub use color_field::{ColorField, ColorFieldProps};
+pub use color_field::{ColorField, ColorFieldProps, ColorFieldVariant};
 pub use color_picker::{ColorFormat, ColorPicker, ColorPickerPart, ColorPickerProps};
 pub use color_slider::ColorSliderPart;
 pub use color_swatch::{ColorSwatch, ColorSwatchProps};

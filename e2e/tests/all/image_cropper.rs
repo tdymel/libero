@@ -439,6 +439,8 @@ async fn a_picked_image_is_cropped<D: Driver>(d: &mut D, _route: &str) -> Result
     d.click(apply).await?;
     eventually_text(d, "#rect", "30,10,40,80", "Apply").await?;
     eventually_text(d, "#out", "e2e-crop-picked.png image/png 16x16", "the crop").await?;
+    // `oncrop` also hands over the file as picked, not the cut.
+    eventually_text(d, "#original", "e2e-crop-picked.png 40x20", "the original").await?;
     eventually(d, "the dialog to close", async |d| {
         Ok(!d.exists("[role=dialog]").await?)
     })
@@ -503,6 +505,79 @@ e2e::scenario!(
     hidden_controls_show_on_focus,
     "/image-cropper/bare",
     hidden_controls_show_on_focus
+);
+
+/// An `overhang` draws the backdrop past the picture on every side and lets the box travel
+/// into it; `ImageCropperControls::None` leaves no buttons, the box keeps its keys.
+async fn an_overhang_lets_the_box_leave_the_picture<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    eventually(d, "the backdrop to be drawn", async |d| {
+        d.exists("#over [data-slot=backdrop]").await
+    })
+    .await?;
+    let (image, backdrop) = (
+        d.rect("#over [data-slot=image]").await?,
+        d.rect("#over [data-slot=backdrop]").await?,
+    );
+    let grown = |outer: f64, inner: f64| (outer - inner * 1.5).abs() <= 2.0;
+    anyhow::ensure!(
+        grown(backdrop.width, image.width) && grown(backdrop.height, image.height),
+        "the backdrop is {}x{} round a {}x{} picture",
+        backdrop.width,
+        backdrop.height,
+        image.width,
+        image.height
+    );
+    anyhow::ensure!(
+        (image.x - backdrop.x - 0.25 * image.width).abs() <= 2.0,
+        "the backdrop does not reach a quarter past the picture's left edge"
+    );
+    // End takes the box as far right as the room goes: 80% wide, ending 25% past the edge.
+    d.focus("#over [data-slot=box]").await?;
+    d.press(keyboard::END).await?;
+    eventually_text(d, "#crop", "45,10,80,80", "End").await?;
+    let reach = d.rect("#over [data-slot=box]").await?;
+    anyhow::ensure!(
+        reach.x + reach.width > image.x + image.width + 0.2 * image.width,
+        "the box ends at {}, inside the picture ending at {}",
+        reach.x + reach.width,
+        image.x + image.width
+    );
+    anyhow::ensure!(
+        !d.exists("#none [data-slot=controls]").await?,
+        "controls: None left the buttons"
+    );
+    anyhow::ensure!(
+        d.exists("#none [data-slot=box]").await?,
+        "controls: None removed the box"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    an_overhang_lets_the_box_leave_the_picture,
+    "/image-cropper/overhang",
+    an_overhang_lets_the_box_leave_the_picture
+);
+
+/// `platform::image`: a file from bytes, a see-through probe, a square pad and a cut past the edge.
+async fn the_image_helpers_cut_and_probe_files<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#run").await?;
+    eventually_text(
+        d,
+        "#helpers",
+        "Some(true) Some(false) 4x4 4x1",
+        "the helpers",
+    )
+    .await
+}
+
+e2e::scenario!(
+    the_image_helpers_cut_and_probe_files,
+    "/image-cropper/helpers",
+    the_image_helpers_cut_and_probe_files
 );
 
 /// A disabled cropper shows no move or resize cursor over the box and its handles.

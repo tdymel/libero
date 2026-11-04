@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, CropOptions, CropRect, FileField, FileRejection, FileTriggerArgs, Files, Flex, Form,
+    Button, CropEvent, CropOptions, FileField, FileRejection, FileTriggerArgs, Files, Flex, Form,
     SelectionArgs, use_form,
 };
 
@@ -211,6 +211,7 @@ fn FileCropPage() -> Element {
     let mut files = use_signal(Files::default);
     let mut rect = use_signal(String::new);
     let mut out = use_signal(String::new);
+    let mut original = use_signal(String::new);
     let mut stubbed = use_signal(|| false);
 
     rsx! {
@@ -230,7 +231,16 @@ fn FileCropPage() -> Element {
                 accept: "image/*",
                 crop: CropOptions { aspect: Some(1.0), max_size: Some(16), ..CropOptions::default() },
                 value: files(),
-                oncrop: move |crop: CropRect| {
+                oncrop: move |event: CropEvent| {
+                    let crop = event.rect;
+                    let picked = event.original;
+                    spawn(async move {
+                        let bytes = picked.read_bytes().await.unwrap_or_default();
+                        let size = |at: usize| {
+                            bytes.get(at..at + 4).map_or(0, |b| u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+                        };
+                        original.set(format!("{} {}x{}", picked.name(), size(16), size(20)));
+                    });
                     let percent = |fraction: f64| (fraction * 100.0).round();
                     rect.set(format!(
                         "{},{},{},{}",
@@ -262,6 +272,7 @@ fn FileCropPage() -> Element {
             }
             p { id: "stubbed", "{stubbed}" }
             p { id: "rect", "{rect}" }
+            p { id: "original", "{original}" }
             p { id: "out", "{out}" }
         }
     }

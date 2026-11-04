@@ -134,7 +134,13 @@ pub(crate) use fullscreen::{FullscreenApi, FullscreenSubscription, fullscreen};
 pub(crate) use geolocation::{Fix, GeolocationSubscription, geolocation};
 pub use geolocation::{GeolocationError, GeolocationOptions, Position};
 pub(crate) use http::fetch_text;
-pub(crate) use image_crop::{data_url, image_crop};
+pub(crate) use image_crop::{Cut, data_url, image_crop};
+
+/// Pictures as files: cut, pad onto a square, probe for see-through pixels, build from bytes.
+pub mod image {
+    pub use super::capture::file_from_bytes;
+    pub use super::image_crop::{Backdrop, crop_image, has_transparency, on_square};
+}
 #[cfg(test)]
 pub(crate) use indexed_db::{IndexedDbApi, MemoryIndexedDb, fake_indexed_db};
 pub(crate) use indexed_db::{Op, indexed_db};

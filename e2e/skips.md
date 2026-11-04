@@ -1,6 +1,6 @@
 # Skipped e2e scenarios
 
-Scenarios: 767
+Scenarios: 770
 
 Generated from the `scenario!` skips in `e2e/tests/all` by `cargo test -p e2e --lib skips`; edit the skip, not this file. A reason starting `upstream:` waits on Dioxus, Blitz, wry or the engine (revisit on their update, todo 3362), a number names the todo that removes it.
 
@@ -34,6 +34,9 @@ The performance scenarios (units `perf`, `table_perf`) are no skips but run on r
 | `carousel_autoplay::tab_from_pause_within_the_carousel` | web | tab_from_pause_to_the_track_is_no_new_entry is the web's arm |
 | `cascader::a_disabled_cascader_row_looks_disabled` | ios | a touch screen has no hover |
 | `cascader_phone::android_back_closes_a_cascader` | all but android | 1275: no Back key off Android |
+| `color_field::a_swatch_color_field_opens_the_dialog_and_gets_focus_back` | android | 958: element identity on the WebView |
+| `color_field::a_swatch_color_field_opens_the_dialog_and_gets_focus_back` | desktop | 958: element identity on the WebView |
+| `color_field::a_swatch_color_field_opens_the_dialog_and_gets_focus_back` | ios | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | android | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | desktop | 958: element identity on the WebView |
 | `color_field::arrow_down_enters_the_colour_dialog_and_escape_returns` | ios | 958: element identity on the WebView |

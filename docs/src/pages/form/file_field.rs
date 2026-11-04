@@ -209,9 +209,9 @@ pub fn FileFieldPage() -> Element {
                         .default("false")
                         .doc("Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that."),
                     prop("crop", "CropOptions")
-                        .doc("A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. `CropOptions` sets `aspect`, `shape`, `pan` and `max_size`, as on `ImageCropper`. Needs the `image-cropper` feature: without it the file passes uncropped, with a warning in a debug build."),
-                    prop("oncrop", "EventHandler<CropRect>")
-                        .doc("The box picked in the crop dialog, before the cut file reaches `onchange`."),
+                        .doc("A single picked or dropped image opens in an `ImageCropper` dialog first, its box centred at 80% of the largest `aspect` allows: Apply hands `onchange` the cut file, Cancel drops it. A crop that fails keeps the dialog open on an error and hands over nothing. Under Blitz an AVIF passes through uncropped, and a WebP is cut lossless, so it can be larger than on the web. Ignored on a `multiple` field. `CropOptions` sets `aspect`, `shape`, `pan`, `max_size`, `overhang` and `backdrop`, as on `ImageCropper`. Needs the `image-cropper` feature: without it the file passes uncropped, with a warning in a debug build."),
+                    prop("oncrop", "EventHandler<CropEvent>")
+                        .doc("The box picked in the crop dialog, `event.rect`, and the file as picked, `event.original`, before the cut file reaches `onchange`. Keep the original to crop it again, or to upload it beside the cut."),
                     prop("selection","Callback<SelectionArgs<FileData>, Element>")
                         .default("Chip, file name or card")
                         .doc("Draws one picked file, remove control included. `args.remove` removes it. Unset, a multiple `input` field draws a chip, a single one the file name, and a dropzone a card under its surface."),

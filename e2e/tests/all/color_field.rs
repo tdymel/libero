@@ -581,3 +581,47 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView"),
     ios: skip("958: element identity on the WebView")
 );
+
+/// Todo 5633: the swatch variant opens on a click, Arrow Down enters, Escape returns to the swatch.
+async fn a_swatch_opens_the_dialog_and_gets_focus_back<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    const SWATCH: &str = "button[aria-haspopup=dialog]";
+    if d.exists("input").await? {
+        bail!("the swatch variant draws no text input");
+    }
+    d.click(SWATCH).await?;
+    eventually(d, "a click to open the dialog", async |d| {
+        d.exists("[role=dialog]").await
+    })
+    .await?;
+    if d.attr(SWATCH, "aria-expanded").await?.as_deref() != Some("true") {
+        bail!("the swatch should say it is expanded");
+    }
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, "[role=dialog] *", "ArrowDown").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close the dialog", async |d| {
+        Ok(!d.exists("[role=dialog]").await?)
+    })
+    .await?;
+    eventually_focused(d, SWATCH, "Escape").await?;
+    d.click(SWATCH).await?;
+    d.click("[role=dialog] [data-slot=swatch][aria-label='#fa5252']")
+        .await?;
+    eventually(d, "the picked colour in the readout", async |d| {
+        Ok(d.text("#readout").await? == "#fa5252")
+    })
+    .await?;
+    eventually_focused(d, SWATCH, "a swatch that closes the dialog").await
+}
+
+e2e::scenario!(
+    a_swatch_color_field_opens_the_dialog_and_gets_focus_back,
+    "/color-field/swatch",
+    a_swatch_opens_the_dialog_and_gets_focus_back,
+    android: skip("958: element identity on the WebView"),
+    desktop: skip("958: element identity on the WebView"),
+    ios: skip("958: element identity on the WebView")
+);

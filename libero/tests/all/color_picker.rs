@@ -4,7 +4,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        AlphaSlider, ColorCode, ColorField, ColorPicker, ColorSwatch, HueSlider, Swatches,
+        AlphaSlider, ColorCode, ColorField, ColorFieldVariant, ColorPicker, ColorSwatch, HueSlider,
+        Swatches,
     },
 };
 
@@ -276,4 +277,80 @@ fn a_closed_color_field_is_a_combobox_over_a_dialog() {
     assert_eq!(input["aria-haspopup"], "dialog");
     assert_eq!(input["aria-expanded"], "false");
     assert!(!input.contains_key("aria-controls"), "{html}");
+}
+
+/// Todo 5633: a gradient paints the swatch, while `color` still picks the mark's black or white.
+#[test]
+fn a_swatch_background_replaces_the_painted_colour() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorSwatch {
+                    color: ColorCode::rgba(255, 255, 255, 1.0),
+                    background: "conic-gradient(red, blue)",
+                }
+                ColorSwatch { color: ColorCode::rgba(34, 139, 230, 1.0) }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert_eq!(
+        html.matches("--lsx-color-swatch-fill:conic-gradient(red, blue)")
+            .count(),
+        1,
+        "{html}"
+    );
+    assert!(html.contains("on-light"), "{html}");
+}
+
+/// Todo 5633: the swatch variant has no text input, and its button is the combobox's counterpart.
+#[test]
+fn a_swatch_color_field_is_a_button_over_a_dialog() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorField {
+                    label: "Accent",
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    variant: ColorFieldVariant::Swatch,
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+    let button = attributes_of(&html, "button");
+
+    assert!(tags_with(&html, "<input").is_empty(), "{html}");
+    assert_eq!(button["aria-haspopup"], "dialog");
+    assert_eq!(button["aria-expanded"], "false");
+    assert!(!button.contains_key("aria-controls"), "{html}");
+    assert_eq!(button["aria-labelledby"], format!("{}-label", button["id"]));
+}
+
+/// Todo 5633: without a label the swatch still has a name, and a user `aria-label` wins.
+#[test]
+fn a_swatch_color_field_is_always_named() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorField {
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    variant: ColorFieldVariant::Swatch,
+                }
+                ColorField {
+                    aria_label: "Fill",
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    variant: ColorFieldVariant::Swatch,
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    assert!(html.contains(r#"aria-label="Fill""#), "{html}");
+    assert_eq!(html.matches("aria-label=").count(), 2, "{html}");
 }

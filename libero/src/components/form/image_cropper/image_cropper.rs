@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use pictogram_core::Svg as SvgData;
 use pictogram_icons_lucide as lucide;
 
-use super::crop::{CropRect, CropShape, Grip};
+use super::crop::{Backdrop, CropRect, CropShape, Grip, Reach};
 use crate::{
     components::{
         accessibility::{use_announcer, visually_hidden_absolute_sx},
@@ -37,6 +37,20 @@ const CROP_HEIGHT: CssVar = CssVar::new("--lsx-image-cropper-height");
 const IMAGE_SCALE: CssVar = CssVar::new("--lsx-image-cropper-scale");
 const IMAGE_X: CssVar = CssVar::new("--lsx-image-cropper-image-x");
 const IMAGE_Y: CssVar = CssVar::new("--lsx-image-cropper-image-y");
+/// The overhang as a fraction of the picture, the stage's size over the picture's, and
+/// the picture's corner in the stage (pan mode's transform origin).
+const OVER: CssVar = CssVar::new("--lsx-image-cropper-over");
+const SPAN: CssVar = CssVar::new("--lsx-image-cropper-span");
+const ORIGIN: CssVar = CssVar::new("--lsx-image-cropper-origin");
+/// The room reserved round the picture for the overhang, as padding percentages.
+const ROOM_X: CssVar = CssVar::new("--lsx-image-cropper-room-x");
+const ROOM_Y: CssVar = CssVar::new("--lsx-image-cropper-room-y");
+/// Room under the picture: the padding without a button row, else that row's top margin.
+const ROOM_END: CssVar = CssVar::new("--lsx-image-cropper-room-end");
+const ROOM_BELOW: CssVar = CssVar::new("--lsx-image-cropper-room-below");
+const BACKDROP: CssVar = CssVar::new("--lsx-image-cropper-backdrop");
+/// What shows through a translucent colour, as the colour swatch draws it.
+const CHECKERBOARD: &str = "repeating-conic-gradient(#e9ecef 0% 25%, #ffffff 0% 50%) 50% / 8px 8px";
 
 /// Arrow keys move this far, Shift+arrow ten times as far.
 const KEY_STEP: f64 = 0.01;
@@ -63,6 +77,8 @@ parts_enum! {
     /// [`ImageCropper`]'s inner parts, for its `parts` prop.
     pub enum ImageCropperPart {
         Image = "image" => "& > [data-slot='image']",
+        /// The checkerboard or colour behind the picture, shown with `overhang` or a colour `backdrop`.
+        Backdrop = "backdrop" => "& > [data-slot='backdrop']",
         /// The dimmed image outside the crop; a drag on it moves the box.
         Mask = "mask" => "& > [data-slot='mask'] > *",
         /// The crop box, a tab stop of its own.
@@ -76,6 +92,32 @@ parts_enum! {
         Zoom = "zoom" => "& > [data-slot='zoom']",
         /// The buttons under the image that move and resize the box without a drag.
         Controls = "controls" => "& > [data-slot='controls']",
+    }
+}
+
+/// Whether [`ImageCropper`] shows its buttons and, in pan mode, its zoom bar.
+///
+/// ```rust
+/// # use libero::components::ImageCropperControls;
+/// assert_eq!(ImageCropperControls::from(true), ImageCropperControls::Shown);
+/// assert_eq!(ImageCropperControls::from(false), ImageCropperControls::HiddenUntilFocus);
+/// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum ImageCropperControls {
+    #[default]
+    Shown,
+    /// Out of sight, back while focus is inside them, so a keyboard keeps them.
+    HiddenUntilFocus,
+    /// Not rendered. The box's keys still work.
+    None,
+}
+
+impl From<bool> for ImageCropperControls {
+    fn from(shown: bool) -> Self {
+        match shown {
+            true => Self::Shown,
+            false => Self::HiddenUntilFocus,
+        }
     }
 }
 
@@ -235,11 +277,16 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         .max_width("100%")
         .line_height("0")
         .user_select("none")
+        // The overhang's room, a share of the container's width: the picture fits inside the rest.
+        .box_sizing("border-box")
+        .padding_inline(ROOM_X.value_or("0%"))
+        .padding_top(ROOM_Y.value_or("0%"))
+        .padding_bottom(ROOM_END.value_or("0%"))
         // A finger-sized handle on the image's edge sticks out half its 44px: room for it inside
         // the root, or it widens the page. A clip margin still counts towards the scroll width.
         .media(
             COARSE,
-            sx().box_sizing("border-box").padding_inline("22px"),
+            sx().padding_inline(format!("calc(22px + {})", ROOM_X.value_or("0%"))),
         )
         .selector(
             "& > [data-slot='image']",
@@ -252,6 +299,19 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                 .height("auto")
                 .pointer_events("none"),
         )
+        // The stage: the picture and its overhang, under the image.
+        .selector(
+            "& > [data-slot='backdrop']",
+            sx().grid_area("1 / 1 / 2 / 2")
+                .position("absolute")
+                .left(format!("calc({} * -100%)", OVER.value_or("0")))
+                .top(format!("calc({} * -100%)", OVER.value_or("0")))
+                .width(format!("calc({} * 100%)", SPAN.value_or("1")))
+                .height(format!("calc({} * 100%)", SPAN.value_or("1")))
+                .background(BACKDROP.value())
+                .pointer_events("none")
+                .forced_color_adjust("none"),
+        )
         .selector(
             "& > [data-slot='mask'], & > [data-slot='box'], & > [data-slot='frame']",
             // All four lines: an absolute item's `auto` line is the padding edge.
@@ -261,6 +321,8 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-slot='controls']",
             sx().grid_area("2 / 1")
+                // A share of the picture's width: the overhang's height under the picture.
+                .margin_top(ROOM_BELOW.value_or("0%"))
                 .width("0")
                 .min_width("100%")
                 .display("flex")
@@ -356,6 +418,18 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
             "circle",
             sx().selector("& > [data-slot='mask'] > *", sx().border_radius("50%")),
         )
+        // The dimming reaches over the overhang; the image paints over the backdrop.
+        .when(
+            "backdrop",
+            sx().selector("& > [data-slot='image']", sx().position("relative"))
+                .selector(
+                    "& > [data-slot='mask']",
+                    sx().overflow("visible").with(
+                        "clip-path",
+                        format!("inset(calc({} * -100%))", OVER.value_or("0")),
+                    ),
+                ),
+        )
         // The frame holds still; the image moves under it, and the whole cropper takes touches.
         // A grid row under the image holds the zoom bar, and the box's parts place in the
         // image's cell, so the bar never covers the box (1613).
@@ -372,6 +446,18 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                         IMAGE_Y.value_or("0"),
                         IMAGE_SCALE.value_or("1")
                     )),
+                )
+                // The backdrop moves with the picture, about the picture's corner.
+                .selector(
+                    "& > [data-slot='backdrop']",
+                    sx().with("transform-origin", format!("{0} {0}", ORIGIN.value_or("0")))
+                        .transform(format!(
+                            "translate(calc({} * 100% / {span}), calc({} * 100% / {span})) scale({})",
+                            IMAGE_X.value_or("0"),
+                            IMAGE_Y.value_or("0"),
+                            IMAGE_SCALE.value_or("1"),
+                            span = SPAN.value_or("1")
+                        )),
                 )
                 .selector(
                     "& > [data-slot='frame']",
@@ -507,10 +593,18 @@ base_props! {
         /// The smallest side, a fraction of the image's. Default 0.05, at least 0.001.
         #[props(default)]
         min_size: Option<f64>,
-        /// `false` hides the buttons under the image, and with `pan` the zoom bar, from
-        /// sight only: they show again while focus is inside them. The keys stay.
-        #[props(default = true)]
-        controls: bool,
+        /// The buttons under the image, and with `pan` the zoom bar. `false` is
+        /// [`ImageCropperControls::HiddenUntilFocus`]; `None` removes them, the keys stay.
+        #[props(default, into)]
+        controls: ImageCropperControls,
+        /// How far the box may reach past each side of the picture, a fraction of its size
+        /// (0 to 1): room to centre a logo or zoom out on a square. The cropper reserves
+        /// that room around the picture and draws `backdrop` in it.
+        #[props(default)]
+        overhang: f64,
+        /// What shows past the picture's edge.
+        #[props(default)]
+        backdrop: Backdrop,
         /// Draws the crop, takes no input.
         #[props(default)]
         disabled: bool,
@@ -573,6 +667,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let touched = use_local_state(|| false);
 
     let pan = props.pan;
+    let reach = Reach::new(props.overhang);
     let interactive = !props.disabled && props.onchange.is_some();
     if props.value.is_some() && props.onchange.is_none() && !props.disabled {
         warn("ImageCropper: `value` without `onchange` can never change.");
@@ -701,8 +796,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             let delta = event.delta();
             let (dx, dy) = (delta.x / width, delta.y / height);
             let rect = match pan {
-                true => from.panned(dx, dy),
-                false => from.resized(grip.get(), dx, dy, ratio, min),
+                true => reach.panned(from, dx, dy),
+                false => reach.resized(from, grip.get(), (dx, dy), ratio, min),
             };
             if rect != shown {
                 emit.call(rect);
@@ -817,10 +912,10 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     let rect = match pan {
                         // The image point under the fingers follows them.
                         true if width > 0.0 && height > 0.0 => {
-                            from.zoomed(spread / before, at(was), at(midpoint), min)
+                            reach.zoomed(from, spread / before, at(was), at(midpoint), min)
                         }
                         true => shown,
-                        false => from.scaled(spread / before, min),
+                        false => reach.scaled(from, spread / before, min),
                     };
                     if rect != shown {
                         emit.call(rect);
@@ -857,8 +952,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
 
     // Keys and buttons go where the arrow points: the box in free mode, the picture in pan mode.
     let shift = move |grabbed: Grip, dx: f64, dy: f64| match pan {
-        true => shown.panned(dx, dy),
-        false => shown.resized(grabbed, dx, dy, ratio, min),
+        true => reach.panned(shown, dx, dy),
+        false => reach.resized(shown, grabbed, (dx, dy), ratio, min),
     };
 
     let key = move |grabbed: Grip| {
@@ -879,13 +974,15 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 // APG's large step, vertical as on the colour picker's saturation area.
                 Key::Named(NamedKey::PageUp) => shift(grabbed, 0.0, -KEY_STEP * 10.0),
                 Key::Named(NamedKey::PageDown) => shift(grabbed, 0.0, KEY_STEP * 10.0),
-                Key::Named(NamedKey::Home) => shown.extreme(grabbed, false, pan, ratio, min),
-                Key::Named(NamedKey::End) => shown.extreme(grabbed, true, pan, ratio, min),
+                Key::Named(NamedKey::Home) => {
+                    reach.extreme(shown, grabbed, false, pan, (ratio, min))
+                }
+                Key::Named(NamedKey::End) => reach.extreme(shown, grabbed, true, pan, (ratio, min)),
                 Key::Character(c) if pan && (c == "+" || c == "=") => {
-                    shown.zoomed(ZOOM_STEP, centre, centre, min)
+                    reach.zoomed(shown, ZOOM_STEP, centre, centre, min)
                 }
                 Key::Character(c) if pan && c == "-" => {
-                    shown.zoomed(1.0 / ZOOM_STEP, centre, centre, min)
+                    reach.zoomed(shown, 1.0 / ZOOM_STEP, centre, centre, min)
                 }
                 _ => return,
             };
@@ -917,7 +1014,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         };
         if !pan {
             let base = chained(&wheeled.get());
-            let rect = base.scaled(factor, min);
+            let rect = reach.scaled(base, factor, min);
             wheeled.set(Some((shown, rect)));
             if rect != base {
                 emit.call(rect);
@@ -939,7 +1036,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 (client.x - left) / size.width,
                 (client.y - top) / size.height,
             );
-            let rect = base.zoomed(factor, at, at, min);
+            let rect = reach.zoomed(base, factor, at, at, min);
             wheeled.set(Some((shown, rect)));
             if rect != base {
                 emit.call(rect);
@@ -967,9 +1064,10 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     };
     // Each button's box: one that reads as now is `aria-disabled`, not a silent press (4999).
     let nudge = move |dx: f64, dy: f64| shift(Grip::Move, dx, dy);
-    let resize = move |factor: f64| shown.scaled(factor, min);
-    let zoom = move |factor: f64| shown.zoomed(factor, (0.5, 0.5), (0.5, 0.5), min);
-    let has_controls = props.onchange.is_some();
+    let resize = move |factor: f64| reach.scaled(shown, factor, min);
+    let zoom = move |factor: f64| reach.zoomed(shown, factor, (0.5, 0.5), (0.5, 0.5), min);
+    let (controls, backdrop) = (props.controls, props.backdrop);
+    let has_controls = props.onchange.is_some() && controls != ImageCropperControls::None;
     // Pan mode zooms through its slider instead of the last two.
     let mut buttons = vec![
         (
@@ -1055,8 +1153,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let valuetext = value_text(&words, formats, pan, shown);
     // The zoom at the largest and the smallest crop of this shape.
     let zoom_range = (
-        shown.scaled(f64::MAX, min).image_transform().0,
-        shown.scaled(0.0, min).image_transform().0,
+        reach.scaled(shown, f64::MAX, min).image_transform().0,
+        reach.scaled(shown, 0.0, min).image_transform().0,
     );
     // The box's exact zoom while the slider shows it snapped to `step`, so both say one number.
     let mut exact_zoom = use_hook(|| CopyValue::new(scale));
@@ -1080,6 +1178,41 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             .with(IMAGE_X, image_x.to_string())
             .with(IMAGE_Y, image_y.to_string());
     }
+    let over = reach.get();
+    let backdrop_shown = over > 0.0 || backdrop != Backdrop::Checkerboard;
+    if backdrop_shown {
+        let span = 1.0 + 2.0 * over;
+        let ratio = image_ratio().unwrap_or(1.0);
+        let (room_x, room_y, below) = match pan {
+            true => (0.0, 0.0, 0.0),
+            false => (
+                over / span * 100.0,
+                over / (span * ratio) * 100.0,
+                over / ratio * 100.0,
+            ),
+        };
+        let row = has_controls && controls == ImageCropperControls::Shown;
+        let (room_end, room_below) = match row && !pan {
+            true => (0.0, below),
+            false => (room_y, 0.0),
+        };
+        let fill = match backdrop {
+            Backdrop::Checkerboard => CHECKERBOARD.to_string(),
+            Backdrop::Color([r, g, b, a]) => {
+                let color = format!("rgba({r}, {g}, {b}, {})", f64::from(a) / 255.0);
+                format!("linear-gradient({color}, {color})")
+            }
+        };
+        crop_variables = crop_variables
+            .with(OVER, over.to_string())
+            .with(SPAN, span.to_string())
+            .with(ORIGIN, format!("{}%", over / span * 100.0))
+            .with(ROOM_X, format!("{room_x}%"))
+            .with(ROOM_Y, format!("{room_y}%"))
+            .with(ROOM_END, format!("{room_end}%"))
+            .with(ROOM_BELOW, format!("{room_below}%"))
+            .with(BACKDROP, fill);
+    }
     let crop_variables: Input<Variables> = crop_variables.into();
     let states: Input<States> = props
         .states
@@ -1089,7 +1222,11 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         .with("disabled", props.disabled)
         .with("loading", image_ratio().is_none() && !failed())
         .with("pan", pan)
-        .with("hidden-controls", !props.controls)
+        .with(
+            "hidden-controls",
+            controls == ImageCropperControls::HiddenUntilFocus,
+        )
+        .with("backdrop", backdrop_shown)
         .into();
     let aria_label = props
         .aria_label
@@ -1108,7 +1245,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         let onpointerdown = press(grabbed);
         match corner {
             Some((element, label)) => {
-                let (least, greatest) = shown.range(grabbed, false, ratio, min);
+                let (least, greatest) = reach.range(shown, grabbed, false, (ratio, min));
                 rsx! {
                 div {
                     key: "{grabbed.slot()}",
@@ -1144,7 +1281,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
 
     let onpointerdown_box = press(Grip::Move);
     let onpointerdown_image = onpointerdown_box.clone();
-    let (box_least, box_greatest) = shown.range(Grip::Move, pan, ratio, min);
+    let (box_least, box_greatest) = reach.range(shown, Grip::Move, pan, (ratio, min));
     use_box()
         .framework_sx(&IMAGE_CROPPER_SX)
         .class(&props.class)
@@ -1161,6 +1298,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
+                if backdrop_shown {
+                    div { "data-slot": ImageCropperPart::Backdrop.slot(), "aria-hidden": "true" }
+                }
                 img {
                     "data-slot": ImageCropperPart::Image.slot(),
                     src: own_src,
@@ -1204,7 +1344,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                         div { "data-slot": "move" }
                     }
                     span { id: keys_id(), hidden: true, "{keys}" }
-                    if pan {
+                    if pan && controls != ImageCropperControls::None {
                         div { "data-slot": ImageCropperPart::Zoom.slot(),
                             {zoom_step(IconSlot::Minus, lucide::minus::outlined, zoom(1.0 / ZOOM_STEP))}
                             // On ln(zoom), so every step zooms by the same factor (1476).
@@ -1218,7 +1358,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                                 format: zoom_text,
                                 oninput: move |event: SliderChangeEvent| {
                                     let factor = event.value().exp() / scale;
-                                    let rect = shown.zoomed(factor, (0.5, 0.5), (0.5, 0.5), min);
+                                    let rect = reach.zoomed(shown, factor, (0.5, 0.5), (0.5, 0.5), min);
                                     if rect != shown {
                                         emit.call(rect);
                                     }

@@ -14,6 +14,10 @@ clamps a value out of range, as CSS does, but knows no named colors: `"red"` is
 an error. `ColorCode::hex(0x228be6)` and its siblings build one, and a theme `HexColor` converts into one. It prints as `#rrggbb`, or
 `#rrggbbaa` when translucent, which a `style` accepts.
 
+To open a picker from a text field or from a swatch button, use
+[ColorField](color_field.md): it brings the dropdown, the focus return and
+Escape, and `variant: ColorFieldVariant::Swatch` leaves only the swatch.
+
 ## Usage
 
 ```rust
@@ -95,6 +99,7 @@ fn Demo() -> Element {
 | `color` | `ColorCode` | required | The color. A translucent one shows a checkerboard through. |
 | `size` | `Size` | `md` | Diameter. |
 | `radius` | `ThemeAwareValue` | `xxl` | Corner radius, or any CSS, e.g. `radius: "0"`. Round by default. |
+| `background` | `String` | - | Any CSS `background`, such as a conic gradient for a hue wheel, painted in place of `color`. `color` still decides whether the mark is black or white, so set it to what shows. |
 | `with_shadow` | `bool` | `true` | A faint inner ring, so a color close to the background keeps an edge. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Makes the swatch a `<button>`. |
 | `children` | `Element` | - | Drawn on the color, such as a check mark, in black or white, whichever reads. |

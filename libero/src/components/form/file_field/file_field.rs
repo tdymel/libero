@@ -10,7 +10,7 @@ use crate::{
         common::{Glyph, HtmlTag, Input, ScaleOrCss, States, input_from_str},
         feedback::Loader,
         form::{
-            CropOptions, CropRect, SelectionArgs, field_parts_enum, field_props, slot_icon_size,
+            CropEvent, CropOptions, SelectionArgs, field_parts_enum, field_props, slot_icon_size,
             use_bound, use_edited, use_field, use_noting_chip_announcer,
         },
         layout::{BoxStyle, use_box},
@@ -125,9 +125,9 @@ field_props! {
         /// and without the `image-cropper` feature.
         #[props(default)]
         crop: Option<CropOptions>,
-        /// The crop the dialog applied, before `onchange` gets the cut file.
+        /// The crop the dialog applied and the file as picked, before `onchange` gets the cut file.
         #[props(default)]
-        oncrop: Option<EventHandler<CropRect>>,
+        oncrop: Option<EventHandler<CropEvent>>,
         /// Rules over the files, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Files>,

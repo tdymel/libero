@@ -51,7 +51,9 @@ fn Demo() -> Element {
 | `shape` | `CropShape` | `Rect` | `Circle` masks outside an ellipse, for an avatar. The rect is the same either way. |
 | `min_size` | `f64` | `0.05` | The smallest side, a fraction of the image's. |
 | `pan` | `bool` | `false` | Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch, the wheel or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image. |
-| `controls` | `bool` | `true` | `false` hides the buttons under the image, and with `pan` the zoom bar, from sight only: they show again while focus is inside them, so a keyboard and a screen reader keep them. The box's keys stay. |
+| `controls` | `ImageCropperControls` | `Shown` | The buttons under the image, and with `pan` the zoom bar. `HiddenUntilFocus` (what `false` converts to) hides them from sight only: they show again while focus is inside them, so a keyboard and a screen reader keep them. `None` removes them; the box's keys stay. |
+| `overhang` | `f64` | `0.0` | How far the box may reach past each side of the picture, a fraction of its size, 0 to 1: room to centre a logo or zoom out on a square. The cropper reserves that room round the picture and draws `backdrop` in it; `value` leaves 0 to 1 by as much. |
+| `backdrop` | `Backdrop` | `Checkerboard` | What shows past the picture's edge, and behind its see-through pixels: a `Checkerboard` or a flat `Color` (`Backdrop::rgb(255, 255, 255)`). A flat colour is also what the cut paints there; a checkerboard leaves it transparent. |
 | `disabled` | `bool` | `false` | Dims the cropper and takes no input. |
 | `aria_label` | `String` | - | Names the box; the localization's `image_cropper.label` ("Crop area") when unset. |
 | `onerror` | `EventHandler<()>` | - | Fires when `src` fails to load. The box is not drawn until `src` changes, so the alt text shows. |
@@ -75,6 +77,24 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 | `shape` | `CropShape` | `Rect` | As `shape` above. |
 | `pan` | `bool` | `false` | As `pan` above. |
 | `max_size` | `Option<u32>` | - | Scales the crop down so its longer side is at most this many pixels. |
+| `overhang` | `f64` | `0.0` | As `overhang` above. |
+| `backdrop` | `Backdrop` | `Checkerboard` | As `backdrop` above; also what fills the cut past the picture. |
+
+### `CropEvent`
+
+| Field | Type | Description |
+|---|---|---|
+| `rect` | `CropRect` | The box the `FileField` crop dialog applied. |
+| `original` | `FileData` | The file as picked, before the cut. |
+
+### `libero::platform::image`
+
+| Prop | Type | Description |
+|---|---|---|
+| `file_from_bytes(name, content_type, bytes)` | `Option<FileData>` | The bytes as a file a form can post. `None` where no page holds files: a server render, Blitz. |
+| `crop_image(file, rect, max_size, backdrop).await` | `Option<FileData>` | The file cut to a `CropRect`, past the picture's edge too, filled by `backdrop`; the longer side scaled down to `max_size`. A PNG, JPEG or WebP keeps its type, anything else comes back a PNG. `None` where no page can cut it: a server render, so call it from an event. |
+| `on_square(file, margin, backdrop).await` | `Option<FileData>` | The picture centred on a square canvas, `margin` of its longer side free on every side, the rest `backdrop`. |
+| `has_transparency(file).await` | `Option<bool>` | Whether any pixel is not fully opaque; `None` when the picture would not decode. |
 
 ## Style API
 
@@ -85,6 +105,7 @@ explains how parts work.
 | Part | `data-slot` | Description |
 |---|---|---|
 | `ImageCropperPart::Image` | `image` | The image. |
+| `ImageCropperPart::Backdrop` | `backdrop` | The checkerboard or colour behind the picture and its overhang; drawn with an `overhang` or a flat colour. |
 | `ImageCropperPart::Mask` | `mask` | The dimmed image outside the box; a drag on it moves the box. |
 | `ImageCropperPart::Box` | `box` | The crop box, a tab stop. |
 | `ImageCropperPart::Frame` | `frame` | Over the box: takes its drags and holds the handles. |
@@ -135,7 +156,8 @@ explains how parts work.
   scale the box around its centre, without `pan`. A button whose press would
   leave the box as it is, such as "Move left" at the left edge, is
   `aria-disabled` and stays focusable. With `controls: false` the
-  buttons and the zoom bar stay out of sight until focus reaches them.
+  buttons and the zoom bar stay out of sight until focus reaches them; with
+  `ImageCropperControls::None` they are gone and only the keys remain.
 - With an `aspect`, a corner key resizes both sides together.
 - The box and the corners describe their keys.
 
@@ -158,6 +180,8 @@ reader hears where it sits, such as "50% by 50%, at 25%, 25%".
   no dialog.
 - Under Blitz a cut WebP is lossless, so it can be larger than the browser's
   lossy one.
+- The overhang is room round the picture, so it takes layout space the picture's
+  own size does not: a picture fills the container less by that much.
 
 ## Localization
 
@@ -182,10 +206,12 @@ the image says `load_failed`, one whose cut fails `crop_failed`.
 
 With `pan` the four above place the still box in fractions of the cropper, and
 `--lsx-image-cropper-scale`, `--lsx-image-cropper-image-x` and
-`--lsx-image-cropper-image-y` scale and offset the image under it.
+`--lsx-image-cropper-image-y` scale and offset the image under it. With an
+`overhang` or a flat `backdrop`, `--lsx-image-cropper-over` is the overhang and
+`--lsx-image-cropper-span` the picture and its overhang over the picture.
 
 ## Data attributes
 
-`data-state` on the root carries `circle`, `pan`, `hidden-controls` and `disabled` when they apply. Each
+`data-state` on the root carries `circle`, `pan`, `hidden-controls`, `backdrop` and `disabled` when they apply. Each
 handle is `data-slot="handle"` with `data-grip` one of `n`, `s`, `e`, `w`,
 `ne`, `nw`, `se`, `sw`.

@@ -1,7 +1,9 @@
 //! `ColorField` between two buttons, with the alpha slider and swatches.
 
 use dioxus::prelude::*;
-use libero::components::{Button, ColorCode, ColorField, Flex, SliderChangeEvent, Text};
+use libero::components::{
+    Button, ColorCode, ColorField, ColorFieldVariant, Flex, SliderChangeEvent, Text,
+};
 
 use crate::Routes;
 
@@ -12,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/color-field/recent", || rsx! { RecentFieldPage {} }),
     ("/color-field/recents-only", || rsx! { RecentsOnlyFieldPage {} }),
     ("/color-field/cleared", || rsx! { ClearedFieldPage {} }),
+    ("/color-field/swatch", || rsx! { SwatchVariantPage {} }),
 ];
 
 const SWATCHES: [&str; 3] = ["#fa5252", "#40c057", "#228be6"];
@@ -148,6 +151,28 @@ fn ClearedFieldPage() -> Element {
                 }
                 Button { id: "after", "After" }
             }
+        }
+    }
+}
+
+/// `variant: Swatch` on a hue wheel: a swatch button opens the dropdown (5633).
+#[component]
+fn SwatchVariantPage() -> Element {
+    let mut color = use_signal(|| "#40c057".parse::<ColorCode>().unwrap());
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            ColorField {
+                label: "Background",
+                variant: ColorFieldVariant::Swatch,
+                swatch_background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+                swatches: SWATCHES,
+                value: color(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            }
+            Button { id: "after", "After" }
+            Text { id: "readout", "{color().to_hex()}" }
         }
     }
 }

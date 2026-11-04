@@ -52,6 +52,12 @@ const COLOR_SWATCH: &str = r#"let mut picked = use_signal(|| false);
 ColorSwatch { color: ColorCode::hex(0x228be6), role: "img", aria_label: "Blue" }
 ColorSwatch { color: "rgba(250, 82, 82, 0.4)".parse().unwrap(), role: "img", aria_label: "Translucent red" }
 ColorSwatch {
+    color: ColorCode::hex(0xffffff),
+    background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+    role: "img",
+    aria_label: "Hue wheel",
+}
+ColorSwatch {
     color: ColorCode::hex(0x40c057),
     onclick: move |_| picked.toggle(),
     aria_label: "Green",
@@ -166,6 +172,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("color", "ColorCode").default("required").doc("The color. A translucent one shows a checkerboard through."),
                     prop("size", "Size").default(theme.color_swatch.size.as_str()).doc("Diameter."),
                     prop("radius", "ThemeAwareValue").default(theme.color_swatch.radius.as_str()).doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Round by default."),
+                    prop("background", "String").doc("Any CSS `background`, such as a conic gradient for a hue wheel, painted in place of `color`. `color` still decides whether the mark is black or white, so set it to what shows."),
                     prop("with_shadow", "bool").default("true").doc("A faint inner ring, so a color close to the background keeps an edge."),
                     prop("onclick", "EventHandler<MouseEvent>").doc("Makes the swatch a `<button>`."),
                     prop("children", "Element").doc("Drawn on the color, such as a check mark, in black or white, whichever reads."),
@@ -213,6 +220,13 @@ pub fn ColorPickerPage() -> Element {
                     " when translucent, which a "
                     Code { source: "style" }
                     " accepts."
+                }
+                Text {
+                    "To open a picker from a text field or from a swatch button, use "
+                    Code { source: "ColorField" }
+                    ": it brings the dropdown, the focus return and Escape, and "
+                    Code { source: "variant: ColorFieldVariant::Swatch" }
+                    " leaves only the swatch."
                 }
             },
             Demo {
@@ -342,6 +356,12 @@ fn ColorSwatchPreview() -> Element {
         Flex { direction: "row", gap: "sm", align: "center",
             ColorSwatch { color: ColorCode::hex(0x228be6), role: "img", aria_label: "Blue" }
             ColorSwatch { color: ColorCode::rgba(250, 82, 82, 0.4), role: "img", aria_label: "Translucent red" }
+            ColorSwatch {
+                color: ColorCode::hex(0xffffff),
+                background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+                role: "img",
+                aria_label: "Hue wheel",
+            }
             ColorSwatch {
                 color: ColorCode::hex(0x40c057),
                 onclick: move |_| picked.toggle(),

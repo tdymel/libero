@@ -326,8 +326,15 @@ pub(crate) const DEVICES_SCRIPT: &str = "const devices = navigator.mediaDevices;
         removeEventListener('lsx-capture-granted', list);
     };";
 
-/// `bytes` as a file a form can post, `None` where no page holds files.
-pub(crate) fn file_from_bytes(name: &str, content_type: &str, bytes: Vec<u8>) -> Option<FileData> {
+/// `bytes` as a file a form can post, `None` where no page holds files (a server render, Blitz).
+///
+/// ```rust
+/// # use libero::platform::image::file_from_bytes;
+/// let file = file_from_bytes("logo.png", "image/png", vec![0x89, b'P', b'N', b'G']);
+/// // A browser or WebView returns a file; a server render has none.
+/// # let _ = file;
+/// ```
+pub fn file_from_bytes(name: &str, content_type: &str, bytes: Vec<u8>) -> Option<FileData> {
     #[cfg(target_arch = "wasm32")]
     return super::image_crop::web::bytes_file(
         name,

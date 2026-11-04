@@ -6,6 +6,6 @@ mod image_cropper;
 #[cfg(all(test, feature = "image-cropper"))]
 mod tests;
 
-pub use crop::{CropOptions, CropRect, CropShape, PixelRect};
+pub use crop::{Backdrop, CropEvent, CropOptions, CropRect, CropShape, PixelRect};
 #[cfg(feature = "image-cropper")]
-pub use image_cropper::{ImageCropper, ImageCropperPart, ImageCropperProps};
+pub use image_cropper::{ImageCropper, ImageCropperControls, ImageCropperPart, ImageCropperProps};

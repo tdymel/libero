@@ -9,7 +9,7 @@ use crate::{
     components::{
         buttons::Button,
         feedback::Alert,
-        form::{CropOptions, CropRect, ImageCropper},
+        form::{CropEvent, CropOptions, CropRect, ImageCropper},
         layout::Flex,
         overlay::Dialog,
     },
@@ -59,7 +59,7 @@ pub(super) fn CropGate(
     /// Takes the cut file: it owes the focus after Apply, since a single-file
     /// dropzone puts away the Browse button the dialog would hand it back to.
     cropped: Callback<Files>,
-    oncrop: Option<EventHandler<CropRect>>,
+    oncrop: Option<EventHandler<CropEvent>>,
 ) -> Element {
     let dialog = use_modal(|scope: ModalScope<CropArgs, (CropRect, FileData)>| {
         rsx! {
@@ -83,12 +83,13 @@ pub(super) fn CropGate(
                 .await
                 .ok()
                 .map(|bytes| platform::data_url(&kind, &bytes));
+            let original = file.clone();
             let args = CropArgs { file, src, options };
             let Some((rect, cut)) = dialog.open_with(args).await else {
                 return;
             };
             if let Some(oncrop) = &oncrop {
-                oncrop.call(rect);
+                oncrop.call(CropEvent { rect, original });
             }
             cropped.call(cut.into());
         });
@@ -127,9 +128,13 @@ fn CropDialog(
         crop_failed.set(false);
         let file = file.clone();
         spawn(async move {
-            let fractions = [rect.x, rect.y, rect.width, rect.height];
+            let cut = platform::Cut {
+                max: options.max_size,
+                fill: options.backdrop.fill(),
+                square: None,
+            };
             let cropped = match platform::image_crop() {
-                Some(cropper) => cropper.crop(file, fractions, options.max_size).await,
+                Some(cropper) => cropper.crop(file, rect.into(), cut).await,
                 None => None,
             };
             cropping.set(false);
@@ -150,6 +155,8 @@ fn CropDialog(
                         aspect: options.aspect,
                         shape: options.shape,
                         pan: options.pan,
+                        overhang: options.overhang,
+                        backdrop: options.backdrop,
                         value: rect(),
                         onchange: move |next| rect.set(Some(next)),
                         onerror: move |()| failed.set(true),
