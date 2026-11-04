@@ -133,6 +133,13 @@ impl ThemeSet {
         super::theme_sheet_css(self.light, self.dark)
     }
 
+    /// Every theme of the set: the pair, then the named ones.
+    pub(crate) fn themes(&self) -> impl Iterator<Item = &'static Theme> + '_ {
+        std::iter::once(self.light)
+            .chain(self.dark)
+            .chain(self.extras.iter().map(|(_, theme)| *theme))
+    }
+
     /// Whether `name` is in the pair, which switches by attribute rather than a rebuild.
     pub(crate) fn is_in_pair(&self, name: &str) -> bool {
         name == Self::LIGHT || (name == Self::DARK && self.dark.is_some())

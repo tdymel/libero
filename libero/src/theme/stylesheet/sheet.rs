@@ -133,6 +133,78 @@ pub(crate) fn theme_sheet_css(light: &'static Theme, dark: Option<&'static Theme
     css
 }
 
+/// The attribute [`ThemeScope`](crate::ThemeScope) puts on its box.
+pub(crate) const THEME_SCOPE_ATTRIBUTE: &str = "data-lsx-theme-scope";
+
+/// `theme`'s block under `[data-lsx-theme-scope="name"]`, or `None` if `set` has no such theme.
+/// Holds only the vars another theme of `set` disagrees on, as the pinned blocks do, plus every
+/// `var()`-valued one: those resolve where declared, so the inherited copy keeps the page's ink.
+pub(crate) fn theme_scope_css(set: &ThemeSet, name: &str) -> Option<Rc<str>> {
+    let theme = set.get(name)?;
+    let key: ScopeSheetKey = (
+        name.to_string(),
+        set.themes().map(|other| other as *const Theme).collect(),
+    );
+    let hit = SCOPE_SHEET_CACHE.with_borrow(|cache| {
+        cache
+            .iter()
+            .find(|(cached, _)| *cached == key)
+            .map(|(_, css)| css.clone())
+    });
+    if hit.is_some() {
+        return hit;
+    }
+
+    let others: Vec<Vec<CssDeclaration>> = set
+        .themes()
+        .filter(|other| !std::ptr::eq(*other, theme))
+        .map(theme_declarations)
+        .collect();
+    let others: Vec<HashMap<&str, &str>> = others
+        .iter()
+        .map(|other| {
+            other
+                .iter()
+                .map(|declaration| (declaration.property(), declaration.value()))
+                .collect()
+        })
+        .collect();
+    let mut declarations: Vec<CssDeclaration> = theme_declarations(theme)
+        .into_iter()
+        .filter(|declaration| {
+            declaration.value().contains("var(")
+                || others
+                    .iter()
+                    .any(|other| other.get(declaration.property()) != Some(&declaration.value()))
+        })
+        .collect();
+    declarations.push(CssDeclaration::new(
+        "background-color",
+        NamedColorCss::SURFACE.value(),
+    ));
+    declarations.push(CssDeclaration::new(
+        "color",
+        foreground_var(theme.surface.contrast(), theme_ends(theme)),
+    ));
+    let selector = format!("[{THEME_SCOPE_ATTRIBUTE}=\"{name}\"]");
+    let css: Rc<str> = pair_block(&selector, declarations, theme).into();
+    SCOPE_SHEET_CACHE.with_borrow_mut(|cache| {
+        if cache.len() == THEME_SHEETS {
+            cache.pop_front();
+        }
+        cache.push_back((key, css.clone()));
+    });
+    Some(css)
+}
+
+/// The scope's name and its set's themes, by address.
+type ScopeSheetKey = (String, Vec<*const Theme>);
+
+thread_local! {
+    static SCOPE_SHEET_CACHE: std::cell::RefCell<std::collections::VecDeque<(ScopeSheetKey, Rc<str>)>> =
+        const { std::cell::RefCell::new(std::collections::VecDeque::new()) };
+}
+
 // In `sx`, which `Sx::dark` and `Sx::light` build the same selectors from.
 pub(crate) use crate::sx::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE};
 

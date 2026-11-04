@@ -145,6 +145,14 @@ pub enum IconSlot {
     Filter,
     /// A share button.
     Share,
+    /// An info alert's default icon.
+    Info,
+    /// A success alert's default icon.
+    Success,
+    /// A warning alert's default icon.
+    Warning,
+    /// An error alert's default icon.
+    Error,
 }
 }
 

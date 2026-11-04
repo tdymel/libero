@@ -19,45 +19,54 @@ const GRADIENT: GradientDefaults = GradientDefaults {
     ..GradientDefaults::DEFAULT
 };
 
+// Consts too, so `Theme { .., ..Theme::X }` spreads a preset; the statics are what sets point to.
+impl Theme {
+    /// kettek16, light - derived, not upstream.
+    pub const KETTEK16_LIGHT: Theme = Theme {
+        surface: HexColor::new(0xFFFDD7),
+        ink: HexColor::new(0x090909),
+        neutral: HexColor::new(0x090909),
+        muted: HexColor::new(0x252525),
+        primary: HexColor::new(0x2BA0CC),
+        secondary: HexColor::new(0xEE3377),
+        info: HexColor::new(0x4B96B0),
+        success: HexColor::new(0x009988),
+        error: HexColor::new(0xEE6677),
+        paper: PaperDefaults {
+            background: "#fffbaf",
+            ..PaperDefaults::DEFAULT
+        },
+        code: CodeDefaults::DEFAULT,
+        gradient: GRADIENT,
+        ..Theme::DEFAULT
+    };
+
+    /// kettek16.
+    pub const KETTEK16_DARK: Theme = Theme {
+        surface: HexColor::new(0x090909),
+        ink: HexColor::new(0xFEF638),
+        neutral: HexColor::new(0xFEF638),
+        muted: HexColor::new(0xDDDDDD),
+        primary: HexColor::new(0x33BBEE),
+        secondary: HexColor::new(0xEE3377),
+        info: HexColor::new(0x66CCEE),
+        success: HexColor::new(0x009988),
+        error: HexColor::new(0xEE6677),
+        paper: PaperDefaults {
+            background: "#1d1f21",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        gradient: GRADIENT,
+        ..Theme::DARK
+    };
+}
+
 /// kettek16, light - derived, not upstream.
-pub static KETTEK16_LIGHT: Theme = Theme {
-    surface: HexColor::new(0xFFFDD7),
-    ink: HexColor::new(0x090909),
-    neutral: HexColor::new(0x090909),
-    muted: HexColor::new(0x252525),
-    primary: HexColor::new(0x2BA0CC),
-    secondary: HexColor::new(0xEE3377),
-    info: HexColor::new(0x4B96B0),
-    success: HexColor::new(0x009988),
-    error: HexColor::new(0xEE6677),
-    paper: PaperDefaults {
-        background: "#fffbaf",
-        ..PaperDefaults::DEFAULT
-    },
-    code: CodeDefaults::DEFAULT,
-    gradient: GRADIENT,
-    ..Theme::DEFAULT
-};
+pub static KETTEK16_LIGHT: Theme = Theme::KETTEK16_LIGHT;
 
 /// kettek16.
-pub static KETTEK16_DARK: Theme = Theme {
-    surface: HexColor::new(0x090909),
-    ink: HexColor::new(0xFEF638),
-    neutral: HexColor::new(0xFEF638),
-    muted: HexColor::new(0xDDDDDD),
-    primary: HexColor::new(0x33BBEE),
-    secondary: HexColor::new(0xEE3377),
-    info: HexColor::new(0x66CCEE),
-    success: HexColor::new(0x009988),
-    error: HexColor::new(0xEE6677),
-    paper: PaperDefaults {
-        background: "#1d1f21",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    gradient: GRADIENT,
-    ..Theme::DARK
-};
+pub static KETTEK16_DARK: Theme = Theme::KETTEK16_DARK;
 
 impl ThemeSet {
     /// kettek16: [`KETTEK16_LIGHT`] (derived) paired with [`KETTEK16_DARK`].

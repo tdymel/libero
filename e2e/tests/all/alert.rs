@@ -240,3 +240,32 @@ fn the_icon_centres_on_the_first_line() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5635: a stated severity draws its glyph at the icon size; an unset colour draws none.
+async fn a_stated_severity_draws_its_glyph<D: e2e::driver::Driver>(
+    d: &mut D,
+    _route: &str,
+) -> anyhow::Result<()> {
+    const GLYPH: &str = "#long-title > [data-slot=icon] svg";
+    e2e::driver::eventually(d, "the warning glyph shows", async |d| {
+        d.exists(GLYPH).await
+    })
+    .await?;
+    let glyph = d.rect(GLYPH).await?;
+    anyhow::ensure!(
+        (glyph.width - 20.0).abs() < 1.0,
+        "the glyph takes the 20px icon size: {}",
+        glyph.width
+    );
+    anyhow::ensure!(
+        !d.exists("#dismissible > [data-slot=icon]").await?,
+        "an unset colour stays plain"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_stated_severity_draws_its_glyph_and_an_unset_colour_none,
+    "/alert",
+    a_stated_severity_draws_its_glyph
+);

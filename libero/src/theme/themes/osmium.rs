@@ -9,43 +9,52 @@
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
+// Consts too, so `Theme { .., ..Theme::X }` spreads a preset; the statics are what sets point to.
+impl Theme {
+    /// Osmium, light - derived, not upstream.
+    pub const OSMIUM_LIGHT: Theme = Theme {
+        surface: HexColor::new(0xF4F7FC),
+        ink: HexColor::new(0x14131E),
+        neutral: HexColor::new(0x14131E),
+        muted: HexColor::new(0x54566B),
+        primary: HexColor::new(0x9089C0),
+        secondary: HexColor::new(0xD9A1E8),
+        info: HexColor::new(0x7591B0),
+        success: HexColor::new(0x889666),
+        error: HexColor::new(0xE55376),
+        paper: PaperDefaults {
+            background: "#e9eef9",
+            ..PaperDefaults::DEFAULT
+        },
+        code: CodeDefaults::DEFAULT,
+        ..Theme::DEFAULT
+    };
+
+    /// Osmium.
+    pub const OSMIUM_DARK: Theme = Theme {
+        surface: HexColor::new(0x14131E),
+        ink: HexColor::new(0xC8D5F1),
+        neutral: HexColor::new(0xC8D5F1),
+        muted: HexColor::new(0x949BB9),
+        primary: HexColor::new(0xB0A8EB),
+        secondary: HexColor::new(0xD9A1E8),
+        info: HexColor::new(0x9ABFE8),
+        success: HexColor::new(0xC9DE96),
+        error: HexColor::new(0xE55376),
+        paper: PaperDefaults {
+            background: "#1f1d2d",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        ..Theme::DARK
+    };
+}
+
 /// Osmium, light - derived, not upstream.
-pub static OSMIUM_LIGHT: Theme = Theme {
-    surface: HexColor::new(0xF4F7FC),
-    ink: HexColor::new(0x14131E),
-    neutral: HexColor::new(0x14131E),
-    muted: HexColor::new(0x54566B),
-    primary: HexColor::new(0x9089C0),
-    secondary: HexColor::new(0xD9A1E8),
-    info: HexColor::new(0x7591B0),
-    success: HexColor::new(0x889666),
-    error: HexColor::new(0xE55376),
-    paper: PaperDefaults {
-        background: "#e9eef9",
-        ..PaperDefaults::DEFAULT
-    },
-    code: CodeDefaults::DEFAULT,
-    ..Theme::DEFAULT
-};
+pub static OSMIUM_LIGHT: Theme = Theme::OSMIUM_LIGHT;
 
 /// Osmium.
-pub static OSMIUM_DARK: Theme = Theme {
-    surface: HexColor::new(0x14131E),
-    ink: HexColor::new(0xC8D5F1),
-    neutral: HexColor::new(0xC8D5F1),
-    muted: HexColor::new(0x949BB9),
-    primary: HexColor::new(0xB0A8EB),
-    secondary: HexColor::new(0xD9A1E8),
-    info: HexColor::new(0x9ABFE8),
-    success: HexColor::new(0xC9DE96),
-    error: HexColor::new(0xE55376),
-    paper: PaperDefaults {
-        background: "#1f1d2d",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    ..Theme::DARK
-};
+pub static OSMIUM_DARK: Theme = Theme::OSMIUM_DARK;
 
 impl ThemeSet {
     /// Osmium: [`OSMIUM_LIGHT`] (derived) paired with [`OSMIUM_DARK`].

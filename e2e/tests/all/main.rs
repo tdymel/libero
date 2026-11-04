@@ -188,6 +188,7 @@ mod tags_field;
 mod text_field;
 mod textarea;
 mod theme_defaults;
+mod theme_scope;
 mod theme_switcher;
 mod time_picker;
 mod timeline;

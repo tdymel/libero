@@ -5,43 +5,52 @@
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
+// Consts too, so `Theme { .., ..Theme::X }` spreads a preset; the statics are what sets point to.
+impl Theme {
+    /// Flexoki light: `paper` page, `base-50` card, `black` text.
+    pub const FLEXOKI_LIGHT: Theme = Theme {
+        surface: HexColor::new(0xFFFCF0),
+        ink: HexColor::new(0x100F0F),
+        neutral: HexColor::new(0x100F0F),
+        muted: HexColor::new(0x6F6E69),
+        primary: HexColor::new(0x205EA6),
+        secondary: HexColor::new(0x5E409D),
+        info: HexColor::new(0x24837B),
+        success: HexColor::new(0x66800B),
+        error: HexColor::new(0xAF3029),
+        paper: PaperDefaults {
+            background: "#f2f0e5",
+            ..PaperDefaults::DEFAULT
+        },
+        code: CodeDefaults::DEFAULT,
+        ..Theme::DEFAULT
+    };
+
+    /// Flexoki dark: `black` page, `base-950` card, `base-200` text.
+    pub const FLEXOKI_DARK: Theme = Theme {
+        surface: HexColor::new(0x100F0F),
+        ink: HexColor::new(0xCECDC3),
+        neutral: HexColor::new(0xCECDC3),
+        muted: HexColor::new(0x878580),
+        primary: HexColor::new(0x4385BE),
+        secondary: HexColor::new(0x8B7EC8),
+        info: HexColor::new(0x3AA99F),
+        success: HexColor::new(0x879A39),
+        error: HexColor::new(0xD14D41),
+        paper: PaperDefaults {
+            background: "#1c1b1a",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        ..Theme::DARK
+    };
+}
+
 /// Flexoki light: `paper` page, `base-50` card, `black` text.
-pub static FLEXOKI_LIGHT: Theme = Theme {
-    surface: HexColor::new(0xFFFCF0),
-    ink: HexColor::new(0x100F0F),
-    neutral: HexColor::new(0x100F0F),
-    muted: HexColor::new(0x6F6E69),
-    primary: HexColor::new(0x205EA6),
-    secondary: HexColor::new(0x5E409D),
-    info: HexColor::new(0x24837B),
-    success: HexColor::new(0x66800B),
-    error: HexColor::new(0xAF3029),
-    paper: PaperDefaults {
-        background: "#f2f0e5",
-        ..PaperDefaults::DEFAULT
-    },
-    code: CodeDefaults::DEFAULT,
-    ..Theme::DEFAULT
-};
+pub static FLEXOKI_LIGHT: Theme = Theme::FLEXOKI_LIGHT;
 
 /// Flexoki dark: `black` page, `base-950` card, `base-200` text.
-pub static FLEXOKI_DARK: Theme = Theme {
-    surface: HexColor::new(0x100F0F),
-    ink: HexColor::new(0xCECDC3),
-    neutral: HexColor::new(0xCECDC3),
-    muted: HexColor::new(0x878580),
-    primary: HexColor::new(0x4385BE),
-    secondary: HexColor::new(0x8B7EC8),
-    info: HexColor::new(0x3AA99F),
-    success: HexColor::new(0x879A39),
-    error: HexColor::new(0xD14D41),
-    paper: PaperDefaults {
-        background: "#1c1b1a",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    ..Theme::DARK
-};
+pub static FLEXOKI_DARK: Theme = Theme::FLEXOKI_DARK;
 
 impl ThemeSet {
     /// Flexoki: [`FLEXOKI_LIGHT`] paired with [`FLEXOKI_DARK`].

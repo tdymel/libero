@@ -39,6 +39,7 @@ pub mod utils;
 /// The date types the date and time components hold, re-exported so an app
 /// names the same version.
 pub use chrono;
+pub use components::ThemeScope;
 pub(crate) use context::CssLayer;
 pub use context::{IconProvider, IconSet, IconSlot, LiberoContext, LiberoProvider};
 pub use css::Stylesheet;

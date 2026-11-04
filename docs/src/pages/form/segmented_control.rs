@@ -51,7 +51,7 @@ fn renamed(alignment: Alignment) -> OptionLabel {
 // A segment is a `label`, so its content stays phrasing: `Icon` is a `span`, a `Flex` a `div`.
 fn rich(alignment: Alignment) -> OptionLabel {
     // demo-code: rich start
-    OptionLabel::rich(
+    OptionLabel::with_icon(
         alignment.label(),
         rsx! {
             Icon {
@@ -63,7 +63,6 @@ fn rich(alignment: Alignment) -> OptionLabel {
                     Alignment::Right => rsx! { Pictogram { icon: lucide::text_align_end::outlined } },
                 }
             }
-            "{alignment.label()}"
         },
     )
     // demo-code: rich end
@@ -98,7 +97,7 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
-                        .doc("Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = \"..\")]` renames one at the type."),
+                        .doc("Renames a segment, or draws it with `OptionLabel::with_icon` or `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = \"..\")]` renames one at the type."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("A row or a column."),

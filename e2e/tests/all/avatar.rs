@@ -195,3 +195,39 @@ fn the_group_ring_shows_in_forced_colours() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5630: an `overhang` picture spills past the unclipped root, 10% per side.
+async fn the_picture_overhangs<D: e2e::driver::Driver>(
+    d: &mut D,
+    _route: &str,
+) -> anyhow::Result<()> {
+    const IMAGE: &str = "#overhang > [data-slot=image]";
+    e2e::driver::eventually(d, "the overhanging picture shows", async |d| {
+        d.exists(IMAGE).await
+    })
+    .await?;
+    let overflow = d.style("#overhang", "overflow").await?;
+    anyhow::ensure!(
+        overflow.starts_with("visible"),
+        "the root stops clipping: {overflow}"
+    );
+    let side = d.rect("#overhang").await?;
+    // A data URL decodes after mount on Blitz, so the box settles later.
+    e2e::driver::eventually(
+        d,
+        "the picture is 120% of the side, 10% past each edge",
+        async |d| {
+            let image = d.rect(IMAGE).await?;
+            Ok((image.width - side.width * 1.2).abs() < 1.0
+                && (side.x - image.x - side.width * 0.1).abs() < 1.0)
+        },
+    )
+    .await?;
+    Ok(())
+}
+
+e2e::scenario!(
+    an_overhanging_picture_spills_past_the_edge,
+    "/avatar-overhang",
+    the_picture_overhangs
+);

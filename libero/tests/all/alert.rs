@@ -299,3 +299,85 @@ fn a_filled_alert_rings_its_children_in_its_text_colour() {
     assert!(!own.contains("--lsx-focus-contrast:"), "{own}");
     assert!(!own.contains("--lsx-focus-ring-halo:"), "{own}");
 }
+
+/// Whether the alert draws its leading icon slot.
+fn has_icon(app: fn() -> Element) -> bool {
+    body(&render(app)).contains(r#"data-slot="icon""#)
+}
+
+/// Todo 5635: a severity `color` the call site sets draws its glyph; the theme's default does not.
+#[test]
+fn a_stated_severity_draws_its_glyph() {
+    fn error() -> Element {
+        rsx! { LiberoProvider { Alert { color: "error", "Payment failed" } } }
+    }
+    fn success() -> Element {
+        rsx! { LiberoProvider { Alert { color: "success", "Saved" } } }
+    }
+    fn unset() -> Element {
+        rsx! { LiberoProvider { Alert { "A note" } } }
+    }
+    fn brand() -> Element {
+        rsx! { LiberoProvider { Alert { color: "primary", "A note" } } }
+    }
+    assert!(has_icon(error));
+    assert!(has_icon(success));
+    assert!(!has_icon(unset), "an unset colour stays plain");
+    assert!(!has_icon(brand), "no glyph for a non-severity colour");
+}
+
+#[test]
+fn with_icon_opts_out_or_forces_the_glyph() {
+    fn opted_out() -> Element {
+        rsx! { LiberoProvider { Alert { color: "error", with_icon: false, "Payment failed" } } }
+    }
+    fn forced() -> Element {
+        rsx! { LiberoProvider { Alert { with_icon: true, "A note" } } }
+    }
+    assert!(!has_icon(opted_out));
+    assert!(has_icon(forced), "the theme's info colour, forced");
+}
+
+static PLAIN: libero::theme::Theme = libero::theme::Theme {
+    alert: libero::theme::AlertDefaults {
+        severity_icons: false,
+        ..libero::theme::Theme::DEFAULT.alert
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+#[test]
+fn the_theme_switch_turns_the_glyphs_off() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { themes: &PLAIN, Alert { color: "error", "Payment failed" } } }
+    }
+    assert!(!has_icon(app));
+}
+
+/// A caller's `icon` wins, and an `IconProvider` swaps the severity glyph.
+#[test]
+fn an_own_icon_or_a_provider_replaces_the_glyph() {
+    fn own() -> Element {
+        rsx! { LiberoProvider { Alert { color: "error", icon: rsx! { b { "own" } }, "Payment failed" } } }
+    }
+    fn plain() -> Element {
+        rsx! { LiberoProvider { Alert { color: "error", "Payment failed" } } }
+    }
+    fn swapped() -> Element {
+        rsx! {
+            LiberoProvider {
+                libero::IconProvider {
+                    icons: libero::IconSet::new()
+                        .with(libero::IconSlot::Error, pictogram_icons_lucide::circle_x::outlined),
+                    Alert { color: "error", "Payment failed" }
+                }
+            }
+        }
+    }
+    let own = body(&render(own));
+    assert!(
+        own.contains(r#"aria-hidden="true" data-slot="icon"><b>own</b>"#),
+        "{own}"
+    );
+    assert_ne!(body(&render(plain)), body(&render(swapped)));
+}

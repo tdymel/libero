@@ -91,6 +91,10 @@ icon_set!(lucide: [outlined => lucide_outlined] {
     More => ellipsis_vertical,
     Filter => funnel,
     Share => share_2,
+    Info => info,
+    Success => circle_check,
+    Warning => triangle_alert,
+    Error => circle_alert,
 });
 
 #[cfg(feature = "icons-material")]
@@ -156,6 +160,10 @@ icon_set!(material: [
     More => navigation_more_vert,
     Filter => action_filter_alt,
     Share => social_share,
+    Info => action_info,
+    Success => action_check_circle,
+    Warning => alert_warning,
+    Error => alert_error,
 });
 
 #[cfg(feature = "icons-tabler")]
@@ -215,6 +223,10 @@ icon_set!(tabler: [outlined => tabler_outlined] {
     More => dots_vertical,
     Filter => filter,
     Share => share,
+    Info => info_circle,
+    Success => circle_check,
+    Warning => alert_triangle,
+    Error => alert_circle,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -273,6 +285,10 @@ icon_set!(bootstrap: [outlined => bootstrap_outlined] {
     More => three_dots_vertical,
     Filter => funnel,
     Share => share,
+    Info => info_circle,
+    Success => check_circle,
+    Warning => exclamation_triangle,
+    Error => exclamation_circle,
 });
 
 // No text direction glyph: the direction toggle keeps lucide's.
@@ -338,6 +354,10 @@ icon_set!(phosphor: [
     More => dots_three_vertical,
     Filter => funnel,
     Share => share_network,
+    Info => info,
+    Success => check_circle,
+    Warning => warning,
+    Error => warning_circle,
 });
 
 #[cfg(test)]

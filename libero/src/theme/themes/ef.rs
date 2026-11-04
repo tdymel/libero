@@ -5,43 +5,52 @@
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
+// Consts too, so `Theme { .., ..Theme::X }` spreads a preset; the statics are what sets point to.
+impl Theme {
+    /// Ef Day.
+    pub const EF_NIGHT_LIGHT: Theme = Theme {
+        surface: HexColor::new(0xFFF5EA),
+        ink: HexColor::new(0x584141),
+        neutral: HexColor::new(0x584141),
+        muted: HexColor::new(0x63728F),
+        primary: HexColor::new(0x375CC6),
+        secondary: HexColor::new(0x8448AA),
+        info: HexColor::new(0x3F6FAF),
+        success: HexColor::new(0x007A0A),
+        error: HexColor::new(0xBA2D2F),
+        paper: PaperDefaults {
+            background: "#f2e9db",
+            ..PaperDefaults::DEFAULT
+        },
+        code: CodeDefaults::DEFAULT,
+        ..Theme::DEFAULT
+    };
+
+    /// Ef Night.
+    pub const EF_NIGHT_DARK: Theme = Theme {
+        surface: HexColor::new(0x000E17),
+        ink: HexColor::new(0xAFBCBF),
+        neutral: HexColor::new(0xAFBCBF),
+        muted: HexColor::new(0x70819F),
+        primary: HexColor::new(0x379CF6),
+        secondary: HexColor::new(0xAF8AFF),
+        info: HexColor::new(0x6FAFFF),
+        success: HexColor::new(0x1FA526),
+        error: HexColor::new(0xEF656A),
+        paper: PaperDefaults {
+            background: "#1a202b",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        ..Theme::DARK
+    };
+}
+
 /// Ef Day.
-pub static EF_NIGHT_LIGHT: Theme = Theme {
-    surface: HexColor::new(0xFFF5EA),
-    ink: HexColor::new(0x584141),
-    neutral: HexColor::new(0x584141),
-    muted: HexColor::new(0x63728F),
-    primary: HexColor::new(0x375CC6),
-    secondary: HexColor::new(0x8448AA),
-    info: HexColor::new(0x3F6FAF),
-    success: HexColor::new(0x007A0A),
-    error: HexColor::new(0xBA2D2F),
-    paper: PaperDefaults {
-        background: "#f2e9db",
-        ..PaperDefaults::DEFAULT
-    },
-    code: CodeDefaults::DEFAULT,
-    ..Theme::DEFAULT
-};
+pub static EF_NIGHT_LIGHT: Theme = Theme::EF_NIGHT_LIGHT;
 
 /// Ef Night.
-pub static EF_NIGHT_DARK: Theme = Theme {
-    surface: HexColor::new(0x000E17),
-    ink: HexColor::new(0xAFBCBF),
-    neutral: HexColor::new(0xAFBCBF),
-    muted: HexColor::new(0x70819F),
-    primary: HexColor::new(0x379CF6),
-    secondary: HexColor::new(0xAF8AFF),
-    info: HexColor::new(0x6FAFFF),
-    success: HexColor::new(0x1FA526),
-    error: HexColor::new(0xEF656A),
-    paper: PaperDefaults {
-        background: "#1a202b",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    ..Theme::DARK
-};
+pub static EF_NIGHT_DARK: Theme = Theme::EF_NIGHT_DARK;
 
 impl ThemeSet {
     /// Ef Night: [`EF_NIGHT_LIGHT`] (ef-day) paired with [`EF_NIGHT_DARK`].

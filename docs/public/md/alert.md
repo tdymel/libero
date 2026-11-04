@@ -37,7 +37,8 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `title` | `String` | - | The title, and the alert's accessible name. Text only. |
-| `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. |
+| `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. Unset, a `color` set to `info`, `success`, `warning` or `error` draws its severity's glyph, which an `IconProvider` can swap (`IconSlot::Info`, `Success`, `Warning`, `Error`); another colour draws none. |
+| `with_icon` | `Option<bool>` | `true` | `false` drops the severity glyph of an alert without `icon`, `true` draws it for the theme's default colour too. Unset, `theme.alert.severity_icons` (on by default) for a `color` the call site sets. |
 | `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. A `gradient` surface keeps the theme's gradient: there only the role follows this. |
 | `variant` | `Responsive<Variant>` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. `gradient` paints the theme's gradient whatever the `color`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `md` | Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
@@ -109,6 +110,7 @@ severity in words.
 | `gap` | `Size` | `Md`, from icon to text to close button. |
 | `body_gap` | `Size` | `Xs`, from title to message. |
 | `icon_size` | `&'static str` | `20px`, the icon slot's width and height. |
+| `severity_icons` | `bool` | `true`. An alert whose `color` prop is `info`, `success`, `warning` or `error`, and that has no `icon`, draws its severity's glyph. |
 
 ## CSS variables
 

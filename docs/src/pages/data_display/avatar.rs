@@ -126,6 +126,9 @@ pub fn AvatarPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default(theme.avatar.color.as_str())
                         .doc("The placeholder's tint."),
+                    prop("overhang", "Option<u8>")
+                        .default(theme.avatar.overhang.to_string())
+                        .doc("Percent of the side the picture spills past each edge, for a cut-out portrait: unclipped, whole (`object-fit: contain`) and with no fill behind it. `0` clips it to the shape. The fallback and a group's `+N` chip stay clipped."),
                     prop("children", "Option<Element>")
                         .default("None")
                         .doc("Anything in place of the initials, such as an icon."),
@@ -255,6 +258,13 @@ pub fn AvatarPage() -> Element {
                     .default(theme.avatar.variant.as_str()),
                     // Unset `color` resolves to primary, so the default swatch is primary.
                     Control::color("color").default(theme.avatar.color.as_str()),
+                    Control::slider("overhang", ["0", "5", "10", "15", "20"])
+                        .default(theme.avatar.overhang.to_string())
+                        .hidden_when(|values| grouped(values) || values.str("content") != "picture")
+                        .code(|_, values| match values.str("overhang").as_str() {
+                            "0" => vec![],
+                            value => vec![format!("overhang: {value}")],
+                        }),
                     // Not a prop: the name beside the avatar, which `alt: ""` then hides.
                     Control::switch("beside_name")
                         .hidden_when(grouped)
@@ -296,6 +306,7 @@ pub fn AvatarPage() -> Element {
                             radius: values.str("radius"),
                             variant: values.str("variant"),
                             color: Input::from(values.str("color")),
+                            overhang: values.str("overhang").parse::<u8>().ok(),
                         }
                     };
                     match beside_name(&values) {

@@ -1,7 +1,9 @@
 use crate::Route;
 use crate::components::{DocPage, DocSection, SectionLink};
 use dioxus::prelude::*;
-use libero::components::{Code, CodeBlock, Table, Text, column};
+use libero::ThemeScope;
+use libero::components::{Button, Code, CodeBlock, Flex, Paper, Table, Text, column};
+use libero::sx::sx;
 
 /// A part of the theme, its fields, and what it changes.
 type Part = (&'static str, &'static str, &'static str);
@@ -116,6 +118,18 @@ const GRADIENT: &str = r#"static THEME: Theme = Theme {
 const THEME_SET: &str = r#"LiberoProvider {
     themes: ThemeSet::new().light(&LIGHT).dark(&DARK),
     Router::<Route> {}
+}"#;
+
+const FROM_A_PRESET: &str = r#"static BRAND: Theme = Theme {
+    primary: HexColor::new(0x0B7285),
+    ..Theme::GITHUB_LIGHT
+};"#;
+
+// snippet: ignore - an excerpt of a component's rsx
+const THEME_SCOPE: &str = r#"ThemeScope { theme: "dark",
+    Paper { sx: sx().padding("md"),
+        Button { "Save" }
+    }
 }"#;
 
 const READING_THE_THEME: &str = r#"let theme = use_theme();
@@ -264,9 +278,38 @@ pub fn ThemingPage() -> Element {
                 }
                 CodeBlock { source: THEME_SET, label: "Theme set", language: "rust" }
                 Text {
+                    "Every ready-made theme is also a constant on "
+                    Code { source: "Theme" }
+                    ", such as "
+                    Code { source: "Theme::GITHUB_LIGHT" }
+                    ", so a theme of yours can start from one and change a few fields."
+                }
+                CodeBlock { source: FROM_A_PRESET, label: "From a ready-made theme", language: "rust" }
+                Text {
                     Code { source: "ThemeSwitcher" }
                     " is a ready-made switch."
                 }
+                Text {
+                    Code { source: "ThemeScope" }
+                    " shows its children in another theme of the set, such as a dark preview on a "
+                    "light page. It paints that theme's surface and text, and the menus and dialogs "
+                    "opened inside follow it. Values read in Rust and "
+                    Code { source: "Sx::dark" }
+                    " keep following the page."
+                }
+                Flex { gap: "md", wrap: "wrap",
+                    for name in ["light", "dark"] {
+                        ThemeScope { key: "{name}", theme: name,
+                            Paper { sx: sx().padding("md"),
+                                Flex { gap: "sm", align: "center",
+                                    Text { "Always {name}" }
+                                    Button { "Save" }
+                                }
+                            }
+                        }
+                    }
+                }
+                CodeBlock { source: THEME_SCOPE, label: "Theme scope", language: "rust" }
                 Text {
                     "While a theme is pinned (the pair's, a named one or a lone one) the document root carries "
                     Code { source: "data-lsx-scheme=\"light|dark\"" }

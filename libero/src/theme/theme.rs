@@ -12,6 +12,17 @@ use super::*;
 /// };
 /// ```
 ///
+/// Every shipped preset is an associated const too, so one spreads the same way:
+///
+/// ```
+/// # use libero::theme::{HexColor, Theme};
+/// static BRAND: Theme = Theme {
+///     primary: HexColor::new(0x0B7285),
+///     ..Theme::GITHUB_LIGHT
+/// };
+/// assert_eq!(BRAND.surface, Theme::GITHUB_LIGHT.surface);
+/// ```
+///
 /// Docs: <https://libero-ui.dev/about/theming>
 // Not `Copy`: at ~2KB a stray by-value use is a silent memcpy.
 #[derive(Clone, Debug, PartialEq)]

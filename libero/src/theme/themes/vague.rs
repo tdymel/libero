@@ -21,45 +21,54 @@ const GRADIENT: GradientDefaults = GradientDefaults {
     ..GradientDefaults::DEFAULT
 };
 
+// Consts too, so `Theme { .., ..Theme::X }` spreads a preset; the statics are what sets point to.
+impl Theme {
+    /// Vague, light - derived, not upstream.
+    pub const VAGUE_LIGHT: Theme = Theme {
+        surface: HexColor::new(0xF5F5F5),
+        ink: HexColor::new(0x141415),
+        neutral: HexColor::new(0x141415),
+        muted: HexColor::new(0x868697),
+        primary: HexColor::new(0x6E94B2),
+        secondary: HexColor::new(0xBB9DBD),
+        info: HexColor::new(0x7E98E8),
+        success: HexColor::new(0x7FA563),
+        error: HexColor::new(0xD8647E),
+        paper: PaperDefaults {
+            background: "#ebebeb",
+            ..PaperDefaults::DEFAULT
+        },
+        code: CodeDefaults::DEFAULT,
+        gradient: GRADIENT,
+        ..Theme::DEFAULT
+    };
+
+    /// Vague.
+    pub const VAGUE_DARK: Theme = Theme {
+        surface: HexColor::new(0x141415),
+        ink: HexColor::new(0xCDCDCD),
+        neutral: HexColor::new(0xCDCDCD),
+        muted: HexColor::new(0x66667E),
+        primary: HexColor::new(0x6E94B2),
+        secondary: HexColor::new(0xBB9DBD),
+        info: HexColor::new(0x7E98E8),
+        success: HexColor::new(0x7FA563),
+        error: HexColor::new(0xD8647E),
+        paper: PaperDefaults {
+            background: "#1c1c24",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        gradient: GRADIENT,
+        ..Theme::DARK
+    };
+}
+
 /// Vague, light - derived, not upstream.
-pub static VAGUE_LIGHT: Theme = Theme {
-    surface: HexColor::new(0xF5F5F5),
-    ink: HexColor::new(0x141415),
-    neutral: HexColor::new(0x141415),
-    muted: HexColor::new(0x868697),
-    primary: HexColor::new(0x6E94B2),
-    secondary: HexColor::new(0xBB9DBD),
-    info: HexColor::new(0x7E98E8),
-    success: HexColor::new(0x7FA563),
-    error: HexColor::new(0xD8647E),
-    paper: PaperDefaults {
-        background: "#ebebeb",
-        ..PaperDefaults::DEFAULT
-    },
-    code: CodeDefaults::DEFAULT,
-    gradient: GRADIENT,
-    ..Theme::DEFAULT
-};
+pub static VAGUE_LIGHT: Theme = Theme::VAGUE_LIGHT;
 
 /// Vague.
-pub static VAGUE_DARK: Theme = Theme {
-    surface: HexColor::new(0x141415),
-    ink: HexColor::new(0xCDCDCD),
-    neutral: HexColor::new(0xCDCDCD),
-    muted: HexColor::new(0x66667E),
-    primary: HexColor::new(0x6E94B2),
-    secondary: HexColor::new(0xBB9DBD),
-    info: HexColor::new(0x7E98E8),
-    success: HexColor::new(0x7FA563),
-    error: HexColor::new(0xD8647E),
-    paper: PaperDefaults {
-        background: "#1c1c24",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    gradient: GRADIENT,
-    ..Theme::DARK
-};
+pub static VAGUE_DARK: Theme = Theme::VAGUE_DARK;
 
 impl ThemeSet {
     /// Vague: [`VAGUE_LIGHT`] (derived) paired with [`VAGUE_DARK`].

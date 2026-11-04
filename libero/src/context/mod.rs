@@ -2,6 +2,7 @@ mod icons;
 mod libero;
 mod modal;
 mod portal;
+mod theme_scope;
 mod window;
 
 pub(crate) use icons::IconContext;
@@ -13,4 +14,5 @@ pub use libero::{LiberoContext, LiberoProvider};
 pub(crate) use modal::ModalHost;
 pub use modal::{Dismiss, ModalContext};
 pub(crate) use portal::{HostOutlet, PortalEntry, PortalHost, PortalOutlet};
+pub(crate) use theme_scope::ThemeScopeContext;
 pub(crate) use window::WindowHost;

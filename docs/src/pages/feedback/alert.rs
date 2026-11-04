@@ -7,6 +7,7 @@ use libero::{
     components::{Alert, AlertPart, Button, Code, Flex, Text},
     hooks::use_element,
     platform::ElementApi,
+    theme::AlertDefaults,
     use_theme,
 };
 
@@ -32,7 +33,10 @@ pub fn AlertPage() -> Element {
                 prop("title", "String")
                     .doc("The title, and the alert's accessible name. Text only."),
                 prop("icon", "Option<Element>")
-                    .doc("A leading icon of your own, hidden from screen readers."),
+                    .doc("A leading icon of your own, hidden from screen readers. Unset, a `color` set to `info`, `success`, `warning` or `error` draws its severity's glyph, which an `IconProvider` can swap (`IconSlot::Info`, `Success`, `Warning`, `Error`); another colour draws none."),
+                prop("with_icon", "Option<bool>")
+                    .default(theme.alert.severity_icons.to_string())
+                    .doc("`false` drops the severity glyph of an alert without `icon`, `true` draws it for the theme's default colour too. Unset, `theme.alert.severity_icons` (on by default) for a `color` the call site sets."),
                 prop("color", "ThemeAwareValue")
                     .default("info")
                     .doc("The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. A `gradient` surface keeps the theme's gradient: there only the role follows this."),
@@ -117,12 +121,18 @@ pub fn AlertPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("icon").default("true").code(|_, values| {
-                        match values.str("icon").as_str() {
-                            "true" => vec!["icon: rsx! { Pictogram { icon: lucide::check::outlined } }".to_string()],
+                    // The severity's own glyph by default; a custom one, or none.
+                    Control::toggle("icon", ["severity", "custom", "none"])
+                        .labels(["Severity", "Custom", "None"])
+                        .code(|_, values| match values.str("icon").as_str() {
+                            "custom" => vec!["icon: rsx! { Pictogram { icon: lucide::check::outlined } }".to_string()],
+                            "none" => vec!["with_icon: false".to_string()],
+                            // The glyph needs a stated colour; the colour control prints only a changed one.
+                            _ if values.str("color") == AlertDefaults::DEFAULT.color => {
+                                vec![format!("color: {:?}", AlertDefaults::DEFAULT.color)]
+                            }
                             _ => vec![],
-                        }
-                    }),
+                        }),
                     Control::switch("actions").default("true").code(|_, values| {
                         match values.str("actions").as_str() {
                             "true" => vec![format!("actions: rsx! {{ {ACTION_CODE} }}")],
@@ -152,7 +162,8 @@ pub fn AlertPage() -> Element {
                                 color: values.str("color"),
                                 radius: values.str("radius"),
                                 title: (values.str("title") == "true").then(|| TITLE.to_string()),
-                                icon: (values.str("icon") == "true").then(|| rsx! { Pictogram { icon: lucide::check::outlined } }),
+                                icon: (values.str("icon") == "custom").then(|| rsx! { Pictogram { icon: lucide::check::outlined } }),
+                                with_icon: (values.str("icon") == "none").then_some(false),
                                 actions: (values.str("actions") == "true").then(|| rsx! {
                                     Button {
                                         variant: "standard",

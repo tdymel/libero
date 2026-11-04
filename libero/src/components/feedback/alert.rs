@@ -183,17 +183,33 @@ fn alert_variables(base: &ThemeAwareValue, variant: Variant, radius: Option<Stri
         .with(ALERT_RADIUS.override_var(), radius)
 }
 
-/// `alert` interrupts the reader: only `error` and `warning` earn it.
-fn alert_role(color: &ThemeAwareValue) -> &'static str {
-    let severity = match color {
+/// The palette colour `color` names, `None` for any other CSS colour.
+fn palette_color(color: &ThemeAwareValue) -> Option<Color> {
+    match color {
         ThemeAwareValue::Color(color) => Some(*color),
         ThemeAwareValue::ColorValue(value) => Some(value.color()),
         _ => None,
-    };
-    match severity {
+    }
+}
+
+/// `alert` interrupts the reader: only `error` and `warning` earn it.
+fn alert_role(color: &ThemeAwareValue) -> &'static str {
+    match palette_color(color) {
         Some(Color::Error | Color::Warning) => "alert",
         _ => "status",
     }
+}
+
+/// The default glyph of a severity colour; none for the brand and neutral ones.
+fn severity_icon(color: &ThemeAwareValue) -> Option<Element> {
+    let (slot, icon) = match palette_color(color)? {
+        Color::Info => (IconSlot::Info, lucide::info::outlined),
+        Color::Success => (IconSlot::Success, lucide::circle_check::outlined),
+        Color::Warning => (IconSlot::Warning, lucide::triangle_alert::outlined),
+        Color::Error => (IconSlot::Error, lucide::circle_alert::outlined),
+        _ => return None,
+    };
+    Some(rsx! { Glyph { slot, icon } })
 }
 
 parts_enum! {
@@ -219,9 +235,14 @@ base_props! {
         /// The title, and the accessible name.
         #[props(default, into)]
         title: Option<String>,
-        /// A leading glyph, `aria-hidden`.
+        /// A leading glyph, `aria-hidden`. Unset, a `color` set to `info`, `success`, `warning`
+        /// or `error` draws its severity's glyph.
         #[props(default)]
         icon: Option<Element>,
+        /// `false` drops the severity glyph, `true` draws it for the theme's colour too.
+        /// Unset, `theme.alert.severity_icons` for a `color` the call site sets.
+        #[props(default)]
+        with_icon: Option<bool>,
         /// Theme colour or CSS colour; `error` and `warning` make it `role="alert"`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -350,7 +371,14 @@ pub fn Alert(props: AlertProps) -> Element {
         .unwrap_or_else(|| common.close.to_string());
 
     let onclose = props.onclose;
-    let icon = props.icon.clone();
+    // Severity is the caller's to state: the theme's default colour draws no glyph.
+    let severity_glyph = props
+        .with_icon
+        .unwrap_or(theme.alert.severity_icons && props.color.as_ref().is_some());
+    let icon = props
+        .icon
+        .clone()
+        .or_else(|| severity_glyph.then(|| severity_icon(&color)).flatten());
     let actions = props.actions.clone();
     let children = rsx! {
         if let Some(icon) = icon {

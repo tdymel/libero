@@ -43,6 +43,7 @@ fn Demo() -> Element {
 | `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
 | `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `color` | `ThemeAwareValue` | `primary` | The placeholder's tint. |
+| `overhang` | `Option<u8>` | `0` | Percent of the side the picture spills past each edge, for a cut-out portrait: unclipped, whole (`object-fit: contain`) and with no fill behind it. `0` clips it to the shape. The fallback and a group's `+N` chip stay clipped. |
 | `parts` | `Parts<AvatarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Option<Element>` | `None` | Anything in place of the initials, such as an icon. |
 
@@ -125,6 +126,7 @@ tooltip when `total` counts people the list does not hold).
 | `avatar.sizes` | `Sizes<u16>` | `20, 28, 38, 56, 84, 120` | The square's side, in px, per size step. |
 | `avatar.font_sizes` | `Sizes<u16>` | `10, 12, 15, 22, 34, 48` | Placeholder font size in px at a 16px root, written as `rem`; about `side / 2.5`, never under 10. |
 | `avatar.radii` | `Sizes<&'static str>` | `2px, 4px, 8px, 16px, 32px, 9999px` | The avatar's own radius scale. `xxl` is a circle at every size. |
+| `avatar.overhang` | `u8` | `0` | Default `overhang` when the prop is omitted: `0` clips the picture to the shape. |
 | `avatar_group.spacing` | `Size` | `sm` | How far each circle is pulled over the one before it. |
 | `avatar_group.ring` | `&'static str` | `2px` | Width of the ring in the page colour that separates two overlapping members. |
 
@@ -140,6 +142,7 @@ tooltip when `total` counts people the list does not hold).
 | `--lsx-avatar-color` | The resolved `color`, which the variant chrome reads. |
 | `--lsx-avatar-contrast` | What reads on `--lsx-avatar-color`. Unset for a CSS color. |
 | `--lsx-avatar-container` / `--lsx-avatar-on-container` | The tonal variant's tint and its label colour. |
+| `--lsx-avatar-overhang` | Set from `overhang` as a percentage while an overhanging picture shows. |
 | `--lsx-avatar-group-spacing` | The overlap, set on the group root from its `spacing`. |
 | `--lsx-avatar-group-ring` | Width of the ring around a member inside a group. |
 | `--lsx-avatar-group-index` | A member's paint order. The first member gets the highest. |
@@ -152,4 +155,6 @@ State tokens on the root's `data-state`, space separated.
 |---|---|
 | `size-xs` … `size-xxl` | The `size` in effect. |
 | `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect. |
+| `overhang` | A picture shows with an `overhang`: the root stops clipping. |
+| `bare` | With `overhang`, where the renderer reports a failed load: no fill behind the picture. |
 | `grouped` | On a member of an `AvatarGroup` and on the `+N` chip. It draws the ring and the paint order. |

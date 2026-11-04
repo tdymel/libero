@@ -121,8 +121,8 @@ pub use anchor::{ANCHOR_COLOR, AnchorDefaults, AnchorUnderline};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use autocomplete::AutocompleteDefaults;
 pub use avatar::{
-    AVATAR_FONT_SIZE, AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_GROUP_SPACING, AVATAR_RADII,
-    AVATAR_RADIUS, AVATAR_SIZE, AvatarDefaults, AvatarGroupDefaults,
+    AVATAR_FONT_SIZE, AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_GROUP_SPACING, AVATAR_OVERHANG,
+    AVATAR_RADII, AVATAR_RADIUS, AVATAR_SIZE, AvatarDefaults, AvatarGroupDefaults,
 };
 pub use badge::{
     BADGE_BOX, BADGE_FONT, BADGE_FONT_SIZE, BADGE_FONT_WEIGHT, BADGE_HEIGHT, BADGE_LETTER_SPACING,

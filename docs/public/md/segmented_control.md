@@ -51,7 +51,7 @@ fn Demo() -> Element {
 | `name` | `FieldName<T>` | - | What the control posts as. A path such as `Settings::FIELDS.align()` also binds it to the surrounding `Form`'s value when it has no `onchange`. The path stays a `FieldName<T>`, not an `Option<T>` as on `Select`: exactly one segment is always selected. |
 | `validate` | `Validators<T>` | - | Rules over the selection, shown once the control loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = "..")]` renames one at the type. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::with_icon` or `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = "..")]` renames one at the type. |
 | `orientation` | `Orientation` | `horizontal` | A row or a column. |
 | `variant` | `Variant` | `filled` | The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset. |
@@ -85,7 +85,9 @@ fn Demo() -> Element {
 | `content` | `Element` | - | Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. A segment is a `<label>`, so phrasing content only: an `Icon` works, a `Flex` does not. |
 
 `OptionLabel` is a value, not a component, so it takes no shared props. A bare
-string converts (`"Konto".into()`). [Tabs](tabs.md) uses it too.
+string converts (`"Konto".into()`). `OptionLabel::with_icon(name, icon)` draws the
+icon, hidden from screen readers, before the name. [Tabs](tabs.md) and a `Select`
+row (`option: |args| label.render()`) use it too.
 
 Like every component, `SegmentedControl` also takes the shared props `sx`,
 `class`, `style`, `states`, and any extra HTML attributes. `sx`, `class` and

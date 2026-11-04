@@ -127,12 +127,37 @@ LiberoProvider {
 }
 ```
 
+Every ready-made theme is also a constant on `Theme`, such as `Theme::GITHUB_LIGHT`,
+so a theme of yours can start from one and change a few fields.
+
+```rust
+use libero::theme::{HexColor, Theme};
+
+static BRAND: Theme = Theme {
+    primary: HexColor::new(0x0B7285),
+    ..Theme::GITHUB_LIGHT
+};
+```
+
 [`ThemeSwitcher`](theme_switcher.md) is a ready-made switch.
 
 The choice is kept in local storage: `localStorage` on the web, a file off it
 where local storage has a directory (see `libero::platform::set_storage_dir`). To restore it before the first
 paint, paste `libero::theme::COLOR_SCHEME_RESTORE_SCRIPT` into the head of your
 `index.html`.
+
+`ThemeScope` shows its children in another theme of the set, such as a dark
+preview on a light page. It paints that theme's surface and text, and the menus
+and dialogs opened inside follow it. Values read in Rust and `Sx::dark` keep
+following the page.
+
+```rust,ignore
+ThemeScope { theme: "dark",
+    Paper { sx: sx().padding("md"),
+        Button { "Save" }
+    }
+}
+```
 
 While a theme is pinned (the pair's, a named one or a lone one) the document root
 carries `data-lsx-scheme="light|dark"`, taken from the theme's `surface`; `Sx::dark`

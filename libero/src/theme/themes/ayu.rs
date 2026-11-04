@@ -2,62 +2,74 @@
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
+// Consts too, so `Theme { .., ..Theme::X }` spreads a preset; the statics are what sets point to.
+impl Theme {
+    /// Ayu Light.
+    pub const AYU_LIGHT: Theme = Theme {
+        surface: HexColor::new(0xFAFAFA),
+        ink: HexColor::new(0x5C6166),
+        neutral: HexColor::new(0x5C6166),
+        muted: HexColor::new(0x868D95),
+        primary: HexColor::new(0x399EE6),
+        secondary: HexColor::new(0xA37ACC),
+        info: HexColor::new(0x55B4D4),
+        success: HexColor::new(0x86B300),
+        error: HexColor::new(0xF07171),
+        paper: PaperDefaults {
+            background: "#f3f3f3",
+            ..PaperDefaults::DEFAULT
+        },
+        code: CodeDefaults::DEFAULT,
+        ..Theme::DEFAULT
+    };
+
+    /// Ayu Dark.
+    pub const AYU_DARK: Theme = Theme {
+        surface: HexColor::new(0x0A0E14),
+        ink: HexColor::new(0xB3B1AD),
+        neutral: HexColor::new(0xB3B1AD),
+        muted: HexColor::new(0x626A73),
+        primary: HexColor::new(0x39BAE6),
+        secondary: HexColor::new(0xD2A6FF),
+        info: HexColor::new(0x59C2FF),
+        success: HexColor::new(0xC2D94C),
+        error: HexColor::new(0xF07178),
+        paper: PaperDefaults {
+            background: "#0d1017",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        ..Theme::DARK
+    };
+
+    /// Ayu Mirage.
+    pub const AYU_MIRAGE_DARK: Theme = Theme {
+        surface: HexColor::new(0x1F2430),
+        ink: HexColor::new(0xCBCCC6),
+        neutral: HexColor::new(0xCBCCC6),
+        muted: HexColor::new(0x707A8C),
+        primary: HexColor::new(0x5CCFE6),
+        secondary: HexColor::new(0xD4BFFF),
+        info: HexColor::new(0x73D0FF),
+        success: HexColor::new(0xBAE67E),
+        error: HexColor::new(0xF28779),
+        paper: PaperDefaults {
+            background: "#242936",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        ..Theme::DARK
+    };
+}
+
 /// Ayu Light.
-pub static AYU_LIGHT: Theme = Theme {
-    surface: HexColor::new(0xFAFAFA),
-    ink: HexColor::new(0x5C6166),
-    neutral: HexColor::new(0x5C6166),
-    muted: HexColor::new(0x868D95),
-    primary: HexColor::new(0x399EE6),
-    secondary: HexColor::new(0xA37ACC),
-    info: HexColor::new(0x55B4D4),
-    success: HexColor::new(0x86B300),
-    error: HexColor::new(0xF07171),
-    paper: PaperDefaults {
-        background: "#f3f3f3",
-        ..PaperDefaults::DEFAULT
-    },
-    code: CodeDefaults::DEFAULT,
-    ..Theme::DEFAULT
-};
+pub static AYU_LIGHT: Theme = Theme::AYU_LIGHT;
 
 /// Ayu Dark.
-pub static AYU_DARK: Theme = Theme {
-    surface: HexColor::new(0x0A0E14),
-    ink: HexColor::new(0xB3B1AD),
-    neutral: HexColor::new(0xB3B1AD),
-    muted: HexColor::new(0x626A73),
-    primary: HexColor::new(0x39BAE6),
-    secondary: HexColor::new(0xD2A6FF),
-    info: HexColor::new(0x59C2FF),
-    success: HexColor::new(0xC2D94C),
-    error: HexColor::new(0xF07178),
-    paper: PaperDefaults {
-        background: "#0d1017",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    ..Theme::DARK
-};
+pub static AYU_DARK: Theme = Theme::AYU_DARK;
 
 /// Ayu Mirage.
-pub static AYU_MIRAGE_DARK: Theme = Theme {
-    surface: HexColor::new(0x1F2430),
-    ink: HexColor::new(0xCBCCC6),
-    neutral: HexColor::new(0xCBCCC6),
-    muted: HexColor::new(0x707A8C),
-    primary: HexColor::new(0x5CCFE6),
-    secondary: HexColor::new(0xD4BFFF),
-    info: HexColor::new(0x73D0FF),
-    success: HexColor::new(0xBAE67E),
-    error: HexColor::new(0xF28779),
-    paper: PaperDefaults {
-        background: "#242936",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    ..Theme::DARK
-};
+pub static AYU_MIRAGE_DARK: Theme = Theme::AYU_MIRAGE_DARK;
 
 impl ThemeSet {
     /// Ayu: [`AYU_LIGHT`] paired with [`AYU_DARK`].

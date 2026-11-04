@@ -6,7 +6,13 @@ use libero::components::{Avatar, AvatarGroup, AvatarSpec, Variant};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/avatar", || rsx! { AvatarPage {} })];
+pub const ROUTES: Routes = &[
+    ("/avatar", || rsx! { AvatarPage {} }),
+    ("/avatar-overhang", || rsx! { OverhangPage {} }),
+];
+
+/// A square picture, drawn whole past the edge by `#overhang` (todo 5630).
+const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Crect width='4' height='4' fill='%23369'/%3E%3C/svg%3E";
 
 /// Three chromatic colours keep the sweep short.
 const COLORS: [&str; 3] = ["primary", "secondary", "error"];
@@ -90,6 +96,16 @@ fn AvatarPage() -> Element {
                     }
                 }
             }
+        }
+    }
+}
+
+/// Its own route, so the baseline snapshot of `/avatar` stays as it is.
+#[component]
+fn OverhangPage() -> Element {
+    rsx! {
+        div { padding: "24px",
+            Avatar { id: "overhang", name: "Ada Lovelace", src: PICTURE, size: "lg", overhang: 10 }
         }
     }
 }

@@ -120,6 +120,47 @@ impl OptionLabel {
         }
     }
 
+    /// `icon` before the `name` as text; the icon is hidden from assistive tech, so `name` stays
+    /// the accessible name. For a tab, a segment or a `Select` row (`option` prop, `.render()`).
+    ///
+    /// ```rust
+    /// # use dioxus::prelude::*;
+    /// use libero::components::{Icon, OptionLabel, Options, Tabs};
+    ///
+    /// #[derive(Clone, Copy, PartialEq, Options)]
+    /// enum Page {
+    ///     Inbox,
+    ///     Sent,
+    /// }
+    ///
+    /// # fn app() -> Element {
+    /// let mut page = use_signal(|| Page::Inbox);
+    /// rsx! {
+    ///     Tabs {
+    ///         aria_label: "Mail",
+    ///         value: page(),
+    ///         onchange: move |next| page.set(next),
+    ///         option_label: |page: Page| OptionLabel::with_icon(
+    ///             page.label(),
+    ///             rsx! { Icon { variant: "standard", size: "sm", InboxIcon {} } },
+    ///         ),
+    ///     }
+    /// }
+    /// # }
+    /// # #[component] fn InboxIcon() -> Element { rsx! {} }
+    /// ```
+    pub fn with_icon(name: impl Into<String>, icon: Element) -> Self {
+        let name = name.into();
+        let content = rsx! {
+            span { aria_hidden: "true", {icon} }
+            "{name}"
+        };
+        Self {
+            name,
+            content: Some(content),
+        }
+    }
+
     /// The accessible name - always plain text, even when the label is rich.
     pub fn name(&self) -> &str {
         &self.name

@@ -6,6 +6,8 @@ pub const AVATAR_SIZE: SizeCss = SizeCss::new("--lsx-avatar-size-");
 pub const AVATAR_FONT_SIZE: SizeCss = SizeCss::new("--lsx-avatar-font-size-");
 pub const AVATAR_RADII: SizeCss = SizeCss::new("--lsx-avatar-radius-");
 pub const AVATAR_RADIUS: CssVar = CssVar::new("--lsx-avatar-radius");
+/// How far an overhanging picture spills past each edge, a percentage of the side.
+pub const AVATAR_OVERHANG: CssVar = CssVar::new("--lsx-avatar-overhang");
 
 pub const AVATAR_GROUP_SPACING: CssVar = CssVar::new("--lsx-avatar-group-spacing");
 pub const AVATAR_GROUP_RING: CssVar = CssVar::new("--lsx-avatar-group-ring");
@@ -29,6 +31,9 @@ pub struct AvatarDefaults {
     pub font_sizes: Sizes<u16>,
     /// Its own radius scale; `xxl` is a circle, which no fixed global step gives.
     pub radii: Sizes<&'static str>,
+    /// Percent of the side a picture spills past each edge, unclipped and with no fill behind
+    /// it, for a cut-out portrait; `0` keeps the clip.
+    pub overhang: u8,
 }
 
 impl AvatarDefaults {
@@ -40,6 +45,7 @@ impl AvatarDefaults {
         sizes: Sizes::new(20, 28, 38, 56, 84, 120),
         font_sizes: Sizes::new(10, 12, 15, 22, 34, 48),
         radii: Sizes::new("2px", "4px", "8px", "16px", "32px", "9999px"),
+        overhang: 0,
     };
 
     pub(crate) fn size_sx(size: Size) -> Sx {

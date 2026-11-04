@@ -32,6 +32,7 @@ mod responsive_sx;
 mod reveal_inline;
 mod style_attributes;
 mod svg_fit;
+mod theme_scope;
 mod toolbar_context;
 #[cfg(any(feature = "text", feature = "title"))]
 mod truncate;
@@ -84,6 +85,7 @@ pub(crate) use options::use_identity_keys;
 #[cfg(feature = "menubar")]
 pub(crate) use options::use_label_keys;
 pub use options::{OptionLabel, Options};
+pub use theme_scope::{ThemeScope, ThemeScopeProps};
 // The derive and the trait share a name and one import, the way serde's do.
 pub use crate::sx::states::{States, states};
 pub use crate::sx::variables::{Variables, variables};

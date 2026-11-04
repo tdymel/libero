@@ -335,3 +335,71 @@ fn an_unset_variant_follows_the_theme() {
     // The lone avatar, two members and the chip.
     assert_eq!(html.matches("filled").count(), 4, "{html}");
 }
+
+fn state_tokens(html: &str) -> Vec<String> {
+    attributes_of(html, "span")
+        .get("data-state")
+        .map(|state| state.split(' ').map(str::to_string).collect())
+        .unwrap_or_default()
+}
+
+/// Todo 5630: `overhang` lifts the clip and the fill while a picture shows, and sets its spill.
+#[test]
+fn an_overhanging_picture_spills_past_the_edge_without_a_fill() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Avatar { name: "Grace Hopper", src: "/grace.png", overhang: 12 } }
+        }
+    }
+    let html = render(app);
+    let root = body(&html);
+    let tokens = state_tokens(&root);
+    assert!(tokens.contains(&"overhang".to_string()), "{root}");
+    assert!(root.contains("--lsx-avatar-overhang:12%"), "{root}");
+    assert!(html.contains("object-fit:contain"), "{html}");
+    assert!(html.contains("overflow:visible"), "{html}");
+}
+
+/// The fallback keeps its clip, and the theme's 0 draws no overhang at all.
+#[test]
+fn without_a_picture_or_an_overhang_the_avatar_clips() {
+    fn fallback() -> Element {
+        rsx! {
+            LiberoProvider { Avatar { name: "Grace Hopper", initials: "GH", overhang: 12 } }
+        }
+    }
+    let root = body(&render(fallback));
+    assert!(
+        !state_tokens(&root).contains(&"overhang".to_string()),
+        "{root}"
+    );
+    assert!(!root.contains("--lsx-avatar-overhang"), "{root}");
+
+    let root = body(&render(picture_app));
+    assert!(
+        !state_tokens(&root).contains(&"overhang".to_string()),
+        "{root}"
+    );
+}
+
+static OVERHANGING: libero::theme::Theme = libero::theme::Theme {
+    avatar: libero::theme::AvatarDefaults {
+        overhang: 8,
+        ..libero::theme::Theme::DEFAULT.avatar
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// An unset `overhang` takes `theme.avatar.overhang`.
+#[test]
+fn an_unset_overhang_follows_the_theme() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { themes: &OVERHANGING,
+                Avatar { name: "Grace Hopper", src: "/grace.png" }
+            }
+        }
+    }
+    let root = body(&render(app));
+    assert!(root.contains("--lsx-avatar-overhang:8%"), "{root}");
+}

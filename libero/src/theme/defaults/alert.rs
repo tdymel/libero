@@ -26,6 +26,9 @@ pub struct AlertDefaults {
     pub gap: Size,
     pub body_gap: Size,
     pub icon_size: &'static str,
+    /// An alert whose `color` prop is `info`, `success`, `warning` or `error`, and that has no
+    /// `icon`, draws its severity's glyph.
+    pub severity_icons: bool,
 }
 
 impl AlertDefaults {
@@ -37,6 +40,7 @@ impl AlertDefaults {
         gap: Size::Md,
         body_gap: Size::Xs,
         icon_size: "20px",
+        severity_icons: true,
     };
 
     pub fn theme_vars() -> Sx {

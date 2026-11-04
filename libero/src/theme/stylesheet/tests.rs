@@ -897,3 +897,20 @@ fn the_scheme_blocks_carry_only_the_vars_the_themes_disagree_on() {
     assert!(!dark.contains_key("--lsx-spacing-md"), "{dark:?}");
     assert!(root.contains_key("--lsx-spacing-md"));
 }
+
+/// A `var()` value resolves where declared, so the scope repeats each one (todo 5638).
+#[test]
+fn a_scope_block_repeats_every_var_valued_declaration() {
+    use super::declarations::theme_declarations;
+    use super::sheet::theme_scope_css;
+
+    let css = theme_scope_css(&ThemeSet::DEFAULT, "dark").expect("the pair's dark");
+    assert!(css.starts_with("[data-lsx-theme-scope=\"dark\"]{"), "{css}");
+    for declaration in theme_declarations(&Theme::DARK) {
+        if declaration.value().contains("var(") {
+            let written = format!("{}:{};", declaration.property(), declaration.value());
+            assert!(css.contains(&written), "{written} missing from {css}");
+        }
+    }
+    assert!(theme_scope_css(&ThemeSet::DEFAULT, "sepia").is_none());
+}

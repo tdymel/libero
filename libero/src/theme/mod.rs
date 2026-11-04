@@ -17,6 +17,7 @@ pub(crate) use stylesheet::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE};
 pub(crate) use stylesheet::physical_text_align;
 pub(crate) use stylesheet::theme_sheet_css;
 pub(crate) use stylesheet::themed_form_controls;
+pub(crate) use stylesheet::{THEME_SCOPE_ATTRIBUTE, theme_scope_css};
 
 // From `crate::tokens` (below `sx`), so `libero::theme::Size` stays the public path.
 pub use crate::tokens::{

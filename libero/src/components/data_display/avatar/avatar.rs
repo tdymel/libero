@@ -17,8 +17,8 @@ use crate::{
     platform,
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_RADII, AVATAR_RADIUS, AvatarDefaults, CssVar,
-        PAPER_BACKGROUND, Responsive, Size,
+        AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_OVERHANG, AVATAR_RADII, AVATAR_RADIUS,
+        AvatarDefaults, CssVar, PAPER_BACKGROUND, Responsive, Size,
     },
 };
 
@@ -57,6 +57,20 @@ pub(super) fn avatar_sx() -> Sx {
         // The person glyph, which has no size of its own.
         .selector("& > svg", sx().width("60%").height("60%"))
         .when(LAYERED, sx().position("relative"))
+        // The picture spills past every edge, centred and whole.
+        .when(
+            OVERHANG,
+            sx().overflow("visible").position("relative").selector(
+                AvatarPart::Image.selector(),
+                sx().position("absolute")
+                    .top(format!("calc(-1 * {})", AVATAR_OVERHANG.value()))
+                    .left(format!("calc(-1 * {})", AVATAR_OVERHANG.value()))
+                    .width(format!("calc(100% + 2 * {})", AVATAR_OVERHANG.value()))
+                    .height(format!("calc(100% + 2 * {})", AVATAR_OVERHANG.value()))
+                    .max_width("none")
+                    .object_fit("contain"),
+            ),
+        )
         // In a group: a page-colour ring separates overlaps; the index is paint order.
         .when(
             "grouped",
@@ -103,7 +117,15 @@ pub(super) fn avatar_sx() -> Sx {
         });
 
     // A border on the outlined arm only: elsewhere it would inset the picture.
-    base.when(Variant::Outlined.state_name(), outlined_border_sx())
+    let base = base.when(Variant::Outlined.state_name(), outlined_border_sx());
+
+    // No fill behind an overhanging picture; with the variant, past its own and the grouped fill.
+    Variant::ALL.iter().fold(base, |base, &variant| {
+        base.when(
+            format!("{} && {BARE}", variant.state_name()),
+            sx().background("transparent"),
+        )
+    })
 }
 
 /// The paper fill an unfilled grouped member takes: see [`avatar_sx`].
@@ -149,6 +171,10 @@ static AVATAR_BASE_SX: StaticSx = StaticSx::new(avatar_sx);
 
 /// The picture lies over the fallback, for a renderer that fires no `error`.
 const LAYERED: &str = "layered";
+/// A picture shows with an `overhang`.
+const OVERHANG: &str = "overhang";
+/// An overhanging picture that is surely loaded, so nothing waits under it to need the fill.
+const BARE: &str = "bare";
 
 static AVATAR_IMAGE_SX: StaticSx = StaticSx::new(|| {
     sx().when(SVG_FIT, svg_fit_sx())
@@ -221,6 +247,11 @@ base_props! {
         visible_from: Input<Size>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Percent of the side the picture spills past each edge, unclipped, whole
+        /// (`object-fit: contain`) and with no fill behind it, for a cut-out portrait.
+        /// `theme.avatar.overhang` (0, clipped) when unset; the fallback stays clipped.
+        #[props(default)]
+        overhang: Option<u8>,
         /// Anything in place of the initials, such as an icon.
         children: Option<Element>,
     }
@@ -301,8 +332,15 @@ pub fn Avatar(props: AvatarProps) -> Element {
     // Without an `error` event the fallback waits under the picture, and shows
     // where it fails to load (todo 884).
     let layered = !platform::fires_image_errors() && src.is_some();
+    let overhang = props.overhang.unwrap_or(theme.avatar.overhang);
+    let overhangs = overhang > 0 && src.is_some() && !failed;
 
-    let variables: Input<Variables> = avatar_variables(Some(&color), variant, plain_radius).into();
+    let variables = avatar_variables(Some(&color), variant, plain_radius);
+    let variables: Input<Variables> = match overhangs {
+        true => variables.with(AVATAR_OVERHANG, Some(format!("{overhang}%"))),
+        false => variables,
+    }
+    .into();
     let states = props
         .states
         .unwrap_or_default()
@@ -312,7 +350,11 @@ pub fn Avatar(props: AvatarProps) -> Element {
         Some(steps) => states.responsive(steps, |size| size.radius_state_name()),
         None => states,
     };
-    let states: Input<States> = states.with(LAYERED, layered).into();
+    let states: Input<States> = states
+        .with(LAYERED, layered)
+        .with(OVERHANG, overhangs)
+        .with(BARE, overhangs && !layered)
+        .into();
 
     // Only the ranges this instance uses; a plain one registers nothing.
     let mut copies = sizes.range_copies(|size| size.state_name(), AvatarDefaults::size_sx);

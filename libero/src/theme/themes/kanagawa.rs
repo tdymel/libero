@@ -3,63 +3,76 @@
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
+// Consts too, so `Theme { .., ..Theme::X }` spreads a preset; the statics are what sets point to.
+impl Theme {
+    /// Kanagawa Lotus. `muted` is upstream's `#8a8980` nudged toward the ink to 3:1 on page
+    /// and card (todos 1308, 4552).
+    pub const KANAGAWA_LIGHT: Theme = Theme {
+        surface: HexColor::new(0xF2ECBC),
+        ink: HexColor::new(0x545464),
+        neutral: HexColor::new(0x545464),
+        muted: HexColor::new(0x737274),
+        primary: HexColor::new(0x4D699B),
+        secondary: HexColor::new(0x624C83),
+        info: HexColor::new(0x4E8CA2),
+        success: HexColor::new(0x6F894E),
+        error: HexColor::new(0xE82424),
+        paper: PaperDefaults {
+            background: "#d5cea3",
+            ..PaperDefaults::DEFAULT
+        },
+        code: CodeDefaults::DEFAULT,
+        ..Theme::DEFAULT
+    };
+
+    /// Kanagawa Wave.
+    pub const KANAGAWA_DARK: Theme = Theme {
+        surface: HexColor::new(0x1F1F28),
+        ink: HexColor::new(0xDCD7BA),
+        neutral: HexColor::new(0xDCD7BA),
+        muted: HexColor::new(0x727169),
+        primary: HexColor::new(0x7E9CD8),
+        secondary: HexColor::new(0x957FB8),
+        info: HexColor::new(0x7FB4CA),
+        success: HexColor::new(0x98BB6C),
+        error: HexColor::new(0xE82424),
+        paper: PaperDefaults {
+            background: "#16161d",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        ..Theme::DARK
+    };
+
+    /// Kanagawa Dragon, from the Kopuz pack.
+    pub const KANAGAWA_DRAGON_DARK: Theme = Theme {
+        surface: HexColor::new(0x181616),
+        ink: HexColor::new(0xC5C9C5),
+        neutral: HexColor::new(0xC5C9C5),
+        muted: HexColor::new(0xA6A69C),
+        primary: HexColor::new(0x949FB5),
+        secondary: HexColor::new(0xA292A3),
+        info: HexColor::new(0x8BA4B0),
+        success: HexColor::new(0x87A987),
+        error: HexColor::new(0xC4746E),
+        paper: PaperDefaults {
+            background: "#1d1c19",
+            ..PaperDefaults::DARK
+        },
+        code: CodeDefaults::DARK,
+        ..Theme::DARK
+    };
+}
+
 /// Kanagawa Lotus. `muted` is upstream's `#8a8980` nudged toward the ink to 3:1 on page
 /// and card (todos 1308, 4552).
-pub static KANAGAWA_LIGHT: Theme = Theme {
-    surface: HexColor::new(0xF2ECBC),
-    ink: HexColor::new(0x545464),
-    neutral: HexColor::new(0x545464),
-    muted: HexColor::new(0x737274),
-    primary: HexColor::new(0x4D699B),
-    secondary: HexColor::new(0x624C83),
-    info: HexColor::new(0x4E8CA2),
-    success: HexColor::new(0x6F894E),
-    error: HexColor::new(0xE82424),
-    paper: PaperDefaults {
-        background: "#d5cea3",
-        ..PaperDefaults::DEFAULT
-    },
-    code: CodeDefaults::DEFAULT,
-    ..Theme::DEFAULT
-};
+pub static KANAGAWA_LIGHT: Theme = Theme::KANAGAWA_LIGHT;
 
 /// Kanagawa Wave.
-pub static KANAGAWA_DARK: Theme = Theme {
-    surface: HexColor::new(0x1F1F28),
-    ink: HexColor::new(0xDCD7BA),
-    neutral: HexColor::new(0xDCD7BA),
-    muted: HexColor::new(0x727169),
-    primary: HexColor::new(0x7E9CD8),
-    secondary: HexColor::new(0x957FB8),
-    info: HexColor::new(0x7FB4CA),
-    success: HexColor::new(0x98BB6C),
-    error: HexColor::new(0xE82424),
-    paper: PaperDefaults {
-        background: "#16161d",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    ..Theme::DARK
-};
+pub static KANAGAWA_DARK: Theme = Theme::KANAGAWA_DARK;
 
 /// Kanagawa Dragon, from the Kopuz pack.
-pub static KANAGAWA_DRAGON_DARK: Theme = Theme {
-    surface: HexColor::new(0x181616),
-    ink: HexColor::new(0xC5C9C5),
-    neutral: HexColor::new(0xC5C9C5),
-    muted: HexColor::new(0xA6A69C),
-    primary: HexColor::new(0x949FB5),
-    secondary: HexColor::new(0xA292A3),
-    info: HexColor::new(0x8BA4B0),
-    success: HexColor::new(0x87A987),
-    error: HexColor::new(0xC4746E),
-    paper: PaperDefaults {
-        background: "#1d1c19",
-        ..PaperDefaults::DARK
-    },
-    code: CodeDefaults::DARK,
-    ..Theme::DARK
-};
+pub static KANAGAWA_DRAGON_DARK: Theme = Theme::KANAGAWA_DRAGON_DARK;
 
 impl ThemeSet {
     /// Kanagawa: [`KANAGAWA_LIGHT`] paired with [`KANAGAWA_DARK`].

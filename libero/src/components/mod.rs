@@ -17,8 +17,8 @@ pub use buttons::*;
 pub use common::Truncate;
 pub use common::{
     Choice, Choices, ClassList, HtmlTag, Input, NumberValue, OptionItem, OptionLabel, OptionList,
-    OptionSource, Options, Orientation, Part, Parts, States, StaticParts, Variables, Variant,
-    class_list, states, variables,
+    OptionSource, Options, Orientation, Part, Parts, States, StaticParts, ThemeScope,
+    ThemeScopeProps, Variables, Variant, class_list, states, variables,
 };
 pub use data_display::*;
 pub use feedback::*;
