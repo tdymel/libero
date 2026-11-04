@@ -1,7 +1,8 @@
 //! What the `Slider` and `RangeSlider` demos share: the discrete `Quality` scale and the
 //! helpers behind their controls.
 use crate::components::{Control, DemoFile, DemoValues};
-use libero::components::{SliderChangeEvent, SliderMark, SliderValue};
+use libero::components::{Orientation, SliderChangeEvent, SliderMark, SliderValue};
+use libero::theme::{Responsive, responsive};
 
 const FILE: DemoFile = DemoFile(include_str!("slider_demo.rs"));
 
@@ -176,5 +177,30 @@ pub(super) fn continuous_marks(values: &DemoValues) -> Vec<SliderMark> {
             ]
         }
         false => Vec::new(),
+    }
+}
+
+/// A vertical track drops bars and segments, so `responsive` flips only a Vertical pick:
+/// horizontal below `md`, vertical from it.
+fn flips(values: &DemoValues) -> bool {
+    values.str("responsive") == "true" && values.str("orientation") == "vertical"
+}
+
+pub(super) fn orientation(values: &DemoValues) -> Responsive<Orientation> {
+    match flips(values) {
+        true => responsive(Orientation::Horizontal).md(Orientation::Vertical),
+        false => Orientation::from(values.str("orientation").as_str()).into(),
+    }
+}
+
+pub(super) fn orientation_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match (flips(values), values.str("orientation").as_str()) {
+        (true, _) => {
+            vec![
+                "orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical)".into(),
+            ]
+        }
+        (false, "vertical") => vec!["orientation: \"vertical\"".to_string()],
+        _ => vec![],
     }
 }

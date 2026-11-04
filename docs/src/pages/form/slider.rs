@@ -1,7 +1,7 @@
 use super::slider_demo::{
     Quality, bound_code, continuous, continuous_marks, discrete, discrete_marks, event_code,
     event_text, is_on, mark_values, marks_code, max_options, min_options, number, number_code,
-    quality_code, quality_of, within,
+    orientation, orientation_code, quality_code, quality_of, within,
 };
 use crate::components::{
     Control, Demo, DemoValues, DocPage, Wrap, a11y, description_position_control,
@@ -263,9 +263,9 @@ pub fn SliderPage() -> Element {
                     prop("preview_on_hover", "bool")
                         .default("false")
                         .doc("Shows a bubble over the value a hovering mouse or pen points at, before a press picks it. Escape hides it until the pointer leaves the slider. Touch has no hover, so it never shows there. The bubble follows the pointer and goes when it leaves the slider, so it is not hoverable (WCAG 1.4.13)."),
-                    prop("orientation", "Orientation")
+                    prop("orientation", "Responsive<Orientation>")
                         .default("horizontal")
-                        .doc("`vertical` runs the track bottom to top, `12rem` tall unless `sx` sets a `height`, with the mark captions beside it. A touch on the track's strip drags, since no swipe scrolls past an upright track; the row beside it still scrolls the page. A vertical track is a line: `bars` and `segments` are dropped."),
+                        .doc("`vertical` runs the track bottom to top, `12rem` tall unless `sx` sets a `height`, with the mark captions beside it. A touch on the track's strip drags, since no swipe scrolls past an upright track; the row beside it still scrolls the page. A vertical track is a line: `bars` and `segments` are dropped. Or one per breakpoint, `orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical)`. A vertical slider drops `bars` and `segments`, so the demo's Responsive switch flips only a Vertical pick, to horizontal below `md`."),
                 ])
                 .parts("SliderPart", vec![
                     (SliderPart::Label, "The label above the control."),
@@ -355,10 +355,7 @@ pub fn SliderPage() -> Element {
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
                         .default("horizontal")
-                        .code(|_, values| match values.str("orientation").as_str() {
-                            "vertical" => vec!["orientation: \"vertical\"".to_string()],
-                            _ => vec![],
-                        }),
+                        .code(orientation_code),
                     Control::slider("min", Quality::ALL)
                         .options_from(min_options)
                         .code(bound_code)
@@ -451,7 +448,7 @@ pub fn SliderPage() -> Element {
                                         (false, size) => size.into(),
                                     },
                                     color: values.str("color"),
-                                    orientation: values.str("orientation"),
+                                    orientation: orientation(&values),
                                     min: quality_of(&values, "min"),
                                     max: quality_of(&values, "max"),
                                     step: values.str("step").parse::<usize>().unwrap_or(1),
@@ -505,7 +502,7 @@ pub fn SliderPage() -> Element {
                                         (false, size) => size.into(),
                                     },
                                     color: values.str("color"),
-                                    orientation: values.str("orientation"),
+                                    orientation: orientation(&values),
                                     min: number(&values, "min_value"),
                                     max: number(&values, "max_value"),
                                     step: number(&values, "step_value"),

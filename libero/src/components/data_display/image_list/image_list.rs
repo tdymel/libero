@@ -3,9 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Part, REPLACED_ELEMENTS, ScaleOrCss, States, Variables, as_length,
+            HtmlTag, Input, Part, REPLACED_ELEMENTS, ResponsiveScale, States, Variables, as_length,
             base_props, input_from_str, inset_focus_ring_sx, inset_outline_ring_sx, parts_enum,
-            parts_under_sx, responsive_sx, ring_overlay, ring_overlay_sx, variables,
+            parts_under_sx, ring_overlay, ring_overlay_sx, variables,
         },
         data_display::LinkedImageScope,
         layout::{InternalAnchor, use_box},
@@ -431,10 +431,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
                     .breakpoint(size, sx().var(GRID_ZONE_GAP.override_var(), css)),
             )
         });
-    let radius = ScaleOrCss::new(
-        props.radius.as_ref().map(Responsive::base_ref),
-        defaults.radius,
-    );
+    let radius = ResponsiveScale::new(props.radius.as_ref(), defaults.radius, SizeCss::RADIUS);
 
     if masonry && props.ratio.as_ref().is_some() {
         warned.once("masonry-ratio", || {
@@ -464,16 +461,13 @@ pub fn ImageList(props: ImageListProps) -> Element {
         )
         .into();
     let base_ratio = ratio.unwrap_or(theme.aspect_ratio.ratio);
-    let cell_states = States::default().with(radius.size.radius_state_name(), true);
+    let cell_states = States::default().with(radius.base.size.radius_state_name(), true);
     // `GridItem` takes no `variables`, so a custom radius and each breakpoint's ride the
     // cell's own sx; the base step keeps its state class.
-    let radius_sx = props.radius.as_ref().and_then(|radii| {
-        responsive_sx(radii, |sx, value| {
-            let css = value
-                .resolve(Some(SizeCss::RADIUS))
-                .unwrap_or_else(|| "initial".into());
-            sx.var(SizeCss::RADIUS.override_var(), css)
-        })
+    let radius_sx = radius.sx.clone().or_else(|| {
+        radius
+            .custom_css()
+            .map(|css| sx().var(SizeCss::RADIUS.override_var(), css))
     });
 
     // Prepared once, above the loop (`use_box` is a hook), and cloned per cell.

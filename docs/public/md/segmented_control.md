@@ -52,7 +52,7 @@ fn Demo() -> Element {
 | `validate` | `Validators<T>` | - | Rules over the selection, shown once the control loses focus or its form is submitted. |
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::with_icon` or `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = "..")]` renames one at the type. |
-| `orientation` | `Orientation` | `horizontal` | A row or a column. |
+| `orientation` | `Responsive<Orientation>` | `horizontal` | A row or a column. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. |
 | `variant` | `Responsive<Variant>` | `filled` | The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. Or one per breakpoint, `variant: responsive(Variant::Filled).md(Variant::Outlined)`. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset. |
 | `size` | `Responsive<Size>` | `md` | Size of the segments and the captions. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |

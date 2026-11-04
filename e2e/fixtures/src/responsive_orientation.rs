@@ -1,12 +1,12 @@
-//! Responsive `orientation` (todo 5656): a toolbar, a data list, a radio group, a divider, a
-//! marquee, a slider and a carousel, a column under 62rem and a row from it.
+//! Responsive `orientation` (todo 5656): a toolbar, a data list, radio groups, a segmented
+//! control, a divider, a marquee, a slider and a carousel, a column under 62rem and a row from it.
 
 use dioxus::prelude::*;
 use libero::components::{
-    ActionIcon, Carousel, DataList, DataListItem, Divider, Marquee, Orientation, RadioGroup, Slider,
-    Toolbar,
+    ActionIcon, Carousel, DataList, DataListItem, Divider, Marquee, Orientation, RadioGroup,
+    SegmentedControl, Slider, Toolbar,
 };
-use libero::theme::responsive;
+use libero::theme::{ChoiceVariant, responsive};
 
 use crate::Routes;
 
@@ -30,6 +30,25 @@ fn ResponsiveOrientationPage() -> Element {
             RadioGroup::<String> {
                 label: "Plan",
                 options: vec!["Free".to_string(), "Pro".to_string()],
+                orientation: stacked,
+                onchange: |_| {},
+            }
+        }
+        // Cards only from md, where the row starts: both axes per breakpoint (todo 5675).
+        div { id: "rso-cards",
+            RadioGroup::<String> {
+                label: "Tier",
+                options: vec!["Free".to_string(), "Pro".to_string()],
+                orientation: stacked,
+                variant: responsive(ChoiceVariant::Plain).md(ChoiceVariant::Card),
+                onchange: |_| {},
+            }
+        }
+        div { id: "rso-segmented",
+            SegmentedControl::<String> {
+                "aria-label": "Align",
+                options: vec!["Left".to_string(), "Right".to_string()],
+                value: "Left".to_string(),
                 orientation: stacked,
                 onchange: |_| {},
             }

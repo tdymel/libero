@@ -5,14 +5,14 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            ABSENT, HtmlTag, Input, LogicalTextAlign, Part, Rail, RailInset, ScaleOrCss, States,
-            Variables, base_props, input_from_str, parts_enum, responsive_sx, variables, with_own,
+            ABSENT, HtmlTag, Input, LogicalTextAlign, Part, Rail, RailInset, ResponsiveScale,
+            States, Variables, base_props, input_from_str, parts_enum, variables, with_own,
         },
         data_display::responsive_props::and_sx,
         layout::use_box,
     },
     hooks::{use_range_css, use_theme},
-    sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         Responsive, Size, SizeCss, TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_COLOR,
         TIMELINE_CONNECTOR, TIMELINE_GAP, TIMELINE_LINE_COLOR, TIMELINE_LINE_STYLE,
@@ -23,26 +23,6 @@ use crate::{
 
 input_from_str!(TimelineAlign);
 crate::sx::input::input_from_responsive!(str TimelineAlign);
-
-/// A per-breakpoint size-or-CSS prop's override var, in the user layer; the base step
-/// keeps its state class. `None` when plain.
-fn override_sx(value: &Input<Responsive<ThemeAwareValue>>, scale: SizeCss) -> Option<Sx> {
-    let value = value.as_ref().filter(|value| !value.is_plain())?;
-    responsive_sx(value, |sx, value| {
-        let css = value
-            .resolve(Some(scale))
-            .unwrap_or_else(|| "initial".into());
-        sx.var(scale.override_var(), css)
-    })
-}
-
-/// The scale step of every breakpoint, for the state words and range copies.
-fn steps(value: &Input<Responsive<ThemeAwareValue>>, fallback: Size) -> Responsive<Size> {
-    match value.as_ref() {
-        Some(value) => value.map(|value| ScaleOrCss::new(Some(&value), fallback).size),
-        None => fallback.into(),
-    }
-}
 
 /// Horizontal space between the marker and the text column.
 const CONTENT_SPACE: &str = "var(--lsx-spacing-md)";
@@ -355,22 +335,15 @@ pub fn Timeline(props: TimelineProps) -> Element {
     let bullet_sizes = props
         .bullet_size
         .copied_or(theme.timeline.bullet_size.into());
-    let radius = ScaleOrCss::new(
-        props.radius.as_ref().map(Responsive::base_ref),
+    let radius = ResponsiveScale::new(
+        props.radius.as_ref(),
         theme.timeline.radius,
+        SizeCss::RADIUS,
     );
-    let gap = ScaleOrCss::new(
-        props.gap.as_ref().map(Responsive::base_ref),
-        theme.timeline.gap,
-    );
-    let radius_steps = steps(&props.radius, theme.timeline.radius);
-    let gap_steps = steps(&props.gap, theme.timeline.gap);
-    let radius_sx = override_sx(&props.radius, SizeCss::RADIUS);
-    let gap_sx = override_sx(&props.gap, TIMELINE_GAP);
-    // A per-breakpoint value declares every range in `sx`: an inline var would beat them.
-    let plain_radius = radius_sx.is_none();
-    let plain_gap = gap_sx.is_none();
-    let sx = with_own(and_sx(radius_sx, gap_sx), &props.sx);
+    let gap = ResponsiveScale::new(props.gap.as_ref(), theme.timeline.gap, TIMELINE_GAP);
+    let radius_steps = radius.steps;
+    let gap_steps = gap.steps;
+    let sx = with_own(and_sx(radius.sx.clone(), gap.sx.clone()), &props.sx);
 
     // One event with an opposite centres the rail of every event.
     let opposed = props.items.iter().any(|item| item.opposite.is_some());
@@ -419,14 +392,8 @@ pub fn Timeline(props: TimelineProps) -> Element {
             TIMELINE_COLOR,
             props.color.as_ref().and_then(|color| color.resolve(None)),
         )
-        .with(
-            SizeCss::RADIUS.override_var(),
-            radius.custom_css(SizeCss::RADIUS).filter(|_| plain_radius),
-        )
-        .with(
-            TIMELINE_GAP.override_var(),
-            gap.custom_css(TIMELINE_GAP).filter(|_| plain_gap),
-        )
+        .with(SizeCss::RADIUS.override_var(), radius.custom_css())
+        .with(TIMELINE_GAP.override_var(), gap.custom_css())
         .into();
 
     // Prepared once, outside the loop (`use_box` is a hook), and cloned per item.

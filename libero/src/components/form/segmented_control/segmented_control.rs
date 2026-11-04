@@ -43,8 +43,9 @@ field_props! {
         /// Overrides `Options::label`; runs during render, so it can read a locale.
         #[props(default)]
         option_label: Option<Callback<T, OptionLabel>>,
+        /// Unset, a row. Per breakpoint too: `responsive(Orientation::Vertical).sm(Orientation::Horizontal)`.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// The *unselected* look, shared by every segment.
         #[props(default, into)]
         variant: Input<Responsive<Variant>>,
@@ -242,7 +243,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             segments,
             selected,
             onselect: pick,
-            orientation: props.orientation.copied_or(Orientation::Horizontal),
+            orientation: props.orientation.copied_or(Orientation::Horizontal.into()),
             variant: variants,
             full_width,
             size: sizes,

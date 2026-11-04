@@ -6,11 +6,11 @@ use crate::{
         common::{
             BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR,
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
-            BUTTON_VARS, COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Part, ScaleOrCss, States,
-            TOOLBAR_ITEM, ToolbarItem, Variant, base_color, base_props, contrast_color,
+            BUTTON_VARS, COARSE_POINTER, COARSE_TARGET, HtmlTag, Input, Part, ResponsiveScale,
+            States, TOOLBAR_ITEM, ToolbarItem, Variant, base_color, base_props, contrast_color,
             disabled_look_sx, fill_color, focus_ring_sx, input_from_str, interactive_variant_sx,
-            label_color, literal_contrast, parts_enum, responsive_sx, text_color, use_button_group,
-            use_toolbar_item, variables, variant_colors, variant_selected_sx, with_own,
+            label_color, literal_contrast, parts_enum, text_color, use_button_group,
+            use_toolbar_item, variables, variant_colors, variant_selected_sx,
         },
         feedback::Loader,
         form::use_fieldset_disabled,
@@ -412,29 +412,14 @@ pub fn Button(props: ButtonProps) -> Element {
         .copied_or(group.size.unwrap_or(theme.button.size).into());
     // The `Loader` takes one size; the overlay's follows the breakpoints in CSS.
     let size = sizes.base();
-    let radius = ScaleOrCss::new(
-        props
-            .radius
-            .as_ref()
-            .map(Responsive::base_ref)
-            .or(group.radius.as_ref()),
+    let group_radius = group.radius.clone().map(Responsive::new);
+    let radius = ResponsiveScale::new(
+        props.radius.as_ref().or(group_radius.as_ref()),
         theme.button.radius,
+        SizeCss::RADIUS,
     );
-    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
-    let radius_steps = match radii {
-        Some(radii) => radii.map(|value| ScaleOrCss::new(Some(&value), theme.button.radius).size),
-        None => radius.size.into(),
-    };
-    // Custom CSS per breakpoint rides the override var in the user layer, under `sx`.
-    let radius_sx = radii.and_then(|radii| {
-        responsive_sx(radii, |sx, value| {
-            let css = ScaleOrCss::new(Some(&value), theme.button.radius)
-                .custom_css(SizeCss::RADIUS)
-                .unwrap_or_else(|| "initial".into());
-            sx.var(SizeCss::RADIUS.override_var(), css)
-        })
-    });
-    let own_sx = radius_sx.map(|radius_sx| with_own(Some(radius_sx), &props.sx));
+    let radius_steps = radius.steps;
+    let own_sx = radius.with_own(&props.sx);
 
     let showing = ripple.showing();
     // ~790 ns uncached, and the key rarely changes between renders.
@@ -459,13 +444,12 @@ pub fn Button(props: ButtonProps) -> Element {
         Some(gradient) => format!("{style}{gradient}"),
         None => style,
     };
-    let style = match radii {
-        Some(_) => style,
-        None => format!(
-            "{style}{}",
-            radius.override_variables(SizeCss::RADIUS).render()
-        ),
-    };
+    let style = format!(
+        "{style}{}",
+        variables()
+            .with(SizeCss::RADIUS.override_var(), radius.custom_css())
+            .render()
+    );
     let style = match props.justify.resolve(None) {
         Some(justify) => format!(
             "{style}{}",

@@ -54,8 +54,8 @@ fn Demo() -> Element {
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single options. Named groups are drawn flat, without headings. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Runs during render, so it can read a locale from context. |
 | `option_description` | `Callback<T, String>` | - | A line under each option's label. An empty string renders none. |
-| `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. |
-| `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
+| `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. Or one per breakpoint, `variant: responsive(ChoiceVariant::Plain).md(ChoiceVariant::Card)`. |
+| `orientation` | `Responsive<Orientation>` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. |
 | `color` | `ThemeAwareValue` | `primary` | Ring and dot color of the selected option; `theme.radio.color` when unset. |
 | `size` | `Responsive<Size>` | `md` | Size of the circles and their labels. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `label` | `Caption` | - | The question, and the group's name. |

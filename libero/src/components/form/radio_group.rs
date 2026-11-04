@@ -9,7 +9,7 @@ use crate::{
         form::{Asks, Radio, field_parts_enum, field_props, use_bound, use_field},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_theme},
+    hooks::{ElementHandle, use_element, use_range_css, use_theme},
     platform::{
         ElementApi, PlatformError, focus_selector, focused_attribute, logical_key, next_task,
     },
@@ -35,11 +35,46 @@ static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
                 .column_gap("16px"),
         )
         // Cards grow to fill their row from one basis, so wrapped rows line up (4976).
-        .when(
-            "horizontal && cards",
-            sx().selector("& > *", sx().flex("1 1 12rem")),
-        )
+        .when("horizontal && cards", cards_row_sx())
 });
+
+fn cards_row_sx() -> crate::sx::Sx {
+    sx().selector("& > *", sx().flex("1 1 12rem"))
+}
+
+/// Where cards sit in a row, when both axes are per breakpoint: each axis's own copy keys
+/// the other on its plain word, which such a group never carries. `None` otherwise.
+fn card_rows(
+    orientation: &Responsive<Orientation>,
+    variant: &Responsive<ChoiceVariant>,
+) -> Option<Responsive<bool>> {
+    if orientation.is_plain() || variant.is_plain() {
+        return None;
+    }
+    let row = |size: Option<Size>| {
+        let at = |o: Orientation, v: ChoiceVariant| {
+            o == Orientation::Horizontal && v == ChoiceVariant::Card
+        };
+        match size {
+            None => at(orientation.base(), variant.base()),
+            Some(size) => at(orientation.at(size), variant.at(size)),
+        }
+    };
+    Some(
+        Size::ALL
+            .into_iter()
+            .fold(Responsive::new(row(None)), |rows, size| {
+                rows.with(size, row(Some(size)))
+            }),
+    )
+}
+
+fn card_row_word(row: bool) -> &'static str {
+    match row {
+        true => "card-row",
+        false => "no-card-row",
+    }
+}
 
 /// The selector for option `index` page-wide, scoped by the group's shared `name`.
 fn option_selector(name: &str, index: usize) -> String {
@@ -215,16 +250,31 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         }),
     };
     // Run words; the `horizontal` copy keeps its nested `cards` block.
-    let states: Input<States> = match orientation.is_plain() {
+    let states = match orientation.is_plain() {
         true => states,
         false => states.responsive(&orientation, |orientation| match orientation {
             Orientation::Horizontal => "horizontal",
             Orientation::Vertical => "vertical",
         }),
+    };
+    let rows = card_rows(&orientation, &variant);
+    // Every run, `base` first: `use_state_ranges` reads the words back as one axis.
+    let states: Input<States> = match &rows {
+        Some(rows) => states.responsive(rows, card_row_word),
+        None => states,
     }
     .into();
 
     crate::components::form::use_state_ranges(&RADIO_GROUP_SX, Some(&states));
+    use_range_css(
+        &RADIO_GROUP_SX,
+        rows.map_or_else(Vec::new, |rows| {
+            rows.range_copies(card_row_word, |row| match row {
+                true => cards_row_sx(),
+                false => sx(),
+            })
+        }),
+    );
     let group = use_box()
         .framework_sx(&RADIO_GROUP_SX)
         .states(&states)

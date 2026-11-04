@@ -41,11 +41,6 @@ field_parts_enum! {
 }
 
 static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
-    // Nested two `when`s deep, these outrank the radius rule, which is one
-    // `when` shallower.
-    let collapse_start = "& > label:not(:first-of-type)";
-    let collapse_end = "& > label:not(:last-of-type)";
-
     let base = sx()
         // Contains the radios; against the viewport, focusing one scrolls the
         // document to it.
@@ -97,54 +92,26 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .selector("& > input:focus-visible + label", {
             focus_ring_sx().z_index("2")
         })
-        .when(
-            Orientation::Vertical.state_name(),
-            // Stretch, or each segment sizes to its own label and the column
-            // steps in and out down its edges.
-            sx().flex_direction("column").align_items("stretch"),
-        )
+        .when(Orientation::Vertical.state_name(), column_sx())
         // `gap` separates the segments, so they keep their own borders and
         // radii - only an ungapped control shares them.
         .when(
             "collapsed",
             sx().when(
                 Orientation::Horizontal.state_name(),
-                // Logical sides: under RTL the previous segment is on the right,
-                // and Blitz's stylo matches no `:dir()` (todo 781).
-                sx().selector(
-                    collapse_start,
-                    sx().margin_inline_start("-1px")
-                        .border_start_start_radius("0")
-                        .border_end_start_radius("0"),
-                )
-                .selector(
-                    collapse_end,
-                    sx().border_start_end_radius("0").border_end_end_radius("0"),
-                ),
+                collapse_sx(Orientation::Horizontal),
             )
             .when(
                 Orientation::Vertical.state_name(),
-                sx().selector(
-                    collapse_start,
-                    sx().margin_top("-1px")
-                        .border_top_left_radius("0")
-                        .border_top_right_radius("0"),
-                )
-                .selector(
-                    collapse_end,
-                    sx().border_bottom_left_radius("0")
-                        .border_bottom_right_radius("0"),
-                ),
+                collapse_sx(Orientation::Vertical),
             ),
         )
         // Only a row shares out its width; a shrunk segment ellipsizes rather
         // than wraps, and the radio's `aria-label` keeps the whole name.
         .when(
             "full-width",
-            sx().width("100%").when(
-                Orientation::Horizontal.state_name(),
-                sx().selector(SEGMENT, sx().flex("1 1 0")),
-            ),
+            sx().width("100%")
+                .when(Orientation::Horizontal.state_name(), shared_row_sx()),
         );
 
     let base = Variant::ALL.iter().fold(base, |base, &variant| {
@@ -240,6 +207,58 @@ fn variant_copy_sx(variant: Variant) -> Sx {
     )
 }
 
+/// Stretch, or each segment sizes to its own label and the column steps in and out down its edges.
+fn column_sx() -> Sx {
+    sx().flex_direction("column").align_items("stretch")
+}
+
+/// An ungapped strip's shared borders and square inner corners along `orientation`.
+fn collapse_sx(orientation: Orientation) -> Sx {
+    // Nested two `when`s deep, these outrank the radius rule, which is one `when` shallower.
+    let collapse_start = "& > label:not(:first-of-type)";
+    let collapse_end = "& > label:not(:last-of-type)";
+    match orientation {
+        // Logical sides: under RTL the previous segment is on the right, and Blitz's stylo
+        // matches no `:dir()` (todo 781).
+        Orientation::Horizontal => sx()
+            .selector(
+                collapse_start,
+                sx().margin_inline_start("-1px")
+                    .border_start_start_radius("0")
+                    .border_end_start_radius("0"),
+            )
+            .selector(
+                collapse_end,
+                sx().border_start_end_radius("0").border_end_end_radius("0"),
+            ),
+        Orientation::Vertical => sx()
+            .selector(
+                collapse_start,
+                sx().margin_top("-1px")
+                    .border_top_left_radius("0")
+                    .border_top_right_radius("0"),
+            )
+            .selector(
+                collapse_end,
+                sx().border_bottom_left_radius("0")
+                    .border_bottom_right_radius("0"),
+            ),
+    }
+}
+
+fn shared_row_sx() -> Sx {
+    sx().selector(SEGMENT, sx().flex("1 1 0"))
+}
+
+/// A responsive range's copy: the static sheet's orientation rules for that range.
+fn orientation_sx(orientation: Orientation) -> Sx {
+    let collapse = sx().when("collapsed", collapse_sx(orientation));
+    match orientation {
+        Orientation::Horizontal => collapse.when("full-width", shared_row_sx()),
+        Orientation::Vertical => column_sx().and(collapse),
+    }
+}
+
 /// What an unselected segment draws: the filled variant goes tonal, so the solid pick differs
 /// from it by more than a shade.
 pub(crate) fn unselected_look(variant: Variant) -> Variant {
@@ -249,7 +268,7 @@ pub(crate) fn unselected_look(variant: Variant) -> Variant {
     }
 }
 
-fn selected_look(variant: Variant) -> crate::sx::Sx {
+fn selected_look(variant: Variant) -> Sx {
     match variant {
         // The solid fill; the on-state ring stays the cue that does not rely on colour.
         Variant::Filled => variant_chrome_sx(Variant::Filled, &BUTTON_VARS)
@@ -280,7 +299,7 @@ pub(crate) struct SegmentedControlView {
     /// renders, with nothing checked.
     pub selected: Option<usize>,
     pub onselect: Callback<usize>,
-    pub orientation: Orientation,
+    pub orientation: Responsive<Orientation>,
     pub variant: Responsive<Variant>,
     pub full_width: bool,
     pub size: Responsive<Size>,
@@ -394,7 +413,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         .or_else(|| disabled_segments.iter().position(|off| !off));
 
     let mut own = States::default()
-        .with(orientation.state_name(), true)
+        .responsive(&orientation, |orientation| orientation.state_name())
         .responsive(&variant, Variant::state_name)
         .with("full-width", full_width)
         .with("collapsed", gap.is_none());
@@ -418,6 +437,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         |radius| segment_copy_sx(radius.radius_state_name()),
     ));
     copies.extend(variant.range_copies(Variant::state_name, variant_copy_sx));
+    copies.extend(orientation.range_copies(|orientation| orientation.state_name(), orientation_sx));
     use_range_css(&SEGMENTED_CONTROL_SX, copies);
     // A responsive gap's var is in `gap_sx`; an inline one would beat its breakpoints.
     let gap_variables: Input<Variables> = match gap_sx.as_ref().is_none() {

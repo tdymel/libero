@@ -15,13 +15,16 @@ const AXIS: &str = "(() => { const bar = document.getElementById('rso-toolbar');
     getComputedStyle(list).display, document.activeElement.id].join('|'); })()";
 
 /// The radio group's and marquee track's flex direction, the divider's line side, the slider's
-/// `aria-orientation` and the carousel track's direction.
+/// `aria-orientation`, the carousel track's direction, the segmented strip's direction and
+/// whether the card row grows its cards.
 const PARTS: &str = "(() => { const css = (sel) => getComputedStyle(document.querySelector(sel)); \
     return [css('#rso-radio [role=radiogroup]').flexDirection, \
     css('#rso-divider').borderRightWidth === '0px' ? 'horizontal' : 'vertical', \
     css('#rso-marquee > [data-slot=track]').flexDirection, \
     document.querySelector('#rso-slider [role=slider]').getAttribute('aria-orientation') || 'horizontal', \
-    css('#rso-carousel [data-slot=track]').flexDirection].join('|'); })()";
+    css('#rso-carousel [data-slot=track]').flexDirection, \
+    css('#rso-segmented [data-slot=control]').flexDirection, \
+    css('#rso-cards [role=radiogroup] > *').flexGrow === '1' ? 'grow' : 'fixed'].join('|'); })()";
 
 async fn parts_are(page: &Page, want: &str) {
     let reached = wait::for_js_true(page, &format!("{PARTS} === '{want}'"), want).await;
@@ -54,7 +57,7 @@ fn a_responsive_orientation_moves_its_layout_and_keys_with_the_window() {
         let page = &fixture.page;
         wait::for_visible(page, "#rso-bold").await.unwrap();
         axis_is(page, "horizontal|row|grid|").await;
-        parts_are(page, "row|horizontal|row|horizontal|row").await;
+        parts_are(page, "row|horizontal|row|horizontal|row|row|grow").await;
         pointer::click(page, "#rso-bold").await.unwrap();
         keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
         axis_is(page, "horizontal|row|grid|rso-italic").await;
@@ -63,7 +66,7 @@ fn a_responsive_orientation_moves_its_layout_and_keys_with_the_window() {
             .await
             .unwrap();
         axis_is(page, "vertical|column|flex|rso-italic").await;
-        parts_are(page, "column|vertical|column|vertical|column").await;
+        parts_are(page, "column|vertical|column|vertical|column|column|fixed").await;
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         axis_is(page, "vertical|column|flex|rso-under").await;
 

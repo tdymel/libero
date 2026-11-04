@@ -9,9 +9,9 @@ use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
 use libero::components::{
-    Code, Icon, Input, OptionLabel, OptionList, Options, SegmentedControl, Text,
+    Code, Icon, Input, OptionLabel, OptionList, Options, Orientation, SegmentedControl, Text,
 };
-use libero::theme::{Size, responsive};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
 
 struct AlignmentCopy;
@@ -73,9 +73,39 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }
 
-/// The demo's size from the `md` breakpoint up, `sm` below it.
+/// The demo's size and orientation from the `md` breakpoint up, `sm` and the other one below it.
 fn responsive_on(values: &DemoValues) -> bool {
     values.str("responsive") == "true"
+}
+
+fn picked(values: &DemoValues) -> Orientation {
+    Orientation::from(values.str("orientation").as_str())
+}
+
+fn other(orientation: Orientation) -> Orientation {
+    match orientation {
+        Orientation::Horizontal => Orientation::Vertical,
+        Orientation::Vertical => Orientation::Horizontal,
+    }
+}
+
+/// The other orientation below `md`, the picked one from it, while the `responsive` switch is on.
+fn responsive_orientation(values: &DemoValues) -> Responsive<Orientation> {
+    match responsive_on(values) {
+        true => responsive(other(picked(values))).md(picked(values)),
+        false => picked(values).into(),
+    }
+}
+
+fn orientation_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match (responsive_on(values), picked(values)) {
+        (true, orientation) => vec![format!(
+            "orientation: responsive(Orientation::{:?}).md(Orientation::{orientation:?})",
+            other(orientation)
+        )],
+        (false, Orientation::Horizontal) => vec![],
+        (false, orientation) => vec![format!("orientation: {:?}", orientation.as_str())],
+    }
 }
 
 #[component]
@@ -104,9 +134,9 @@ pub fn SegmentedControlPage() -> Element {
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Renames a segment, or draws it with `OptionLabel::with_icon` or `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = \"..\")]` renames one at the type."),
-                    prop("orientation", "Orientation")
+                    prop("orientation", "Responsive<Orientation>")
                         .default("horizontal")
-                        .doc("A row or a column."),
+                        .doc("A row or a column. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`."),
                     prop("variant", "Responsive<Variant>")
                         .default(theme.segmented_control.variant.as_str())
                         .doc("The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. Or one per breakpoint, `variant: responsive(Variant::Filled).md(Variant::Outlined)`."),
@@ -245,7 +275,8 @@ pub fn SegmentedControlPage() -> Element {
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::toggle("orientation", ["horizontal", "vertical"])
-                        .labels(["Horizontal", "Vertical"]),
+                        .labels(["Horizontal", "Vertical"])
+                        .code(orientation_code),
                     // "auto" is no gap at all: the segments stay connected
                     // and share their borders.
                     Control::slider("gap", ["auto", "0", "xs", "sm", "md", "lg", "xl", "xxl"]),
@@ -286,7 +317,7 @@ pub fn SegmentedControlPage() -> Element {
                                 (false, size) => size.into(),
                             },
                             radius: values.str("radius"),
-                            orientation: values.str("orientation"),
+                            orientation: responsive_orientation(&values),
                             gap: or_unset::<libero::sx::ThemeAwareValue>(values.str("gap")),
                             full_width: is_on(&values, "full_width"),
                             selected_check: is_on(&values, "selected_check"),

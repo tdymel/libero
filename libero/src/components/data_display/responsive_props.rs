@@ -1,4 +1,5 @@
-//! Per-breakpoint value props of the data_display family (todo 5654).
+//! Per-breakpoint value props of the data_display family (todo 5654): a var with no step word.
+//! A size-or-CSS prop with step words and an override var takes `ResponsiveScale` instead.
 
 use crate::{
     components::common::responsive_var_sx,

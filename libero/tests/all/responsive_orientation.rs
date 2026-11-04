@@ -8,10 +8,10 @@ use libero::{
     LiberoProvider,
     components::{
         ActionIcon, Button, ButtonGroup, Carousel, DataList, DataListItem, Divider, Marquee,
-        Options, Orientation, RadioGroup, RangeSlider, Slider, Sortable, SortableItem, Splitter,
-        Stepper, Toolbar,
+        Options, Orientation, RadioGroup, RangeSlider, SegmentedControl, Slider, Sortable,
+        SortableItem, Splitter, Stepper, Toolbar,
     },
-    theme::responsive,
+    theme::{ChoiceVariant, responsive},
 };
 
 /// Any range copy in the page.
@@ -53,6 +53,8 @@ fn a_plain_orientation_keeps_its_words_and_registers_nothing() {
                     panel_a: rsx! { "A" }, panel_b: rsx! { "B" },
                 }
                 RadioGroup::<Plan> { label: "Plan", orientation: "horizontal", onchange: |_| {} }
+                RadioGroup::<Plan> { label: "Tier", orientation: "horizontal", variant: "card", onchange: |_| {} }
+                SegmentedControl::<Plan> { "aria-label": "Plan", orientation: "vertical", value: Plan::Free, onchange: |_| {} }
                 Divider { orientation: "vertical", "or" }
             }
         }
@@ -301,4 +303,58 @@ fn a_responsive_slider_renders_its_base_on_the_server() {
         "{page}"
     );
     assert!(!has_range_copy(&html));
+}
+
+/// Both axes per breakpoint: a third run word keys the cards' row on the ranges they share.
+#[test]
+fn a_radio_group_with_both_axes_responsive_grows_its_cards_where_they_meet() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RadioGroup::<Plan> {
+                    label: "Plan",
+                    orientation: stacked(),
+                    variant: responsive(ChoiceVariant::Plain).lg(ChoiceVariant::Card),
+                    onchange: |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let page = body(&html);
+    assert!(page.contains("base-lg:no-card-row lg-:card-row"), "{page}");
+    let row = copy(&html, "lg-:card-row");
+    assert!(
+        row.starts_with(r#"[data-state~="lg-:card-row"] > *{flex:1 1 12rem;}"#),
+        "{row}"
+    );
+    assert!(!html.contains(r#"[data-state~="base-lg:no-card-row"]"#));
+}
+
+#[test]
+fn a_responsive_segmented_control_stacks_and_joins_per_range() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl::<Plan> {
+                    "aria-label": "Plan",
+                    orientation: stacked(),
+                    full_width: true,
+                    value: Plan::Free,
+                    onchange: |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let page = body(&html);
+    assert!(page.contains("base-md:vertical md-:horizontal"), "{page}");
+    let column = copy(&html, "base-md:vertical");
+    assert!(column.contains("flex-direction:column"), "{column}");
+    assert!(column.contains("margin-top:-1px"), "{column}");
+    let row = copy(&html, "md-:horizontal");
+    assert!(row.contains("margin-inline-start:-1px"), "{row}");
+    assert!(row.contains("flex:1 1 0"), "{row}");
 }

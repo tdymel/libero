@@ -4,9 +4,9 @@ use crate::components::{
     status_prop,
 };
 use dioxus::prelude::*;
-use libero::components::{Code, OptionList, Options, RadioGroup, Text};
+use libero::components::{Code, OptionList, Options, Orientation, RadioGroup, Text};
 use libero::components::{RadioGroupPart, RadioPart};
-use libero::theme::{Size, responsive};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
 
 struct PlanCopy;
@@ -77,9 +77,38 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }
 
-/// The demo's size from the `md` breakpoint up, `sm` below it.
+/// The demo's size and orientation from the `md` breakpoint up, `sm` and the other one below it.
 fn responsive_on(values: &DemoValues) -> bool {
     values.str("responsive") == "true"
+}
+
+fn picked(values: &DemoValues) -> Orientation {
+    Orientation::from(values.str("orientation").as_str())
+}
+
+fn other(orientation: Orientation) -> Orientation {
+    match orientation {
+        Orientation::Horizontal => Orientation::Vertical,
+        Orientation::Vertical => Orientation::Horizontal,
+    }
+}
+
+fn responsive_orientation(values: &DemoValues) -> Responsive<Orientation> {
+    match responsive_on(values) {
+        true => responsive(other(picked(values))).md(picked(values)),
+        false => picked(values).into(),
+    }
+}
+
+fn orientation_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match (responsive_on(values), picked(values)) {
+        (true, orientation) => vec![format!(
+            "orientation: responsive(Orientation::{:?}).md(Orientation::{orientation:?})",
+            other(orientation)
+        )],
+        (false, Orientation::Vertical) => vec![],
+        (false, orientation) => vec![format!("orientation: {:?}", orientation.as_str())],
+    }
 }
 
 #[component]
@@ -112,10 +141,10 @@ pub fn RadioGroupPage() -> Element {
                         .doc("A line under each option's label. An empty string renders none."),
                     prop("variant", "Responsive<ChoiceVariant>")
                         .default(theme.radio.variant.as_str())
-                        .doc("`card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height."),
-                    prop("orientation", "Orientation")
+                        .doc("`card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. Or one per breakpoint, `variant: responsive(ChoiceVariant::Plain).md(ChoiceVariant::Card)`."),
+                    prop("orientation", "Responsive<Orientation>")
                         .default("vertical")
-                        .doc("`horizontal` lays the options out in a row, for two or three short ones."),
+                        .doc("`horizontal` lays the options out in a row, for two or three short ones. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.radio.color.as_str())
                         .doc("Ring and dot color of the selected option; `theme.radio.color` when unset."),
@@ -264,10 +293,7 @@ pub fn RadioGroupPage() -> Element {
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
                         .default("vertical")
-                        .code(|_, values| match values.str("orientation").as_str() {
-                            "horizontal" => vec![r#"orientation: "horizontal""#.to_string()],
-                            _ => vec![],
-                        }),
+                        .code(orientation_code),
                 ], field_controls::<PlanCopy>(), vec![
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -293,7 +319,7 @@ pub fn RadioGroupPage() -> Element {
                                 (true, size) => responsive(Size::Sm).md(size),
                                 (false, size) => size.into(),
                             },
-                            orientation: values.str("orientation"),
+                            orientation: responsive_orientation(&values),
                             label: field.label,
                             "aria-label": field.aria_label,
                             description: field.description,
