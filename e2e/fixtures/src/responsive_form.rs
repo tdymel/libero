@@ -46,6 +46,17 @@ fn ResponsiveFormPage() -> Element {
                     variant: responsive(ChoiceVariant::Plain).md(ChoiceVariant::Card),
                 }
             }
+            // Two responsive axes crossing in one rule: the card's padding per size (todo 5666).
+            div { id: "rspf-cross",
+                Checkbox {
+                    label: "Large card from md",
+                    size: responsive(Size::Sm).md(Size::Xl),
+                    variant: responsive(ChoiceVariant::Plain).md(ChoiceVariant::Card),
+                }
+            }
+            div { id: "rspf-cross-xl",
+                Checkbox { label: "Large card", size: "xl", variant: "card" }
+            }
             div { id: "rspf-seg",
                 SegmentedControl {
                     label: "View",

@@ -97,6 +97,18 @@ fn size_copy_sx(size: Size) -> Sx {
     ButtonDefaults::size_sx(size)
         .and(zoom_height(size))
         .when("loading-overlay", loader_size_sx(size))
+        .when("loading", inline_loader_size_sx(size))
+}
+
+/// A responsive start or end `Loader` (todo 5649); the plain one sizes itself through its `sx`.
+fn inline_loader_size_sx(size: Size) -> Sx {
+    sx().selector(
+        "& > [data-slot='button-icon'] > span, & > [data-slot='button-trailing-icon'] > span",
+        sx().var(
+            LOADER_SIZE,
+            format!("calc({} / 2)", BUTTON_HEIGHT.value(size)),
+        ),
+    )
 }
 
 /// A range copy of one variant: its block, reading the instance's vars for that variant.
@@ -404,7 +416,7 @@ pub fn Button(props: ButtonProps) -> Element {
     let sizes = props
         .size
         .copied_or(group.size.unwrap_or(theme.button.size.into()));
-    // The `Loader` takes one size; the overlay's follows the breakpoints in CSS.
+    // The `Loader` takes one size; the size copies resize it per breakpoint.
     let size = sizes.base();
     let group_radius = group.radius.clone();
     let radius = ResponsiveScale::new(
@@ -546,6 +558,10 @@ pub fn Button(props: ButtonProps) -> Element {
         },
         (Some(loader), true) => loader,
         (None, false) => rsx! {
+            Loader { size, color: "currentColor" }
+        },
+        // Its `sx` sits in the user layer and would outrank the copies.
+        (None, true) if !sizes.is_plain() => rsx! {
             Loader { size, color: "currentColor" }
         },
         (None, true) => rsx! {

@@ -257,3 +257,55 @@ fn picker_content_follows_the_responsive_size() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5666: a responsive size and card variant on one checkbox: from md its card padding is
+/// the plain `xl` card's, under md it has none.
+#[test]
+fn a_card_takes_the_padding_of_its_responsive_size() {
+    const PADDING: &str =
+        "(id) => getComputedStyle(document.querySelector(`#${id} > *`)).paddingTop";
+    block_on(async {
+        let fixture = Fixture::open("/responsive-form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#rspf-cross").await.unwrap();
+        let padding = |id: &str| format!("({PADDING})('{id}')");
+        let same = format!("{} === {}", padding("rspf-cross"), padding("rspf-cross-xl"));
+        let wide: (String, String) = (
+            page.evaluate_bounded(padding("rspf-cross"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap(),
+            page.evaluate_bounded(padding("rspf-cross-xl"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap(),
+        );
+        assert_ne!(wide.1, "0px", "{wide:?}");
+        assert!(
+            wait::for_js_true(page, &same, "the xl card padding")
+                .await
+                .is_ok(),
+            "{wide:?}"
+        );
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(600, 800, 1.0, false))
+            .await
+            .unwrap();
+        let none = format!("{} === '0px'", padding("rspf-cross"));
+        assert!(
+            wait::for_js_true(page, &none, "no padding off the card")
+                .await
+                .is_ok()
+        );
+
+        fixture
+            .console
+            .assert_clean("responsive card padding")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

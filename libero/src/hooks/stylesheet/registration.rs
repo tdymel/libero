@@ -373,6 +373,68 @@ impl<T: Clone + PartialEq> crate::tokens::Responsive<T> {
             })
             .collect()
     }
+
+    /// The copies of the rules keyed on a word of this axis and one of `other` at once
+    /// (`card && size-sm`): one per pair of overlapping runs, under both run words, within the
+    /// overlap. None unless both axes are responsive, so a single-axis instance adds nothing.
+    pub(crate) fn cross_copies<'a, U: Clone + PartialEq + 'a>(
+        &self,
+        token: impl Fn(T) -> &'static str,
+        other: &crate::tokens::Responsive<U>,
+        other_token: impl Fn(U) -> &'static str,
+        block: impl Fn(T, U) -> Sx + Clone + 'a,
+    ) -> Vec<RangeCopy<'a>>
+    where
+        T: 'a,
+    {
+        use crate::tokens::{range_query, range_token};
+        if self.is_plain() || other.is_plain() {
+            return Vec::new();
+        }
+        let theirs = other.runs();
+        let mut copies = Vec::new();
+        for (from, until, value) in self.runs() {
+            for (other_from, other_until, other_value) in theirs.iter().cloned() {
+                let rank =
+                    |bound: Option<crate::tokens::Size>| bound.map_or(0, |size| size.index() + 1);
+                let start = std::cmp::max_by_key(from, other_from, |bound| rank(*bound));
+                let end = match (until, other_until) {
+                    (Some(until), Some(other)) => {
+                        Some(std::cmp::min_by_key(until, other, |size| size.index()))
+                    }
+                    (until, other) => until.or(other),
+                };
+                if end.is_some_and(|end| rank(start) >= rank(Some(end))) {
+                    continue;
+                }
+                let block = block.clone();
+                let (value, other_value) = (value.clone(), other_value);
+                copies.push(RangeCopy {
+                    word: cross_word(
+                        range_token(from, until, token(value.clone())),
+                        range_token(other_from, other_until, other_token(other_value.clone())),
+                    ),
+                    query: range_query(start, end),
+                    block: Box::new(move || block(value, other_value)),
+                });
+            }
+        }
+        copies
+    }
+}
+
+/// `a && b`, interned like a run word, so a held copy compares by its word.
+fn cross_word(word: &'static str, other: &'static str) -> &'static str {
+    use std::collections::HashMap;
+    thread_local! {
+        static WORDS: RefCell<HashMap<(&'static str, &'static str), &'static str>> =
+            RefCell::new(HashMap::new());
+    }
+    WORDS.with_borrow_mut(|words| {
+        *words
+            .entry((word, other))
+            .or_insert_with(|| String::leak(format!("{word} && {other}")))
+    })
 }
 
 /// The range copies one instance holds, released when its scope goes.
@@ -449,4 +511,55 @@ pub(crate) fn use_range_css_in(
         context.stylesheet_registry.release(key);
     }
     bump_if_changed(true, context);
+}
+
+#[cfg(test)]
+mod cross_tests {
+    use crate::{
+        sx::sx,
+        theme::{Size, responsive},
+    };
+
+    fn words_and_queries(
+        size: &crate::theme::Responsive<Size>,
+        card: &crate::theme::Responsive<&'static str>,
+    ) -> Vec<(&'static str, String)> {
+        size.cross_copies(|size| size.state_name(), card, |word| word, |_, _| sx())
+            .into_iter()
+            .map(|copy| (copy.word, copy.query))
+            .collect()
+    }
+
+    #[test]
+    fn overlapping_runs_pair_up_within_their_overlap() {
+        let sizes = responsive(Size::Sm).md(Size::Xl);
+        let cards = responsive("plain").sm("card");
+        assert_eq!(
+            words_and_queries(&sizes, &cards),
+            [
+                (
+                    "base-md:size-sm && base-sm:plain",
+                    "(max-width: 47.99875rem)".to_string()
+                ),
+                (
+                    "base-md:size-sm && sm-:card",
+                    "(min-width: 48rem) and (max-width: 61.99875rem)".to_string()
+                ),
+                ("md-:size-xl && sm-:card", "(min-width: 62rem)".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_plain_axis_crosses_nothing() {
+        let cards = responsive("plain").sm("card");
+        assert!(words_and_queries(&crate::theme::Responsive::new(Size::Sm), &cards).is_empty());
+        assert!(
+            words_and_queries(
+                &responsive(Size::Sm).md(Size::Xl),
+                &crate::theme::Responsive::new("card")
+            )
+            .is_empty()
+        );
+    }
 }

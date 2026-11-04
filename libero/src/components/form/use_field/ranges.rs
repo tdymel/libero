@@ -13,7 +13,7 @@ pub(crate) fn use_state_ranges(sheet: &'static StaticSx, states: Option<&Input<S
         .and_then(Input::as_ref)
         .map(run_axes)
         .unwrap_or_default();
-    let copies = axes
+    let mut copies: Vec<_> = axes
         .iter()
         .flat_map(|axis| {
             axis.range_copies(token_of, move |word| {
@@ -23,6 +23,20 @@ pub(crate) fn use_state_ranges(sheet: &'static StaticSx, states: Option<&Input<S
             })
         })
         .collect();
+    // A rule on two axes' words (`card && size-sm`) keys plain words in each axis's copy.
+    for (at, axis) in axes.iter().enumerate() {
+        for other in &axes[at + 1..] {
+            copies.extend(
+                axis.cross_copies(token_of, other, token_of, move |word, other| {
+                    sheet
+                        .axis_block(token_of(word))
+                        .axis_block(token_of(other))
+                        .rekeyed(token_of(word), word)
+                        .rekeyed(token_of(other), other)
+                }),
+            );
+        }
+    }
     use_range_css(sheet, copies);
 }
 

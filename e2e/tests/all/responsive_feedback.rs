@@ -25,6 +25,7 @@ const LOOK: &str = r#"(mode) => {
         ['#{} [role="menuitem"]', 'border-top-left-radius', 'rf-menubar'],
         ['#{}', 'width', 'rf-burger'],
         ['#{} [data-slot="glyph"]', 'width', 'rf-burger'],
+        ['#{} [data-slot="button-icon"] > span', 'width', 'rf-button'],
         ['#{}', 'width', 'rf-dialog'],
         ['#{}', 'border-top-left-radius', 'rf-dialog'],
     ];

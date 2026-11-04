@@ -83,7 +83,7 @@ pub fn ButtonPage() -> Element {
                     .doc("Drawn in place of the `Loader` while `loading`. Size it yourself, e.g. `Loader { size: \"xs\" }`."),
                 prop("loading_position", "LoadingPosition")
                     .default("center")
-                    .doc("Where the loader sits: `center` over the hidden label, or `start` and `end` in the place of `icon` and `trailing_icon`, with the label still visible."),
+                    .doc("Where the loader sits: `center` over the hidden label, or `start` and `end` in the place of `icon` and `trailing_icon`, with the label still visible. The loader is half the button's height and follows a per-breakpoint `size`."),
                 prop("ripple", "bool")
                     .default("true")
                     .doc("The press ripple. `false` drops it, for a dense toolbar or a theme without one. Reduced motion drops it anyway."),

@@ -6,7 +6,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Alert, Avatar, Chip, Paper},
+    components::{ActionIcon, Alert, Avatar, Button, Chip, Paper},
     sx::ThemeAwareValue,
     theme::{Size, Variant, responsive},
 };
@@ -159,4 +159,45 @@ fn plain_paper_alert_and_avatar_carry_no_range_copy() {
     }
 
     assert!(!has_lazy_css(&render(app)), "lazy CSS on a plain page");
+}
+
+/// Todo 5649: a responsive start or end loader is sized per range by the button's copies.
+#[test]
+fn a_responsive_inline_loader_takes_half_the_button_height_per_range() {
+    fn responsive_app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button {
+                    loading: true,
+                    loading_position: "start",
+                    size: responsive(Size::Xs).md(Size::Xl),
+                    "Save"
+                }
+            }
+        }
+    }
+    fn plain_app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button { loading: true, loading_position: "end", size: "xl", "Save" }
+            }
+        }
+    }
+
+    let html = render(responsive_app);
+    let rule = "{--lsx-loader-size:calc(var(--lsx-button-height-xl) / 2);}";
+    assert!(
+        html.split(r#"[data-state~="md-:size-xl"]"#)
+            .skip(1)
+            .any(|rest| rest.contains("[data-slot='button-icon'] > span") && rest.contains(rule)),
+        "no md copy for the inline loader"
+    );
+    assert!(
+        !html.contains("@layer lsx-user-static"),
+        "the base sx outranks the copies"
+    );
+
+    let html = render(plain_app);
+    assert!(!has_lazy_css(&html), "lazy CSS on a plain page");
+    assert!(html.contains(rule), "the plain loader lost its sx");
 }

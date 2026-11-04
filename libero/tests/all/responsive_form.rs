@@ -537,3 +537,60 @@ fn pickers_follow_a_responsive_size() {
         "a plain picker adds a run"
     );
 }
+
+/// Todo 5666: a rule on two responsive axes' words (`card && size-xl`) gets a copy under both run
+/// words, within the overlap of their ranges, ranked with the other range copies.
+#[test]
+fn a_responsive_size_and_card_cross_in_one_copy() {
+    fn crossed() -> Element {
+        rsx! {
+            LiberoProvider {
+                Checkbox {
+                    label: "Card",
+                    size: responsive(Size::Sm).md(Size::Xl),
+                    variant: responsive(ChoiceVariant::Plain).md(ChoiceVariant::Card),
+                }
+            }
+        }
+    }
+    fn single() -> Element {
+        rsx! {
+            LiberoProvider {
+                Checkbox {
+                    label: "Card",
+                    size: responsive(Size::Sm).md(Size::Xl),
+                    variant: "card",
+                }
+            }
+        }
+    }
+
+    let html = render(crossed);
+    let rule = r#"[data-state~="md-:size-xl"][data-state~="md-:card"]{padding:"#;
+    let copy = html.find(rule).unwrap_or_else(|| panic!("no product copy"));
+    assert!(
+        html[..copy]
+            .rsplit_once("@media")
+            .is_some_and(|(_, query)| query.starts_with(" (min-width: 62rem){")),
+        "the copy is not within md-: {}",
+        &html[copy.saturating_sub(120)..copy + 80]
+    );
+    // A range copy sits ahead of the component sheets in its layer, as the single-axis ones do.
+    let plain = html
+        .find(r#"[data-state~="card"][data-state~="size-xl"]"#)
+        .or_else(|| html.find(r#"[data-state~="size-xl"][data-state~="card"]"#))
+        .expect("the static card rule");
+    assert!(
+        copy < plain,
+        "the product copy comes after the static sheet"
+    );
+    // Under md the size is `sm` and the variant plain: no pair holds a card padding there.
+    assert!(!html.contains(r#"[data-state~="base-md:plain"]{padding"#));
+
+    let html = render(single);
+    assert!(!html.contains(" && "), "a stray cross word");
+    assert!(
+        !html.contains(r#"[data-state~="md-:size-xl"][data-state~="md-:"#),
+        "a single-axis page grew a product copy"
+    );
+}

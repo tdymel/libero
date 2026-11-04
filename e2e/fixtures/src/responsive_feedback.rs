@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Burger, CircularProgress, Dialog, Loader, MenuItem, Menubar, MenubarMenu, Pagination,
+    Burger, Button, CircularProgress, Dialog, Loader, MenuItem, Menubar, MenubarMenu, Pagination,
     ProgressBar, Skeleton,
 };
 use libero::sx::ThemeAwareValue;
@@ -46,6 +46,7 @@ fn ResponsiveFeedbackPage() -> Element {
         {trio!("rf-pagination", Pagination { size: Size::Xs => Size::Xl, radius: step(Size::Xs) => step(Size::Xl) } total: 5, page: 2, aria_label: "Pages", onchange: |_| {})}
         {trio!("rf-menubar", Menubar { size: Size::Xs => Size::Xl, radius: step(Size::Xs) => css("0") } aria_label: "Main", menus: menus())}
         {trio!("rf-burger", Burger { size: step(Size::Xs) => step(Size::Xl) })}
+        {trio!("rf-button", Button { size: Size::Xs => Size::Xl } loading: true, loading_position: "start", "Save")}
         {trio!("rf-dialog", Dialog { size: step(Size::Xs) => step(Size::Lg), radius: step(Size::Xs) => css("0") } aria_label: "Inline", "Content")}
     }
 }
