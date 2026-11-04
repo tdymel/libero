@@ -10,8 +10,7 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, base_props, css_px,
-            input_from_str, variables,
+            FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, base_props, css_px, variables,
         },
         layout::use_box,
     },
@@ -31,9 +30,6 @@ use crate::{
 };
 
 use crate::theme::Side;
-
-input_from_str!(Side);
-crate::sx::input::input_from_responsive!(str Side);
 
 const TOOLTIP_GAP_VAR: CssVar = CssVar::new("--lsx-tooltip-gap");
 

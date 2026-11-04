@@ -11,7 +11,7 @@ use crate::{
         accessibility::{focus_edge, focus_first_stop, tab_order},
         common::{
             FOCUSABLE_SELECTOR, HtmlTag, Input, ResponsiveScale, ScaleOrCss, States, Variables,
-            base_props, css_px, input_from_str, inset_focus_ring_sx, variables,
+            base_props, css_px, inset_focus_ring_sx, variables,
         },
         layout::{paper_sx, scroll_on_key, use_box},
     },
@@ -30,9 +30,6 @@ use crate::{
     },
     utils::warn,
 };
-
-input_from_str!(Align);
-crate::sx::input::input_from_responsive!(str Align);
 
 // `paper_sx()` through `use_box`, not `Paper`: it needs the popover's element and events.
 static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {

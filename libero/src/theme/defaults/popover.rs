@@ -51,6 +51,12 @@ str_enum! {
     }
 }
 
+// Here, not in a feature-gated component: tables and menus take them too.
+crate::sx::input::input_from_str!(Side);
+crate::sx::input::input_from_responsive!(str Side);
+crate::sx::input::input_from_str!(Align);
+crate::sx::input::input_from_responsive!(str Align);
+
 /// Theme defaults for `Popover`, set on [`Theme`](crate::theme::Theme).
 /// Pixels, not a `Size`: `use_popover` does arithmetic with measured rects.
 #[derive(Clone, Copy, Debug, PartialEq)]
