@@ -40,7 +40,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `vertical` | The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them. |
+| `orientation` | `Responsive<Orientation>` | `vertical` | The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint, while the arrow keys and the drag axis follow after mount when the page was rendered on a server. |
 | `initial_size` | `f64` | `50` | Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. Ignored when `size` is set. |
 | `size` | `Option<f64>` | `None` | Pane A's size in percent, kept within `min_size`. Set, the splitter is controlled: a drag, key or double-click only reports through `onresize`, and the panes follow `size`. |
 | `min_size` | `f64` | `10` | The smallest size of either pane in percent, at most 50. |

@@ -11,3 +11,4 @@ str_enum! {
 }
 
 input_from_str!(Orientation);
+crate::sx::input::input_from_responsive!(str Orientation);

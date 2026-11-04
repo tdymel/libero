@@ -16,10 +16,15 @@ use crate::{
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{current_localization, drag_handle_sx, use_css, use_id, use_media_query},
+    hooks::{
+        current_localization, drag_handle_sx, use_css, use_id, use_media_query, use_range_css,
+        use_responsive,
+    },
     localization::fill,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
-    theme::{FOCUS_RING_HALO_SPREAD, Size, SizeCss, TRANSITION_DURATION, TRANSITION_EASING},
+    theme::{
+        FOCUS_RING_HALO_SPREAD, Responsive, Size, SizeCss, TRANSITION_DURATION, TRANSITION_EASING,
+    },
 };
 
 static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -28,20 +33,26 @@ static SORTABLE_BASE_SX: StaticSx = StaticSx::new(|| {
         .list_style("none")
         .margin("0")
         .padding("0")
-        .when("vertical", sx().flex_direction("column"))
+        .when("vertical", orientation_sx(Orientation::Vertical))
+        .when("horizontal", orientation_sx(Orientation::Horizontal))
+        .when("sorting", sx().user_select("none"))
+});
+
+/// The static sheet's orientation block, or a responsive range's copy.
+fn orientation_sx(orientation: Orientation) -> Sx {
+    match orientation {
+        Orientation::Vertical => sx().flex_direction("column"),
         // A row cannot wrap while it sorts, so it scrolls inside itself (1.4.10);
         // the padding keeps the handles' focus rings clear of the scroller's clip,
         // also for a handle that focus scrolls in. A wider gap under a finger tells whose buttons are whose.
-        .when(
-            "horizontal",
-            sx().flex_direction("row")
-                .overflow_x("auto")
-                .padding(FOCUS_RING_HALO_SPREAD.value())
-                .with("scroll-padding-inline", FOCUS_RING_HALO_SPREAD.value())
-                .media(COARSE_POINTER, sx().gap("lg")),
-        )
-        .when("sorting", sx().user_select("none"))
-});
+        Orientation::Horizontal => sx()
+            .flex_direction("row")
+            .overflow_x("auto")
+            .padding(FOCUS_RING_HALO_SPREAD.value())
+            .with("scroll-padding-inline", FOCUS_RING_HALO_SPREAD.value())
+            .media(COARSE_POINTER, sx().gap("lg")),
+    }
+}
 
 pub(crate) static SORTABLE_ITEM_SX: StaticSx = StaticSx::new(sortable_item_sx);
 
@@ -132,9 +143,10 @@ struct SortableView {
 
 base_props! {
     pub struct SortableProps {
-        /// `"vertical"` (default) stacks the items, `"horizontal"` lines them up.
+        /// `"vertical"` (default) stacks the items, `"horizontal"` lines them up. Per breakpoint
+        /// too: `responsive(Orientation::Vertical).md(Orientation::Horizontal)`; the keys follow after mount.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Called on drop when an item changed place. Apply it to your data.
         onreorder: EventHandler<SortableMove>,
         /// Each item's two buttons moving it one slot without a drag (WCAG 2.5.7).
@@ -168,7 +180,9 @@ base_props! {
 /// Docs: <https://libero-ui.dev/data-display/sortable>
 #[component]
 pub fn Sortable(props: SortableProps) -> Element {
-    let orientation = props.orientation.copied_or(Orientation::Vertical);
+    let orientations = props.orientation.copied_or(Orientation::Vertical.into());
+    // The keys, the drag axis and the move buttons; the CSS follows through range copies.
+    let orientation = use_responsive(&orientations)();
     let onreorder = props.onreorder;
     let list = use_sortable(SortableOptions {
         orientation,
@@ -192,10 +206,13 @@ pub fn Sortable(props: SortableProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with("vertical", vertical)
-        .with("horizontal", !vertical)
+        .responsive(&orientations, |orientation| orientation.state_name())
         .with("sorting", (list.sorting)())
         .into();
+    use_range_css(
+        &SORTABLE_BASE_SX,
+        orientations.range_copies(|orientation| orientation.state_name(), orientation_sx),
+    );
 
     let items = use_box()
         .framework_sx(&SORTABLE_BASE_SX)

@@ -1,11 +1,12 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Orientation, Sortable, SortableItem},
+    components::{Input, Orientation, Sortable, SortableItem},
     hooks::SortableMove,
+    theme::Responsive,
 };
 
 #[component]
-pub fn Fruit(#[props(default, into)] orientation: Orientation) -> Element {
+pub fn Fruit(#[props(default, into)] orientation: Input<Responsive<Orientation>>) -> Element {
     let mut fruit = use_signal(|| vec!["Apple", "Pear", "Plum", "Cherry"]);
     rsx! {
         Sortable {

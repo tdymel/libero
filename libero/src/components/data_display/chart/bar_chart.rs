@@ -16,9 +16,11 @@ use super::{
 };
 use crate::{
     components::common::{Input, Orientation, use_name_warning},
-    hooks::{use_accessibility, use_formats, use_localization, use_root_id, use_theme},
+    hooks::{
+        use_accessibility, use_formats, use_localization, use_responsive, use_root_id, use_theme,
+    },
     localization::fill,
-    theme::{BarLabelPosition, BarLayout, ChartInk, chart_palette},
+    theme::{BarLabelPosition, BarLayout, ChartInk, Responsive, chart_palette},
     tokens::Size,
     utils::warn,
 };
@@ -36,8 +38,10 @@ chart_props! {
         #[props(default, into)]
         layout: Input<BarLayout>,
         /// `"horizontal"` lays the categories down the side, top to bottom. Unset, vertical.
+        /// Per breakpoint too: `responsive(Orientation::Horizontal).md(Orientation::Vertical)`,
+        /// drawn in Rust, so it switches after mount when server-rendered.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Corner radius of a bar's free end, the one away from its axis. Unset, the theme's.
         #[props(default, into)]
         radius: Input<Size>,
@@ -144,7 +148,8 @@ pub fn BarChart(props: BarChartProps) -> Element {
         .iter()
         .all(|series| series.values.iter().all(Option::is_none));
     let forced = use_accessibility().forced_colors();
-    let horizontal = props.orientation.copied_or(Orientation::Vertical) == Orientation::Horizontal;
+    let horizontal = use_responsive(&props.orientation.copied_or(Orientation::Vertical.into()))()
+        == Orientation::Horizontal;
     let layout = props.layout.copied_or(theme.chart.bar_layout);
     // Bars are never dashed, so neither are their legend keys. A lying chart draws its
     // lines as bars; a percent one measures them on the right axis, off the shares, and

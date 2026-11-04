@@ -6,9 +6,9 @@ use crate::{
         ClassList, Input, OptionLabel, Options, Orientation, Parts, States, base_color,
         contrast_color, fill_color, input_from_str, literal_contrast, parts_under_sx, text_color,
     },
-    hooks::{use_localization, use_root_id, use_theme},
+    hooks::{use_localization, use_responsive, use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
-    theme::{Size, StepLabelPosition},
+    theme::{Responsive, Size, StepLabelPosition},
     utils::warn,
 };
 
@@ -41,9 +41,11 @@ pub struct StepperProps<T: Options> {
     /// Whether steps not reached yet can be picked. Default `false`.
     #[props(default)]
     allow_next_steps: Option<bool>,
-    /// `horizontal` (default) or `vertical`.
+    /// `horizontal` (default) or `vertical`. Per breakpoint too:
+    /// `responsive(Orientation::Vertical).md(Orientation::Horizontal)`; the steps are laid out
+    /// in Rust, so it switches after mount when server-rendered.
     #[props(default, into)]
-    orientation: Input<Orientation>,
+    orientation: Input<Responsive<Orientation>>,
     /// `side` or `below` the marker; `side` falls back to `below` under 120px a step.
     #[props(default, into)]
     label_position: Input<StepLabelPosition>,
@@ -102,7 +104,8 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
     let labels = use_localization().stepper;
 
     // Not themed: the shared `Orientation` defaults to vertical.
-    let orientation = props.orientation.copied_or(Orientation::Horizontal);
+    let orientation =
+        use_responsive(&props.orientation.copied_or(Orientation::Horizontal.into()))();
     let vertical = orientation == Orientation::Vertical;
 
     let values = props

@@ -1,8 +1,11 @@
-use super::focus_from;
+use super::{focus_from, responsive_on};
 use crate::components::DemoValues;
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Flex, Textarea, Toolbar, ToolbarGroup, ToolbarSeparator};
+use libero::components::{
+    ActionIcon, Flex, Orientation, Textarea, Toolbar, ToolbarGroup, ToolbarSeparator,
+};
 use libero::hooks::use_element;
+use libero::theme::responsive;
 use pictogram_icons_lucide as lucide;
 
 /// Owns the editor's handle, which `render` cannot hold.
@@ -20,7 +23,10 @@ pub fn ToolbarPreview(values: DemoValues) -> Element {
     rsx! { Flex { gap: "sm",
         Toolbar {
             "aria-label": "Formatting",
-            orientation: values.str("orientation"),
+            orientation: match (responsive_on(&values), Orientation::from(values.str("orientation").as_str())) {
+                (true, chosen) => responsive(Orientation::Vertical).md(chosen),
+                (false, chosen) => chosen.into(),
+            },
             loop_focus: values.str("loop_focus") == "true",
             focus_from: from.then_some(editor),
             // demo-code: children start

@@ -11,8 +11,9 @@ use crate::{
         },
         layout::use_box,
     },
+    hooks::use_range_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorCss, ColorShade, Size},
+    theme::{ColorCss, ColorShade, Responsive, Size},
     utils::warn,
 };
 
@@ -67,26 +68,10 @@ fn coarse_across(ends: Sx) -> Sx {
     )
 }
 
-// One `when` deep, so these outrank the controls' own radius and variant rules.
-static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
-    sx().display("inline-flex")
-        .max_width("100%")
-        // The focused control's ring over its neighbours.
-        .selector(format!("& {CONTROL}:focus-visible"), sx().z_index("1"))
-        // Under a finger an `xs`/`sm` icon is as tall as the Buttons beside it, so the row stays level (5083).
-        .media(COARSE_POINTER, {
-            let compact = format!("[data-state~=\"{ACTION_ICON_COMPACT}\"]");
-            sx().selector(
-                format!("& > {CONTROL}{compact}"),
-                sx().min_height(COARSE_TARGET),
-            )
-            .selector(
-                format!("& > * > {CONTROL}{compact}"),
-                sx().min_height(COARSE_TARGET),
-            )
-        })
-        .when(
-            Orientation::Horizontal.state_name(),
+/// One orientation's block: the static sheet's `when`, or a responsive range's copy.
+fn orientation_sx(orientation: Orientation) -> Sx {
+    match orientation {
+        Orientation::Horizontal => {
             // Logical sides: under RTL the previous item is on the right.
             controls(
                 ":not(:first-child)",
@@ -104,10 +89,9 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
             .and(pair_seam(sx().border_inline_start(divider())))
             .and(coarse_across(
                 sx().inset_inline_start("0").inset_inline_end("0"),
-            )),
-        )
-        .when(
-            Orientation::Vertical.state_name(),
+            ))
+        }
+        Orientation::Vertical => {
             sx().flex_direction("column")
                 .align_items("stretch")
                 // `auto`, not `100%`, lets a set width (`ActionIcon`) stretch: Blitz resolves no percentage in the shrink-to-fit column (todo 2330).
@@ -141,15 +125,44 @@ static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
                 ))
                 // The pair stays a row in a column.
                 .and(pair_seam(sx().border_inline_start(divider())))
-                .and(coarse_across(sx().top("0").bottom("0"))),
+                .and(coarse_across(sx().top("0").bottom("0")))
+        }
+    }
+}
+
+// One `when` deep, so these outrank the controls' own radius and variant rules.
+static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
+    sx().display("inline-flex")
+        .max_width("100%")
+        // The focused control's ring over its neighbours.
+        .selector(format!("& {CONTROL}:focus-visible"), sx().z_index("1"))
+        // Under a finger an `xs`/`sm` icon is as tall as the Buttons beside it, so the row stays level (5083).
+        .media(COARSE_POINTER, {
+            let compact = format!("[data-state~=\"{ACTION_ICON_COMPACT}\"]");
+            sx().selector(
+                format!("& > {CONTROL}{compact}"),
+                sx().min_height(COARSE_TARGET),
+            )
+            .selector(
+                format!("& > * > {CONTROL}{compact}"),
+                sx().min_height(COARSE_TARGET),
+            )
+        })
+        .when(
+            Orientation::Horizontal.state_name(),
+            orientation_sx(Orientation::Horizontal),
+        )
+        .when(
+            Orientation::Vertical.state_name(),
+            orientation_sx(Orientation::Vertical),
         )
 });
 
 base_props! {
     pub struct ButtonGroupProps {
-        /// Unset, `"horizontal"`.
+        /// Unset, `"horizontal"`. Per breakpoint too: `responsive(Orientation::Vertical).sm(Orientation::Horizontal)`.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Default `size` of the buttons inside.
         #[props(default, into)]
         size: Input<Size>,
@@ -227,7 +240,7 @@ base_props! {
 /// Docs: <https://libero-ui.dev/buttons/button-group>
 #[component]
 pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
-    let orientation = props.orientation.copied_or(Orientation::Horizontal);
+    let orientation = props.orientation.copied_or(Orientation::Horizontal.into());
     use_name_warning(
         names_itself(&props.attributes),
         "ButtonGroup: no `aria-label` or `aria-labelledby`, so it is announced as just \"group\".",
@@ -261,8 +274,12 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(orientation.state_name(), true)
+        .responsive(&orientation, |orientation| orientation.state_name())
         .into();
+    use_range_css(
+        &BUTTON_GROUP_SX,
+        orientation.range_copies(|orientation| orientation.state_name(), orientation_sx),
+    );
 
     use_box()
         .framework_sx(&BUTTON_GROUP_SX)

@@ -88,7 +88,7 @@ fn Demo() -> Element {
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
 | `layout` | `BarLayout` | `grouped` | `grouped` side by side, `stacked`, or `percent`: stacked to 100%. |
-| `orientation` | `Orientation` | `vertical` | `horizontal` lays the categories down the side, top to bottom. |
+| `orientation` | `Responsive<Orientation>` | `vertical` | `horizontal` lays the categories down the side, top to bottom. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. It is laid out in Rust, so it switches after mount when server-rendered. |
 | `radius` | `Size` | `xs` | Corner radius of a bar's free end, the one away from its axis, on the theme's radius scale. |
 | `value_labels` | `Option<bool>` | `false` | Each bar's value written on it. |
 | `y_min` | `Option<f64>` | | The value axis' lowest value. Unset, 0 or the lowest value below it. Ignored by `percent`, which runs 0 to 100%. |

@@ -71,7 +71,7 @@ fn Demo() -> Element {
 | `state` | `Callback<T, Option<StepState>>` | derived | Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`, which changes the marker, not which step is current. |
 | `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops of their own; a scrolling strip with no clickable step is one tab stop itself. |
 | `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
-| `orientation` | `Orientation` | `horizontal` | `vertical` puts each step's content under the step itself. |
+| `orientation` | `Responsive<Orientation>` | `horizontal` | `vertical` puts each step's content under the step itself. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. It is laid out in Rust, so it switches after mount when server-rendered. |
 | `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Under 7.5rem a step (22.5rem for three, 360px at a 16px root), `side` draws as `below`. |
 | `size` | `Size` | `md` | Marker, type and spacing. |
 | `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |

@@ -11,14 +11,17 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys, use_theme},
+    hooks::{
+        ElementHandle, Hotkey, use_element, use_focus_return, use_hotkeys, use_range_css,
+        use_responsive, use_theme,
+    },
     platform::{
         ElementApi, FocusStep, arrow_target, caret_edges, focus_among, focus_entered_from,
         focus_lands_in, focus_selector, focused_attribute, is_tab, key_taken, logical_key,
         silent_focus, typing_target,
     },
     sx::{StaticSx, sx},
-    theme::{ColorCss, ColorShade, Size, SizeCss},
+    theme::{ColorCss, ColorShade, Responsive, Size, SizeCss},
     utils::warn,
 };
 
@@ -34,6 +37,44 @@ parts_enum! {
 
 /// Between wrapped rows under a finger: a 30px item's 44px box reaches 7px past it.
 const WRAPPED_ROW_GAP: &str = "14px";
+
+/// One orientation's block: the static sheet's `when`, or a responsive range's copy.
+fn orientation_sx(orientation: Orientation) -> crate::sx::Sx {
+    let gap = SizeCss::SPACING.value(Size::Xs);
+    let group = ToolbarPart::Group.selector();
+    let separator = ToolbarPart::Separator.selector();
+    match orientation {
+        Orientation::Horizontal => {
+            // A long bar wraps rather than widening the page (1.4.10). Under a finger the wrapped
+            // rows are apart by `WRAPPED_ROW_GAP`, a single row is as tall as ever, and no box
+            // reaches past half of it into the row above.
+            sx().flex_wrap("wrap")
+                .and(coarse_reach_sx(Orientation::Horizontal, &gap))
+                .and(coarse_reach_sx(Orientation::Vertical, WRAPPED_ROW_GAP))
+                .media(COARSE_POINTER, sx().with("row-gap", WRAPPED_ROW_GAP))
+                .selector(
+                    group,
+                    sx().flex_wrap("wrap")
+                        .media(COARSE_POINTER, sx().with("row-gap", WRAPPED_ROW_GAP)),
+                )
+                .selector(
+                    separator,
+                    sx().width("0")
+                        .with("border-inline-start-width", "1px")
+                        .align_self("stretch"),
+                )
+        }
+        Orientation::Vertical => sx()
+            .flex_direction("column")
+            .align_items("stretch")
+            .and(coarse_reach_sx(Orientation::Vertical, &gap))
+            .selector(group, sx().flex_direction("column").align_items("stretch"))
+            .selector(
+                separator,
+                sx().height("0").with("border-block-start-width", "1px"),
+            ),
+    }
+}
 
 // Groups and separators are styled from the bar, so a toolbar costs one class.
 static TOOLBAR_SX: StaticSx = StaticSx::new(|| {
@@ -60,44 +101,21 @@ static TOOLBAR_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             Orientation::Horizontal.state_name(),
-            // A long bar wraps rather than widening the page (1.4.10). Under a finger the wrapped
-            // rows are apart by `WRAPPED_ROW_GAP`, a single row is as tall as ever, and no box
-            // reaches past half of it into the row above.
-            sx().flex_wrap("wrap")
-                .and(coarse_reach_sx(Orientation::Horizontal, &gap))
-                .and(coarse_reach_sx(Orientation::Vertical, WRAPPED_ROW_GAP))
-                .media(COARSE_POINTER, sx().with("row-gap", WRAPPED_ROW_GAP))
-                .selector(
-                    group,
-                    sx().flex_wrap("wrap")
-                        .media(COARSE_POINTER, sx().with("row-gap", WRAPPED_ROW_GAP)),
-                )
-                .selector(
-                    separator,
-                    sx().width("0")
-                        .with("border-inline-start-width", "1px")
-                        .align_self("stretch"),
-                ),
+            orientation_sx(Orientation::Horizontal),
         )
         .when(
             Orientation::Vertical.state_name(),
-            sx().flex_direction("column")
-                .align_items("stretch")
-                .and(coarse_reach_sx(Orientation::Vertical, &gap))
-                .selector(group, sx().flex_direction("column").align_items("stretch"))
-                .selector(
-                    separator,
-                    sx().height("0").with("border-block-start-width", "1px"),
-                ),
+            orientation_sx(Orientation::Vertical),
         )
 });
 
 base_props! {
     parts(ToolbarPart);
     pub struct ToolbarProps {
-        /// Unset, `"horizontal"`: Left and Right move. `"vertical"`: Up and Down.
+        /// Unset, `"horizontal"`: Left and Right move. `"vertical"`: Up and Down. Per breakpoint
+        /// too: `responsive(Orientation::Vertical).md(Orientation::Horizontal)`; the keys follow after mount.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Whether the arrow keys wrap at the ends. Unset, the theme's.
         #[props(default)]
         loop_focus: Option<bool>,
@@ -137,7 +155,9 @@ base_props! {
 /// Docs: <https://libero-ui.dev/buttons/toolbar>
 #[component]
 pub fn Toolbar(props: ToolbarProps) -> Element {
-    let orientation = props.orientation.copied_or(Orientation::Horizontal);
+    let orientations = props.orientation.copied_or(Orientation::Horizontal.into());
+    // The keys and `aria-orientation`; the CSS follows the breakpoints through range copies.
+    let orientation = use_responsive(&orientations)();
     let loop_focus = props.loop_focus.unwrap_or(use_theme().toolbar.loop_focus);
     let scope = use_provide_toolbar(orientation);
     let bar = use_element();
@@ -337,8 +357,12 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(orientation.state_name(), true)
+        .responsive(&orientations, |orientation| orientation.state_name())
         .into();
+    use_range_css(
+        &TOOLBAR_SX,
+        orientations.range_copies(|orientation| orientation.state_name(), orientation_sx),
+    );
 
     use_box()
         .framework_sx(&TOOLBAR_SX)

@@ -3,7 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Text, ToolbarPart},
+    components::{Code, Orientation, Text, ToolbarPart},
     use_theme,
 };
 
@@ -15,6 +15,11 @@ const FILE: DemoFile = DemoFile(include_str!("toolbar/demo.rs"));
 
 pub(super) fn focus_from(values: &DemoValues) -> bool {
     values.str("focus_from") == "true"
+}
+
+/// The demo's orientation from the `md` breakpoint up, `vertical` below it.
+pub(super) fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
 }
 
 /// Prints the toggles' signals; with `focus_from`, the handle and the editor it names too.
@@ -45,9 +50,9 @@ pub fn ToolbarPage() -> Element {
             markdown: "/md/toolbar.md",
             properties: vec![
                 props("Toolbar", vec![
-                    prop("orientation", "Orientation")
+                    prop("orientation", "Responsive<Orientation>")
                         .default("horizontal")
-                        .doc("`\"vertical\"` stacks the controls; Up and Down move instead of Left and Right. Not themed."),
+                        .doc("`\"vertical\"` stacks the controls; Up and Down move instead of Left and Right. Not themed. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint, while the arrow keys follow after mount when the page was rendered on a server."),
                     prop("loop_focus", "bool")
                         .default(theme.toolbar.loop_focus.to_string())
                         .doc("Whether the arrow keys wrap at the ends."),
@@ -128,7 +133,17 @@ pub fn ToolbarPage() -> Element {
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
-                        .default("horizontal"),
+                        .default("horizontal")
+                        .code(|_, values| match (responsive_on(values), values.str("orientation").as_str()) {
+                            (true, orientation) => vec![format!(
+                                "orientation: responsive(Orientation::Vertical).md(Orientation::{:?})",
+                                Orientation::from(orientation)
+                            )],
+                            (false, "horizontal") => vec![],
+                            (false, orientation) => vec![format!("orientation: {orientation:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::switch("loop_focus").default(theme.toolbar.loop_focus.to_string()),
                     Control::switch("focus_from").code(|_, values| match focus_from(values) {
                         true => vec!["focus_from: editor".to_string()],

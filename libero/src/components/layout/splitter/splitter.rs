@@ -11,11 +11,12 @@ use crate::{
         layout::use_box,
     },
     hooks::{
-        DragMove, DragOptions, DragStart, use_css, use_drag_with, use_element, use_id, use_theme,
+        DragMove, DragOptions, DragStart, use_css, use_drag_with, use_element, use_id,
+        use_range_css, use_responsive, use_theme,
     },
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, Size},
+    theme::{CssVar, Responsive, Size},
     utils::warn,
 };
 
@@ -59,10 +60,18 @@ static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .isolation("isolate")
         .height("100%")
-        .when("horizontal", sx().flex_direction("column"))
-        .when("vertical", sx().flex_direction("row"))
+        .when("horizontal", direction_sx(Orientation::Horizontal))
+        .when("vertical", direction_sx(Orientation::Vertical))
         .when("dragging", sx().user_select("none"))
 });
+
+/// Panes stacked under a horizontal divider, side by side beside a vertical one.
+fn direction_sx(orientation: Orientation) -> crate::sx::Sx {
+    match orientation {
+        Orientation::Horizontal => sx().flex_direction("column"),
+        Orientation::Vertical => sx().flex_direction("row"),
+    }
+}
 
 // Each pane scrolls its own overflow: at its floor it would paint over the divider
 // and the other pane, its focusables under them.
@@ -92,8 +101,10 @@ fn splitter_variables(a: f64, divider_color: Option<&ThemeAwareValue>) -> Variab
 base_props! {
     pub struct SplitterProps {
         /// Divider line axis: `"vertical"` (default, side by side) or `"horizontal"` (stacked).
+        /// Per breakpoint too: `responsive(Orientation::Horizontal).md(Orientation::Vertical)`;
+        /// the keys and the drag axis follow after mount.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Initial % of pane A; uncontrolled afterwards. Ignored when `size` is set.
         #[props(default = 50.0)]
         initial_size: f64,
@@ -154,8 +165,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
     );
     let (panel_a, panel_b) = (props.panel_a, props.panel_b);
 
-    let orientation = props.orientation.copied_or(Orientation::Vertical);
-    let vertical = orientation == Orientation::Vertical;
+    let orientations = props.orientation.copied_or(Orientation::Vertical.into());
+    // The keys, the drag axis and `aria-orientation`; the CSS follows through range copies.
+    let vertical = use_responsive(&orientations)() == Orientation::Vertical;
 
     // Above 50 leaves no range and `f64::clamp` asserts `min <= max`; a NaN
     // survives `clamp`, so it's dropped first.
@@ -339,10 +351,13 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with("vertical", vertical)
-        .with("horizontal", !vertical)
+        .responsive(&orientations, |orientation| orientation.state_name())
         .with("dragging", (drag.dragging)())
         .into();
+    use_range_css(
+        &SPLITTER_BASE_SX,
+        orientations.range_copies(|orientation| orientation.state_name(), direction_sx),
+    );
 
     let variables: Input<Variables> =
         splitter_variables(bounded(), props.divider_color.as_ref()).into();
@@ -374,6 +389,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
                     element: divider,
                     a,
                     vertical,
+                    orientations,
                     size,
                     min_size,
                     aria_label,

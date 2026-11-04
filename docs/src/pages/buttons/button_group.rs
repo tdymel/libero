@@ -1,12 +1,18 @@
 use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::Pictogram;
-use libero::components::{ActionIcon, Button, ButtonGroup, Input, Text};
+use libero::components::{ActionIcon, Button, ButtonGroup, Input, Orientation, Text};
+use libero::theme::responsive;
 use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("button_group.rs"));
+
+/// The demo's orientation from the `md` breakpoint up, `vertical` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
 
 /// A single group keeps one of the styles Multiple pressed, the first in button order (5084).
 fn first_style(selected: &HashSet<String>) -> HashSet<String> {
@@ -26,9 +32,9 @@ pub fn ButtonGroupPage() -> Element {
             source: "libero/src/components/buttons/button_group.rs",
             markdown: "/md/button_group.md",
             properties: vec![props("ButtonGroup", vec![
-                prop("orientation", "Orientation")
+                prop("orientation", "Responsive<Orientation>")
                     .default("horizontal")
-                    .doc("`\"vertical\"` stacks the buttons, each as wide as the widest."),
+                    .doc("`\"vertical\"` stacks the buttons, each as wide as the widest. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint."),
                 prop("variant", "Variant")
                     .doc("Default `variant` of the buttons inside; a button's own prop wins, as for `color`, `size`, `radius`, `disabled` and `focusable_when_disabled`. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider."),
                 prop("color", "ThemeAwareValue")
@@ -81,7 +87,17 @@ pub fn ButtonGroupPage() -> Element {
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
-                        .default("horizontal"),
+                        .default("horizontal")
+                        .code(|_, values| match (responsive_on(values), values.str("orientation").as_str()) {
+                            (true, orientation) => vec![format!(
+                                "orientation: responsive(Orientation::Vertical).md(Orientation::{:?})",
+                                Orientation::from(orientation)
+                            )],
+                            (false, "horizontal") => vec![],
+                            (false, orientation) => vec![format!("orientation: {orientation:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
@@ -116,7 +132,10 @@ pub fn ButtonGroupPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ButtonGroup {
                         "aria-label": "Text style",
-                        orientation: values.str("orientation"),
+                        orientation: match (responsive_on(&values), Orientation::from(values.str("orientation").as_str())) {
+                            (true, chosen) => responsive(Orientation::Vertical).md(chosen),
+                            (false, chosen) => chosen.into(),
+                        },
                         value: match values.str("selection").as_str() {
                             "off" => None,
                             "single" => Some(first_style(&selected.read())),

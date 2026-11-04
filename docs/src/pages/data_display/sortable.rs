@@ -1,9 +1,15 @@
 use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Orientation, SortableItemPart, Text};
+use libero::theme::responsive;
 
 mod demo;
 use demo::Fruit;
+
+/// The demo's orientation from the `md` breakpoint up, `vertical` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
 
 #[component]
 pub fn SortablePage() -> Element {
@@ -14,9 +20,9 @@ pub fn SortablePage() -> Element {
             markdown: "/md/sortable.md",
             properties: vec![
                 props("Sortable", vec![
-                    prop("orientation", "Orientation")
+                    prop("orientation", "Responsive<Orientation>")
                         .default("vertical")
-                        .doc("`vertical` stacks the items, `horizontal` puts them in a row."),
+                        .doc("`vertical` stacks the items, `horizontal` puts them in a row. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint, while the arrow keys follow after mount when the page was rendered on a server."),
                     prop("onreorder", "EventHandler<SortableMove>")
                         .default("required")
                         .doc("Fires on drop, or on a move button, when an item changed place. Apply the move to your data with `SortableMove::apply`; until then the list keeps its old order."),
@@ -86,13 +92,26 @@ pub fn SortablePage() -> Element {
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
-                        .default("vertical"),
+                        .default("vertical")
+                        .code(|_, values| match (responsive_on(values), values.str("orientation").as_str()) {
+                            (true, orientation) => vec![format!(
+                                "orientation: responsive(Orientation::Vertical).md(Orientation::{:?})",
+                                Orientation::from(orientation)
+                            )],
+                            (false, "vertical") => vec![],
+                            (false, orientation) => vec![format!("orientation: {orientation:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // No `move_buttons` switch: off, the page would need another way to
                     // reorder without a drag (WCAG 2.5.7).
                 ],
                 render: move |values: DemoValues| rsx! {
                     Fruit {
-                        orientation: Orientation::from(values.str("orientation").as_str()),
+                        orientation: match (responsive_on(&values), Orientation::from(values.str("orientation").as_str())) {
+                            (true, chosen) => responsive(Orientation::Vertical).md(chosen),
+                            (false, chosen) => chosen.into(),
+                        },
                     }
                 },
                 file: DemoFile(include_str!("sortable/demo.rs")),

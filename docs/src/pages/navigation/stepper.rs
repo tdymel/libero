@@ -1,8 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Code, Flex, Input, Options, StepState, Stepper, StepperPart, Text,
+    Button, Code, Flex, Input, Options, Orientation, StepState, Stepper, StepperPart, Text,
 };
+use libero::theme::responsive;
 use libero::use_theme;
 
 /// The steps are the enum, so the snippet is a lie without it.
@@ -103,7 +104,7 @@ pub fn StepperPage() -> Element {
                         .doc("Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`, which changes the marker, not which step is current."),
                     prop("onstepclick", "EventHandler<T>").doc("Called with the picked step. Without it the steps are plain text with no tab stops of their own; a scrolling strip with no clickable step is one tab stop itself."),
                     prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, lets steps not reached yet be picked too."),
-                    prop("orientation", "Orientation").default("horizontal").doc("`vertical` puts each step's content under the step itself."),
+                    prop("orientation", "Responsive<Orientation>").default("horizontal").doc("`vertical` puts each step's content under the step itself. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. It is laid out in Rust, so it switches after mount when server-rendered."),
                     prop("label_position", "StepLabelPosition").default(theme.stepper.label_position.as_str()).doc("`side` or `below` the marker. Ignored when vertical. Under 7.5rem a step (22.5rem for three, 360px at a 16px root), `side` draws as `below`."),
                     prop("size", "Size").default(theme.stepper.size.as_str()).doc("Marker, type and spacing."),
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
@@ -161,7 +162,17 @@ pub fn StepperPage() -> Element {
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
-                        .default("horizontal"),
+                        .default("horizontal")
+                        .code(|_, values| match (on(values, "responsive"), values.str("orientation").as_str()) {
+                            (true, orientation) => vec![format!(
+                                "orientation: responsive(Orientation::Vertical).md(Orientation::{:?})",
+                                Orientation::from(orientation)
+                            )],
+                            (false, "horizontal") => vec![],
+                            (false, orientation) => vec![format!("orientation: {orientation:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle("label_position", ["side", "below"])
                         .labels(["Side", "Below"])
                         .default(theme.stepper.label_position.as_str())
@@ -241,7 +252,10 @@ pub fn StepperPage() -> Element {
                             Stepper {
                                 value: stage(),
                                 aria_label: "Order steps",
-                                orientation: values.str("orientation"),
+                                orientation: match (on(&values, "responsive"), Orientation::from(values.str("orientation").as_str())) {
+                                    (true, chosen) => responsive(Orientation::Vertical).md(chosen),
+                                    (false, chosen) => chosen.into(),
+                                },
                                 label_position: values.str("label_position"),
                                 size: values.str("size"),
                                 color: match values.str("color").as_str() {

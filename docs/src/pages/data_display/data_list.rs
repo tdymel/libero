@@ -1,10 +1,16 @@
 use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Chip, Code, DataList, DataListItem, Text};
+use libero::components::{Chip, Code, DataList, DataListItem, Orientation, Text};
+use libero::theme::responsive;
 use libero::use_theme;
 
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("data_list.rs"));
+
+/// The demo's orientation from the `md` breakpoint up, `vertical` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
 
 #[component]
 pub fn DataListPage() -> Element {
@@ -18,9 +24,9 @@ pub fn DataListPage() -> Element {
             markdown: "/md/data_list.md",
             properties: vec![
                 props("DataList", vec![
-                    prop("orientation", "Orientation")
+                    prop("orientation", "Responsive<Orientation>")
                         .default("vertical")
-                        .doc("`horizontal` puts each description beside its term, `vertical` below it. Horizontal makes the `<dl>` a two-column grid, terms in the first column and every description in the second."),
+                        .doc("`horizontal` puts each description beside its term, `vertical` below it. Horizontal makes the `<dl>` a two-column grid, terms in the first column and every description in the second. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint."),
                     prop("gap", "Responsive<ThemeAwareValue>")
                         .default(theme.data_list.size.as_str())
                         .doc("Gap between rows, or any CSS, e.g. `gap: \"0\"`, per breakpoint too. In a vertical list a description sits half that gap under its term. In a horizontal list the gap is also the space between the term and description columns."),
@@ -61,13 +67,26 @@ pub fn DataListPage() -> Element {
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
-                        .default("vertical"),
+                        .default("vertical")
+                        .code(|_, values| match (responsive_on(values), values.str("orientation").as_str()) {
+                            (true, orientation) => vec![format!(
+                                "orientation: responsive(Orientation::Vertical).md(Orientation::{:?})",
+                                Orientation::from(orientation)
+                            )],
+                            (false, "vertical") => vec![],
+                            (false, orientation) => vec![format!("orientation: {orientation:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     DataList {
-                        orientation: values.str("orientation"),
+                        orientation: match (responsive_on(&values), Orientation::from(values.str("orientation").as_str())) {
+                            (true, chosen) => responsive(Orientation::Vertical).md(chosen),
+                            (false, chosen) => chosen.into(),
+                        },
                         gap: values.str("gap"),
                         // demo-code: children start
                         DataListItem {

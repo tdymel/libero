@@ -140,7 +140,7 @@ are toggles, `selected` on each, so a screen reader hears whether they are on.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | `"vertical"` stacks the controls; Up and Down move instead of Left and Right. Not themed. |
+| `orientation` | `Responsive<Orientation>` | `horizontal` | `"vertical"` stacks the controls; Up and Down move instead of Left and Right. Not themed. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint, while the arrow keys follow after mount when the page was rendered on a server. |
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends. |
 | `focus_from` | `Option<ElementHandle>` | - | The element the bar serves, such as an editor: Alt+F10 inside it moves focus to the bar, Escape in the bar hands it back. Spread its `attributes()`. |
 | `parts` | `Parts<ToolbarPart>` | - | Styles for the groups and separators, under `sx`. |

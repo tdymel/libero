@@ -3,8 +3,9 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Input, Splitter, SplitterResizeEvent, Text},
+    components::{Box, Code, Input, Orientation, Splitter, SplitterResizeEvent, Text},
     sx::sx,
+    theme::responsive,
 };
 
 // snippet: in Splitter { initial_size: 50.0, aria_label: "Resize panes", panel_b: rsx! {}, .. }
@@ -29,6 +30,11 @@ const NESTED_PANEL_B: &str = r#"panel_b: rsx! {
 
 fn is_controlled(values: &DemoValues) -> bool {
     values.str("controlled") == "true"
+}
+
+/// The demo's orientation from the `md` breakpoint up, `horizontal` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
 }
 
 /// Both panes hang off the `composed` switch, so they are printed by it
@@ -129,7 +135,10 @@ fn SplitterDemo(values: DemoValues) -> Element {
                 .max_width("320px")
                 .border("1px solid var(--lsx-muted-3)"),
             Splitter {
-                orientation: values.str("orientation"),
+                orientation: match (responsive_on(&values), Orientation::from(values.str("orientation").as_str())) {
+                    (true, chosen) => responsive(Orientation::Horizontal).md(chosen),
+                    (false, chosen) => chosen.into(),
+                },
                 initial_size: 50.0,
                 size: controlled.then_some(size()),
                 aria_label: "Resize panes",
@@ -168,9 +177,9 @@ pub fn SplitterPage() -> Element {
             source: "libero/src/components/layout/splitter",
             markdown: "/md/splitter.md",
             properties: vec![props("Splitter", vec![
-                prop("orientation", "Orientation")
+                prop("orientation", "Responsive<Orientation>")
                     .default("vertical")
-                    .doc("The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them."),
+                    .doc("The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint, while the arrow keys and the drag axis follow after mount when the page was rendered on a server."),
                 prop("initial_size", "f64").default("50")
                     .doc("Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. Ignored when `size` is set."),
                 prop("size", "Option<f64>")
@@ -231,7 +240,17 @@ pub fn SplitterPage() -> Element {
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
-                        .default("vertical"),
+                        .default("vertical")
+                        .code(|_, values| match (responsive_on(values), values.str("orientation").as_str()) {
+                            (true, orientation) => vec![format!(
+                                "orientation: responsive(Orientation::Horizontal).md(Orientation::{:?})",
+                                Orientation::from(orientation)
+                            )],
+                            (false, "vertical") => vec![],
+                            (false, orientation) => vec![format!("orientation: {orientation:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::slider("min_size", ["10", "20", "30", "40"]).code(percent_code),
                     Control::sizes("divider_size")
                         .default("sm"),

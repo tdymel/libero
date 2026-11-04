@@ -5,7 +5,7 @@ use crate::{
         common::{HtmlTag, Input, Orientation, States, base_props, responsive_sx, with_own},
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_range_css, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{DATA_LIST_GAP, DATA_LIST_ROW_GAP, DataListDefaults, Responsive},
 };
@@ -34,25 +34,32 @@ static DATA_LIST_SX: StaticSx = StaticSx::new(|| {
                 format!("calc({} / -2)", DATA_LIST_ROW_GAP.value()),
             ),
         )
-        .when(
-            "horizontal",
-            // A term wraps past half the list, so descriptions keep room at 320px (1.4.10).
-            sx().display("grid")
-                .grid_template_columns("fit-content(50%) minmax(0, 1fr)")
-                .align_items("baseline")
-                .selector("& dt", sx().grid_column("1"))
-                .selector(
-                    "& dd",
-                    sx().grid_column("2").with("margin-block-start", "0"),
-                ),
-        )
+        .when("horizontal", orientation_sx(Orientation::Horizontal))
 });
+
+/// The static sheet's `horizontal` block, or a responsive range's copy; the column needs none.
+fn orientation_sx(orientation: Orientation) -> Sx {
+    match orientation {
+        // A term wraps past half the list, so descriptions keep room at 320px (1.4.10).
+        Orientation::Horizontal => sx()
+            .display("grid")
+            .grid_template_columns("fit-content(50%) minmax(0, 1fr)")
+            .align_items("baseline")
+            .selector("& dt", sx().grid_column("1"))
+            .selector(
+                "& dd",
+                sx().grid_column("2").with("margin-block-start", "0"),
+            ),
+        Orientation::Vertical => sx(),
+    }
+}
 
 base_props! {
     pub struct DataListProps {
-        /// `"horizontal"`: descriptions beside their term; default `"vertical"`: below.
+        /// `"horizontal"`: descriptions beside their term; default `"vertical"`: below. Per
+        /// breakpoint too: `responsive(Orientation::Vertical).md(Orientation::Horizontal)`.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Gap between rows (half of it between a term and its description, vertical only): a size word, any CSS
         /// (`gap: "0"`) or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
@@ -82,19 +89,30 @@ base_props! {
 pub fn DataList(props: DataListProps) -> Element {
     let theme = use_theme();
 
-    let is_horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
+    let orientation = props.orientation.copied_or(Orientation::Vertical.into());
 
     let gap = match props.gap.as_ref().map(Responsive::base_ref) {
         Some(ThemeAwareValue::Size(gap)) => *gap,
         _ => theme.data_list.size,
     };
 
-    let states: Input<States> = props
+    let states = props
         .states
         .unwrap_or_default()
-        .with(gap.state_name(), true)
-        .with("horizontal", is_horizontal)
-        .into();
+        .with(gap.state_name(), true);
+    // A plain column carries no word, as before.
+    let states: Input<States> = match orientation.is_plain() {
+        true => states.with(
+            "horizontal",
+            *orientation.base_ref() == Orientation::Horizontal,
+        ),
+        false => states.responsive(&orientation, |orientation| orientation.state_name()),
+    }
+    .into();
+    use_range_css(
+        &DATA_LIST_SX,
+        orientation.range_copies(|orientation| orientation.state_name(), orientation_sx),
+    );
     // A size off the list's own gap scale, not the spacing one.
     let sx = with_own(
         props.gap.as_ref().and_then(|gap| {

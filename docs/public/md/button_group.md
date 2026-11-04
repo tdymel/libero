@@ -46,7 +46,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | `"vertical"` stacks the buttons, each as wide as the widest. |
+| `orientation` | `Responsive<Orientation>` | `horizontal` | `"vertical"` stacks the buttons, each as wide as the widest. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint. |
 | `variant` | `Variant` | - | Default `variant` of the buttons inside; a button's own prop wins, as for `color`, `size`, `radius`, `disabled` and `focusable_when_disabled`. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. |
 | `color` | `ThemeAwareValue` | - | Default `color` of the buttons inside. |
 | `size` | `Size` | - | Default `size` of the buttons inside. |
