@@ -335,6 +335,11 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let mounted = scroll_into_view.then_some(element);
     // Above the branch, and no `InternalAnchor` scope, which would resolve it twice.
     let mut merged = None;
+    let visible = crate::components::common::with_visibility(
+        &states,
+        &props.hidden_from,
+        &props.visible_from,
+    );
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&NAV_LINK_BASE_SX),
@@ -343,7 +348,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
             sx_source(&props.sx),
             &mut merged,
         ),
-        &states,
+        visible.as_ref().unwrap_or(&states),
         &Input::None,
         Some(style),
         true,

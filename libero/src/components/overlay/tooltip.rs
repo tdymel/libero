@@ -673,6 +673,7 @@ fn TooltipBubble(
         .framework_sx(&TOOLTIP_BUBBLE_SX)
         .class(&tooltip.class)
         .sx(&tooltip.sx)
+        .visibility(&tooltip.hidden_from, &tooltip.visible_from)
         .states(&states)
         .variables(&variables)
         .style(style)

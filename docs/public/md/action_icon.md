@@ -46,8 +46,6 @@ fn Demo() -> Element {
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `Responsive<ThemeAwareValue>` | `md` | A size word takes `Button`'s height at that step, so the two line up in a row, and sizes the icon inside as `Icon`'s. A length such as `"20px"` sizes the box, and the icon fills it. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `aria_label` | `String` | required | The button's accessible name. |
 | `tooltip` | `bool` | `false` | Shows `aria_label` in a `Tooltip` on hover and keyboard focus, except while `aria-expanded` in its attributes reads `true`. The text is the name itself, so a screen reader does not hear it twice. |
 | `shortcut` | `String` | - | The chord that runs the action, as `use_hotkeys` takes it (`"mod+b"`). Shown in the tooltip as keys named for the platform, and set as `aria-keyshortcuts`. Binding the key is up to you. |

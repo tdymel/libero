@@ -58,8 +58,6 @@ fn Demo() -> Element {
 | `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so the strip follows a locale signal. `OptionLabel::with_icon` puts an icon before the name, `OptionLabel::rich` draws a tab as rsx and takes a text name for screen readers. |
 | `size` | `Responsive<Size>` | `md` | Tab strip size. On a touch screen a tab is at least 44px tall, so `xs` and `sm` tabs draw taller there. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Md)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs grow to fill the row, never below their label. A crowded strip still scrolls. Not themed. |
 | `activation` | `TabsActivation` | `automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |

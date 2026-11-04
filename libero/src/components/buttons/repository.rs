@@ -15,7 +15,7 @@ use crate::{
     localization::RepositoryLabels,
     platform,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_SIZE, Color, Responsive, Size},
+    theme::{ACTION_ICON_SIZE, Color, Responsive},
     tokens::NamedColorCss,
 };
 
@@ -187,12 +187,6 @@ base_props! {
         /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
         radius: Input<Responsive<ThemeAwareValue>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// Replaces the name's subject (host and repo); the stars and the new-tab cue
         /// still follow. A raw `"aria-label"` attribute replaces the name whole.
         #[props(default, into)]

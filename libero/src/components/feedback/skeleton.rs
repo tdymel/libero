@@ -185,6 +185,7 @@ pub fn Skeleton(props: SkeletonProps) -> Element {
     use_box()
         .framework_sx(&SKELETON_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .states(&states)
         .variables(&vars)

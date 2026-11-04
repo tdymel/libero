@@ -290,6 +290,7 @@ pub fn Transition(props: TransitionProps) -> Element {
     use_box()
         .framework_sx(&TRANSITION_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&states)
         .variables(&variables)

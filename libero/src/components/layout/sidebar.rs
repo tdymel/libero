@@ -189,6 +189,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
     use_box()
         .framework_sx(&SIDEBAR_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .parts(&props.parts)
         .states(&states)

@@ -121,6 +121,7 @@ pub fn VisuallyHidden(props: VisuallyHiddenProps) -> Element {
     use_box()
         .framework_sx(recipe)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .prepare()

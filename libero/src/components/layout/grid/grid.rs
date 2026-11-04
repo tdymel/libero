@@ -146,6 +146,7 @@ pub fn Grid(props: GridProps) -> Element {
     use_box()
         .framework_sx(&GRID_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&states)
         .variables(&variables)

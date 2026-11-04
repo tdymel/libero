@@ -595,6 +595,7 @@ pub fn NavigationBar(props: NavigationBarProps) -> Element {
     use_box()
         .framework_sx(&NAVIGATION_BAR_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .parts(&props.parts)
         .states(&states)
@@ -697,11 +698,16 @@ pub fn NavigationBarItem(props: NavigationBarItemProps) -> Element {
         .with("selected", selected)
         .with("disabled", disabled)
         .into();
+    let visible = crate::components::common::with_visibility(
+        &states,
+        &props.hidden_from,
+        &props.visible_from,
+    );
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&NAVIGATION_BAR_ITEM_SX),
         sx_source(&props.sx),
-        &states,
+        visible.as_ref().unwrap_or(&states),
         &Input::None,
         None,
         true,

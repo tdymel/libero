@@ -64,6 +64,7 @@ pub(crate) struct FieldBuilder<'a> {
     pub(super) sx: Option<&'a Input<Sx>>,
     pub(super) parts: Option<SxSource<'a>>,
     pub(super) states: Option<&'a Input<States>>,
+    pub(super) visibility: Option<(&'a Input<Size>, &'a Input<Size>)>,
     pub(super) attributes: &'a [Attribute],
 }
 
@@ -106,6 +107,7 @@ impl Default for FieldBuilder<'_> {
             sx: None,
             parts: None,
             states: None,
+            visibility: None,
             attributes: &[],
         }
     }
@@ -385,6 +387,17 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn states(mut self, states: &'a Input<States>) -> Self {
         self.states = Some(states);
+        self
+    }
+
+    /// The `hidden_from` / `visible_from` props, on the wrapper.
+    #[inline]
+    pub fn visibility(
+        mut self,
+        hidden_from: &'a Input<Size>,
+        visible_from: &'a Input<Size>,
+    ) -> Self {
+        self.visibility = Some((hidden_from, visible_from));
         self
     }
 

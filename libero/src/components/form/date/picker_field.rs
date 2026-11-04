@@ -122,6 +122,8 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub parts: &'a Input<Parts<FieldPart>>,
     pub dropdown_parts: &'a Input<Parts<ChronoDropdownPart>>,
     pub states: &'a Input<States>,
+    pub hidden_from: &'a Input<crate::theme::Size>,
+    pub visible_from: &'a Input<crate::theme::Size>,
     pub attributes: Vec<Attribute>,
     pub hide_save: Option<bool>,
     pub hide_entry_input: Option<bool>,
@@ -166,6 +168,8 @@ macro_rules! picker_field {
             parts: &$props.parts,
             dropdown_parts: &$props.dropdown_parts,
             states: &$props.states,
+            hidden_from: &$props.hidden_from,
+            visible_from: &$props.visible_from,
             attributes: $props.attributes,
             hide_save: $props.hide_save,
             hide_entry_input: $props.hide_entry_input,
@@ -370,6 +374,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .radius(radius.clone())
         .radii(field.radius.as_ref(), defaults.radius)
         .class(field.class)
+        .visibility(field.hidden_from, field.visible_from)
         .sx(field.sx)
         .parts(field.parts)
         .states(field.states)

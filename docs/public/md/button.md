@@ -41,8 +41,6 @@ fn Demo() -> Element {
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants. |
 | `radius` | `Responsive<ThemeAwareValue>` | `md` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `size` | `Responsive<Size>` | `md` | Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
 | `justify` | `ThemeAwareValue` | `center` | Where the icons and the label sit along the button, as `justify-content`: `start`, `end`, `space-between` or any CSS. It shows on a `full_width` button or one given a width. Unset, they are centred, and an overlong label is cut at its end. |
 | `gap` | `ThemeAwareValue` | `xs` | Space between the icons and the label: a size word or any CSS, as `gap: "0"`. It faces the label under `dir="rtl"` too. |

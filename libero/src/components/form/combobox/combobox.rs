@@ -71,6 +71,12 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     parts: Input<Parts<DropdownPart>>,
     #[props(default, into)]
     states: Input<States>,
+    /// Hides the dropdown from this breakpoint's width up: `hidden_from: "md"`.
+    #[props(default, into)]
+    hidden_from: Input<crate::theme::Size>,
+    /// Hides the dropdown below this breakpoint's width: `visible_from: "md"`.
+    #[props(default, into)]
+    visible_from: Input<crate::theme::Size>,
     /// The trigger, plus anything that belongs with it. `Combobox` renders no control of its own.
     children: Element,
 }
@@ -213,6 +219,8 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             sx: props.sx,
             parts: props.parts,
             states: props.states,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             {props.children}
         }
     }

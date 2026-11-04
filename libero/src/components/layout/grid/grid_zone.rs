@@ -306,6 +306,7 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     use_box()
         .framework_sx(&GRID_ZONE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&own_sx)
         .states(&states)
         .style(Some(style))

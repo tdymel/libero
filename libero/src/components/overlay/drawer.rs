@@ -257,6 +257,8 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                 class,
                 sx,
                 states,
+                hidden_from: props.hidden_from,
+                visible_from: props.visible_from,
                 variables: if bottom { variables } else { Variables::new() },
                 attributes,
                 // Touch only, beside Back, Escape and a close button (WCAG 2.5.1).

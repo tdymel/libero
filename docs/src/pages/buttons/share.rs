@@ -69,10 +69,6 @@ pub fn SharePage() -> Element {
                 prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.radius.as_str())
                     .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("aria_label", "String")
                     .doc("The button's name, such as \"Share this article\". Unset, the name is the localization's `share`, or the `children` text."),
                 prop("label", "String")

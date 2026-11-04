@@ -40,8 +40,6 @@ fn Demo() -> Element {
 | `size` | `Responsive<Size>` | `md` | The side of the square, which also sets the placeholder's font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `xxl` | A step on the avatar's own radius scale, `2px` to `32px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is a circle. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xxl)`. |
 | `variant` | `Responsive<Variant>` | `tonal` | The placeholder's look. Hidden once a picture loads. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `color` | `ThemeAwareValue` | `primary` | The placeholder's tint. |
 | `overhang` | `Option<u8>` | `0` | Percent of the side the picture spills past each edge, for a cut-out portrait: unclipped, whole (`object-fit: contain`) and with no fill behind it. `0` clips it to the shape. The fallback and a group's `+N` chip stay clipped. |
 | `parts` | `Parts<AvatarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

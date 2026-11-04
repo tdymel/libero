@@ -70,6 +70,12 @@ pub struct StepperProps<T: Options> {
     parts: Input<Parts<StepperPart>>,
     #[props(default, into)]
     states: Input<States>,
+    /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+    #[props(default, into)]
+    hidden_from: Input<crate::theme::Size>,
+    /// Hidden below this breakpoint's width: `visible_from: "md"`.
+    #[props(default, into)]
+    visible_from: Input<crate::theme::Size>,
 }
 
 /// The stages of a process over an enum, with the current step's content.
@@ -197,6 +203,8 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
             sx: parts_under_sx(&props.parts, props.sx),
             class: props.class,
             states: props.states,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             attributes: props.attributes,
         },
         root(),

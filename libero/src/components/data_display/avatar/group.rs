@@ -241,6 +241,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     use_box()
         .framework_sx(&AVATAR_GROUP_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&with_own(spacing_sx, &props.sx))
         .states(&props.states)
         .variables(&root_variables)

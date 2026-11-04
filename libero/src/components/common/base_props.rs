@@ -76,6 +76,12 @@ macro_rules! base_props {
             sx: Input<crate::sx::Sx>,
             #[props(default, into)]
             states: Input<crate::components::common::States>,
+            /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+            #[props(default, into)]
+            hidden_from: Input<crate::theme::Size>,
+            /// Hidden below this breakpoint's width: `visible_from: "md"`.
+            #[props(default, into)]
+            visible_from: Input<crate::theme::Size>,
         }
     };
 

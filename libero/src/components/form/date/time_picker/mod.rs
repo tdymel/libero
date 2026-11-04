@@ -82,6 +82,8 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
         sx: props.sx,
         parts: props.parts,
         states: props.states,
+        hidden_from: props.hidden_from,
+        visible_from: props.visible_from,
         attributes: props.attributes,
     })
 }
@@ -139,6 +141,10 @@ pub(super) struct ClockProps {
     #[props(default)]
     parts: Input<Parts<ChronoPickerPart>>,
     states: Input<States>,
+    #[props(default)]
+    hidden_from: Input<crate::theme::Size>,
+    #[props(default)]
+    visible_from: Input<crate::theme::Size>,
     attributes: Vec<Attribute>,
     /// Called once the last hand is picked, or Enter on the last column.
     #[props(default)]
@@ -218,6 +224,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     let root_box = use_box()
         .framework_sx(&TIME_PICKER_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

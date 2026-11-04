@@ -197,6 +197,7 @@ pub fn Float(props: FloatProps) -> Element {
     use_box()
         .framework_sx(&FLOAT_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)
@@ -214,6 +215,8 @@ mod tests {
             class: Default::default(),
             sx: Default::default(),
             states: Input::None,
+            hidden_from: Input::None,
+            visible_from: Input::None,
             attributes: Vec::new(),
             placement: Input::None,
             offset_x,

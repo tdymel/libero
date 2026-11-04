@@ -415,6 +415,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     let card = use_box()
         .framework_sx(&HOVER_CARD_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .states(&states)
         .variables(&radius_variables)

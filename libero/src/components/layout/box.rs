@@ -448,7 +448,7 @@ pub fn Box(props: BoxProps) -> Element {
         variables: Some(&props.variables),
         style: props.style,
         focus_ring: true,
-        visibility: None,
+        visibility: Some((&props.hidden_from, &props.visible_from)),
     }
     .prepare();
 

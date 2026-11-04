@@ -42,8 +42,6 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. A `gradient` surface keeps the theme's gradient: there only the role follows this. |
 | `variant` | `Responsive<Variant>` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. `gradient` paints the theme's gradient whatever the `color`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `md` | Corner radius, a size step from `xs` to `xxl`, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `actions` | `Option<Element>` | - | Buttons or links beside the message, before the close button. Give each a label that says what it does: `Button { variant: "standard", color: "currentColor", size: "xs" }` reads on every variant. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |
 | `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close`, "Close" in English. |

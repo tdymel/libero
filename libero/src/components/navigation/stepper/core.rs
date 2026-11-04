@@ -429,6 +429,8 @@ pub(crate) struct StepperView {
     pub class: Input<ClassList>,
     pub sx: Input<Sx>,
     pub states: Input<States>,
+    pub hidden_from: Input<crate::theme::Size>,
+    pub visible_from: Input<crate::theme::Size>,
     pub attributes: Vec<Attribute>,
 }
 
@@ -463,6 +465,8 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         class,
         sx: user_sx,
         states,
+        hidden_from,
+        visible_from,
         attributes,
     } = view;
 
@@ -649,6 +653,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         .framework_sx(&STEPPER_SX)
         .class(&class)
         .sx(&user_sx)
+        .visibility(&hidden_from, &visible_from)
         .states(&states)
         .variables(&root_variables)
         .prepare()

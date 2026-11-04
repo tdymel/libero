@@ -208,6 +208,7 @@ pub fn Loader(props: LoaderProps) -> Element {
     let boxed = use_box()
         .framework_sx(&LOADER_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)

@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Text},
+    components::{Box, Code, Input, Text},
     sx::sx,
 };
 
@@ -23,6 +23,14 @@ fn tag_code(control: &Control, values: &DemoValues) -> Vec<String> {
         _ => {}
     }
     set
+}
+
+/// `hidden_from` always shows in the code, the default `xl` too: the demo is about it.
+fn hidden_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match values.str("hidden_from").as_str() {
+        "none" => vec![],
+        size => vec![format!("hidden_from: {size:?}")],
+    }
 }
 
 #[component]
@@ -74,7 +82,13 @@ pub fn BoxPage() -> Element {
                     Code { source: "sx" }
                     ", or use "
                     Code { source: "Paper" }
-                    ", which does."
+                    ", which does. "
+                    Code { source: "hidden_from" }
+                    " and "
+                    Code { source: "visible_from" }
+                    ", on every component, hide it from a breakpoint's width up or below it: set "
+                    Code { source: "hidden_from" }
+                    " to md and the box leaves a desktop window."
                 }
             },
             Demo {
@@ -85,15 +99,25 @@ pub fn BoxPage() -> Element {
                     Control::toggle("component", ["div", "section", "a", "button"])
                         .labels(["Div", "Section", "A", "Button"])
                         .code(tag_code),
+                    // Every component takes it; `md` hides the box on a desktop window.
+                    Control::toggle("hidden_from", ["none", "sm", "md", "lg", "xl"])
+                        .labels(["Never", "sm", "md", "lg", "xl"])
+                        .default("xl")
+                        .code(hidden_code),
                 ],
                 render: move |values: DemoValues| {
                     let tag = values.str("component");
+                    let hidden_from: Input<_> = match values.str("hidden_from").as_str() {
+                        "none" => Input::None,
+                        size => size.into(),
+                    };
                     rsx! {
                         Box {
                             component: tag.clone(),
                             href: (tag == "a").then(|| HREF.to_string()),
                             target: (tag == "a").then(|| "_blank".to_string()),
                             r#type: (tag == "button").then(|| "button".to_string()),
+                            hidden_from,
                             sx: sx().padding("16px").background("muted.1").border_radius("md"),
                             "Styled entirely via sx"
                         }

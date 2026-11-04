@@ -170,6 +170,7 @@ pub fn GridItem(props: GridItemProps) -> Element {
     use_box()
         .framework_sx(&GRID_ITEM_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&states)
         .variables(&variables)

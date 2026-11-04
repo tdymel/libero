@@ -369,6 +369,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     use_box()
         .framework_sx(&FIELDSET_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

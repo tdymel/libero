@@ -277,6 +277,10 @@ pub(super) struct DateTimeFlowProps {
     #[props(default)]
     states: Input<States>,
     #[props(default)]
+    hidden_from: Input<crate::theme::Size>,
+    #[props(default)]
+    visible_from: Input<crate::theme::Size>,
+    #[props(default)]
     attributes: Vec<Attribute>,
 }
 
@@ -377,11 +381,16 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
         focusable,
         picker,
     );
+    let visible = crate::components::common::with_visibility(
+        &props.states,
+        &props.hidden_from,
+        &props.visible_from,
+    );
     flow_root(
         &props.class,
         &props.sx,
         &props.parts,
-        &props.states,
+        visible.as_ref().unwrap_or(&props.states),
         props.attributes,
         (&root, refresh_today),
         rsx! {
@@ -420,6 +429,10 @@ pub(super) struct DateTimeRangeFlowProps {
     parts: Input<Parts<ChronoPickerPart>>,
     #[props(default)]
     states: Input<States>,
+    #[props(default)]
+    hidden_from: Input<crate::theme::Size>,
+    #[props(default)]
+    visible_from: Input<crate::theme::Size>,
     #[props(default)]
     attributes: Vec<Attribute>,
 }
@@ -607,11 +620,16 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         focusable,
         picker,
     );
+    let visible = crate::components::common::with_visibility(
+        &props.states,
+        &props.hidden_from,
+        &props.visible_from,
+    );
     flow_root(
         &props.class,
         &props.sx,
         &props.parts,
-        &props.states,
+        visible.as_ref().unwrap_or(&props.states),
         props.attributes,
         (&root, refresh_today),
         rsx! {

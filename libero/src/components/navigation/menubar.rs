@@ -528,6 +528,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
     let root = use_box()
         .framework_sx(&MENUBAR_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)

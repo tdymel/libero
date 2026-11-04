@@ -177,6 +177,8 @@ pub fn ChronoPicker<V: DateValue>(props: ChronoPickerProps<V>) -> Element {
         sx: props.sx,
         parts: props.parts,
         states: props.states,
+        hidden_from: props.hidden_from,
+        visible_from: props.visible_from,
         attributes: props.attributes,
     })
 }

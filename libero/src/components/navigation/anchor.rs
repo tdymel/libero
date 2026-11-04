@@ -178,6 +178,11 @@ pub fn Anchor(props: AnchorProps) -> Element {
 
     // Resolved here: an `InternalAnchor` scope would re-render with `children`.
     let mut merged = None;
+    let visible = crate::components::common::with_visibility(
+        &states,
+        &props.hidden_from,
+        &props.visible_from,
+    );
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&ANCHOR_BASE_SX),
@@ -186,7 +191,7 @@ pub fn Anchor(props: AnchorProps) -> Element {
             sx_source(&props.sx),
             &mut merged,
         ),
-        &states,
+        visible.as_ref().unwrap_or(&states),
         &Input::None,
         None,
         true,

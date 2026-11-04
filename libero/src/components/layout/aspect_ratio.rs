@@ -121,6 +121,7 @@ pub fn AspectRatio(props: AspectRatioProps) -> Element {
     use_box()
         .framework_sx(&ASPECT_RATIO_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .variables(&variables)

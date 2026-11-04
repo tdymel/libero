@@ -146,6 +146,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .disabled(disabled)
         .size(props.size.copied_or(theme.slider.size.into()))
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

@@ -202,6 +202,7 @@ pub fn Indicator(props: IndicatorProps) -> Element {
     use_box()
         .framework_sx(&INDICATOR_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&states)
         .variables(&variables)

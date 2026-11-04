@@ -368,6 +368,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let root = use_box()
         .framework_sx(&CAROUSEL_ROOT_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .parts(&props.parts)
         .states(&root_states)

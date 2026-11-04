@@ -134,6 +134,8 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             sx: props.sx,
             parts: props.parts,
             states: props.states,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             attributes: private_attributes(props.attributes),
             trailing: reveal_button.then(|| rsx! {
                 ActionIcon {

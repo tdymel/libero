@@ -54,6 +54,7 @@ pub fn RichTextView(props: RichTextViewProps) -> Element {
     use_box()
         .framework_sx(&VIEW_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .prepare()

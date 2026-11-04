@@ -194,6 +194,8 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
             title,
             close_label: props.close_label,
             full_screen: props.full_screen,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             class: props.class,
             sx: props.sx,
             states: props.states,

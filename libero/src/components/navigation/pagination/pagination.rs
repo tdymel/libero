@@ -278,6 +278,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
 
     let nav = use_box()
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)

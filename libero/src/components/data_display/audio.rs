@@ -369,6 +369,7 @@ pub fn Audio(props: AudioProps) -> Element {
     use_box()
         .framework_sx(&AUDIO_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

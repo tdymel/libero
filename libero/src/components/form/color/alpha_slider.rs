@@ -111,6 +111,8 @@ pub(super) fn PickerAlphaSlider(
         class: Input::default(),
         sx: Input::default(),
         states: Input::default(),
+        hidden_from: Input::None,
+        visible_from: Input::None,
     };
     alpha_slider(props, track, thumb_fill, ColorPickerPart::Alpha.slot())
 }
@@ -164,6 +166,8 @@ fn alpha_slider(
             class: props.class,
             sx,
             states: props.states,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             size: Input::Value(size.into()),
             color: Input::None,
             disabled: Some(disabled),

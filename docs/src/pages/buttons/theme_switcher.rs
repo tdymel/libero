@@ -43,10 +43,6 @@ pub fn ThemeSwitcherPage() -> Element {
                 prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.action_icon.radius.as_str())
                     .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("themes", "&'static [&'static ThemeSet]")
                     .doc("Adds the theme picker, a second button that opens a menu of these sets. The app persists the picked set: Libero stores only the scheme and the direction. `class`, `sx` and extra attributes then land on the group around both."),
                 prop("with_system", "bool")

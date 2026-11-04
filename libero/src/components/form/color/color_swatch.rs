@@ -152,6 +152,7 @@ pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
     let swatch = use_box()
         .framework_sx(&COLOR_SWATCH_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)

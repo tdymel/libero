@@ -293,6 +293,7 @@ pub fn Blockquote(props: BlockquoteProps) -> Element {
     use_box()
         .framework_sx(&FIGURE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

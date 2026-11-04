@@ -12,7 +12,7 @@ use crate::{
     hooks::{listener, use_id, use_localization, use_share, use_silent_focus_out},
     platform::{ShareData, ShareFile, ShareOutcome},
     sx::ThemeAwareValue,
-    theme::{Responsive, Size},
+    theme::Responsive,
 };
 
 base_props! {
@@ -41,12 +41,6 @@ base_props! {
         /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
         radius: Input<Responsive<ThemeAwareValue>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// Replaces the localized name, e.g. "Share this article".
         #[props(default, into)]
         aria_label: Option<String>,

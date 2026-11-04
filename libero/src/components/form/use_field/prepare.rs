@@ -235,6 +235,9 @@ impl FieldBuilder<'_> {
             .framework_sx(&FIELD_SX)
             .states(&states)
             .variables(&radius);
+        if let Some((hidden_from, visible_from)) = self.visibility {
+            wrapper = wrapper.visibility(hidden_from, visible_from);
+        }
         if let Some(class) = self.class {
             wrapper = wrapper.class(class);
         }

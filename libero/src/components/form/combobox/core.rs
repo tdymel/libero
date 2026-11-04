@@ -287,6 +287,13 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .with("disabled", disabled)
         .with("pointer", *by_pointer.peek())
         .into();
+    // The dropdown is the only box `Combobox` draws.
+    let states = crate::components::common::with_visibility(
+        &states,
+        &props.hidden_from,
+        &props.visible_from,
+    )
+    .unwrap_or(states);
 
     // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
     let onopened = props.onopened;

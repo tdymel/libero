@@ -652,6 +652,8 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
     rsx! {
         TreeCore {
             attributes: props.attributes,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             class: props.class,
             sx: parts_under_sx(&props.parts, props.sx),
             states: props.states,
@@ -1144,6 +1146,8 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 
     rsx! {
         List {
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             class: props.class,
             onmounted: root.mount(),
             sx: root_sx,

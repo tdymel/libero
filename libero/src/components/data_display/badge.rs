@@ -129,12 +129,6 @@ base_props! {
         /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
         size: Input<Responsive<Size>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// A step on the badge's own radius scale, or any CSS, as `radius: "0"`; the default is a pill.
         /// Per breakpoint too: `responsive(Size::Xs).md(Size::Xxl)`.
         #[props(default, into)]

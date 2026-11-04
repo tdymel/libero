@@ -235,6 +235,8 @@ pub fn Burger(props: BurgerProps) -> Element {
             },
             disabled: props.disabled,
             size: button_size,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             class: props.class,
             sx: button_sx,
             states,

@@ -319,6 +319,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .radius(radius.clone())
         .radii(props.radius.as_ref(), theme.phone_field.radius)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

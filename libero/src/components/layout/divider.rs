@@ -289,6 +289,7 @@ pub fn Divider(props: DividerProps) -> Element {
     use_box()
         .framework_sx(&DIVIDER_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .parts(&props.parts)
         .variables(&variables)

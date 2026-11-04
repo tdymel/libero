@@ -42,10 +42,6 @@ pub fn TldrPage() -> Element {
                 prop("radius", "Responsive<ThemeAwareValue>")
                     .default(radius.unwrap_or("the trigger's own"))
                     .doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`. The trigger's own is `xl` on the labelled chip, `sm` icon-only. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("color", "ThemeAwareValue")
                     .default("neutral")
                     .doc("The trigger's accent color. A theme color name or any CSS color. Unset, `theme.tldr.color`."),

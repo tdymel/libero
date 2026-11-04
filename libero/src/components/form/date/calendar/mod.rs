@@ -253,6 +253,10 @@ pub(super) struct CalendarProps {
     #[props(default)]
     states: Input<States>,
     #[props(default)]
+    hidden_from: Input<crate::theme::Size>,
+    #[props(default)]
+    visible_from: Input<crate::theme::Size>,
+    #[props(default)]
     attributes: Vec<Attribute>,
 }
 
@@ -585,6 +589,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let root_box = use_box()
         .framework_sx(&CALENDAR_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

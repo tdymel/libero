@@ -336,6 +336,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     let root = use_box()
         .framework_sx(&COLOR_PICKER_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

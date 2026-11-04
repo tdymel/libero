@@ -335,7 +335,15 @@ const KNOWN_GAPS: &[(&str, &str)] = &[
 ];
 
 /// What `base_props!` adds; the page's tables append all but `parts` themselves.
-const BASE_PROPS: [&str; 5] = ["parts", "class", "sx", "states", "attributes"];
+const BASE_PROPS: [&str; 7] = [
+    "parts",
+    "class",
+    "sx",
+    "states",
+    "hidden_from",
+    "visible_from",
+    "attributes",
+];
 
 /// The fields a page documents: all but the `doc(hidden)` ones.
 fn documented(fields: &str) -> BTreeSet<String> {

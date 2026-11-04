@@ -30,11 +30,16 @@ base_props! {
 #[component]
 pub fn DataListItem(props: DataListItemProps) -> Element {
     // Plain `dt`/`dd`, not a `Box`: a spliced `Element` would be a nested template.
+    let visible = crate::components::common::with_visibility(
+        &props.states,
+        &props.hidden_from,
+        &props.visible_from,
+    );
     let style = use_style_attributes(
         &props.class,
         None,
         crate::components::common::sx_source(&props.sx),
-        &props.states,
+        visible.as_ref().unwrap_or(&props.states),
         &Input::None,
         None,
         true,

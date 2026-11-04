@@ -82,6 +82,8 @@ pub(super) fn PickerHueSlider(
         class: Input::default(),
         sx: Input::default(),
         states: Input::default(),
+        hidden_from: Input::None,
+        visible_from: Input::None,
     };
     hue_slider(props, MAX_HUE, ColorPickerPart::Hue.slot())
 }
@@ -125,6 +127,8 @@ fn hue_slider(props: HueSliderProps, max: f64, slot: &'static str) -> Element {
             class: props.class,
             sx,
             states: props.states,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             size: Input::Value(size.into()),
             color: Input::None,
             disabled: Some(disabled),

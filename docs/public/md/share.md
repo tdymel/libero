@@ -48,8 +48,6 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
 | `size` | `Responsive<ThemeAwareValue>` | `md` | Button size. The default is the icon-only `ActionIcon`'s; with `children`, the `Button`'s, and only a size word applies. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `aria_label` | `String` | - | The button's name, such as "Share this article". Unset, the name is the localization's `share`, or the `children` text. |
 | `label` | `String` | - | Describes what a press shares, read after the name, such as "Link to this page". |
 | `disabled` | `bool` | `false` | Disables and dims the button. |

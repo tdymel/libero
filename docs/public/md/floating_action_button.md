@@ -96,8 +96,6 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
 | `size` | `Responsive<ThemeAwareValue>` | `xl` | A step of `Button`'s heights, 60px at `xl`. Icon-only, a CSS length works too; with `children`, only a size word applies. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `xxl` | Corner radius. The default rounds an icon-only button into a circle and an extended one into a pill; `lg` gives a rounded square. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `placement` | `Placement` | `bottom-end` | The corner or edge it sits at. `start` and `end` follow the text direction. |
 | `offset` | `ThemeAwareValue` | `md` | Distance from the placed edges: a spacing word or any CSS length. |
 | `fixed` | `bool` | `true` | Against the viewport. A bottom one sits above a docked `NavigationBar` and the bottom safe area, a top one below the top safe area. `false` places it in the nearest `position: relative` ancestor instead. |

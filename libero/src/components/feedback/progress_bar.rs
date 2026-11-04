@@ -392,6 +392,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
     let track = use_box()
         .framework_sx(&PROGRESS_BAR_TRACK_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)

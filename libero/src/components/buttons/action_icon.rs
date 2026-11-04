@@ -431,12 +431,6 @@ base_props! {
         /// Per breakpoint too, as `size`.
         #[props(default, into)]
         radius: Input<Responsive<ThemeAwareValue>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// Required: an icon-only button has no text to announce.
         aria_label: String,
         /// Shows `aria_label` in a `Tooltip` on hover and keyboard focus, except while

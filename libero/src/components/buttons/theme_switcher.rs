@@ -16,7 +16,7 @@ use crate::{
         Align, ColorSchemeHandle, use_color_scheme, use_localization, use_theme, use_theme_set,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_SIZE, ColorSchemeSetting, Responsive, Size, ThemeSet},
+    theme::{ACTION_ICON_SIZE, ColorSchemeSetting, Responsive, ThemeSet},
 };
 
 /// `ActionIcon` stretches any `svg` to its whole box; this leaves a margin around the glyph.
@@ -78,12 +78,6 @@ base_props! {
         size: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
         radius: Input<Responsive<ThemeAwareValue>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// Adds a chevron beside the toggle that opens a menu of these theme sets.
         /// The app persists the picked set: Libero stores only the scheme and the direction.
         #[props(default)]

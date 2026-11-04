@@ -174,6 +174,7 @@ mod user_media;
 mod validation;
 mod variant_contrast;
 mod video;
+mod visibility;
 mod visually_hidden;
 
 /// Every `.rs` file in this directory must have a `mod` line above it.

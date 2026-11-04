@@ -146,6 +146,7 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
     use_box()
         .framework_sx(&MODAL_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .variables(&variables)

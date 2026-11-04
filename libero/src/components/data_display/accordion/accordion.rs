@@ -249,6 +249,8 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
             class: props.class,
             sx: props.sx,
             states: props.states,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             attributes: props.attributes,
         },
         root(),

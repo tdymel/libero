@@ -90,6 +90,7 @@ pub fn LoadingOverlay(props: LoadingOverlayProps) -> Element {
     let busy = use_box()
         .framework_sx(&LOADING_OVERLAY_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .prepare()

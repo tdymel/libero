@@ -367,6 +367,7 @@ pub fn Toolbar(props: ToolbarProps) -> Element {
     use_box()
         .framework_sx(&TOOLBAR_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)
@@ -510,6 +511,7 @@ pub fn ToolbarGroup(props: ToolbarGroupProps) -> Element {
     );
     use_box()
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
@@ -549,6 +551,7 @@ pub fn ToolbarSeparator(props: ToolbarSeparatorProps) -> Element {
     };
     use_box()
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .prepare()

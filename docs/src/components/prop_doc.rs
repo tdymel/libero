@@ -263,6 +263,10 @@ fn base_props(extends: &str) -> Vec<PropDoc> {
         prop("class", "ClassList").doc("Extra class names on the root element."),
         prop("sx", "Sx").doc("Style overrides, applied after the theme's."),
         prop("states", "States").doc("`data-state` flags on the root, for styling and CSS hooks."),
+        prop("hidden_from", "Size")
+            .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
+        prop("visible_from", "Size")
+            .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
         prop("attributes", "Vec<Attribute>").doc(attributes),
     ]
 }

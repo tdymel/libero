@@ -930,6 +930,7 @@ pub fn Video(props: VideoProps) -> Element {
     use_box()
         .framework_sx(&VIDEO_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

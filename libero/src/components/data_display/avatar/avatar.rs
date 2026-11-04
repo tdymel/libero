@@ -239,12 +239,6 @@ base_props! {
         /// Per breakpoint too: `responsive(Variant::Outlined).md(Variant::Filled)`.
         #[props(default, into)]
         variant: Input<Responsive<Variant>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Percent of the side the picture spills past each edge, unclipped, whole

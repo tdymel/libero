@@ -241,6 +241,8 @@ pub fn Menu(props: MenuProps) -> Element {
             class: props.class,
             sx: props.sx,
             parts: props.parts,
+            hidden_from: props.hidden_from,
+            visible_from: props.visible_from,
             states: props.states,
         }
     }

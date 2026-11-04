@@ -12,6 +12,9 @@ attributes like `href` or `src` pass through to it. `Box` has no look of its
 own. Everything visible comes from `sx` and `states`, see
 [styling.md](styling.md). A `button` keeps the browser's own border, font,
 padding and centring: reset them in `sx`, or use `Paper`, which does.
+`hidden_from` and `visible_from`, on every component, hide it from a
+breakpoint's width up or below it: set `hidden_from` to md and the box leaves a
+desktop window.
 
 ## Usage
 
@@ -25,6 +28,7 @@ fn Demo() -> Element {
     rsx! {
         Box {
             sx: sx().padding("16px").background("muted.1").border_radius("md"),
+            hidden_from: "xl",
             "Styled entirely via sx"
         }
     }
@@ -43,7 +47,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The element's content. |
 
 Like every component, `Box` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. It also takes the `img`, `a` and
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes. It also takes the `img`, `a` and
 `button` attributes, such as `src`, `href` and `target`.
 
 ## Accessibility

@@ -29,10 +29,6 @@ pub fn RepositoryPage() -> Element {
                 prop("radius", "Responsive<ThemeAwareValue>")
                     .default("sm")
                     .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("aria_label", "String")
                     .doc("Replaces the name's subject, the host and repository; the star count and new-tab cue still follow. A raw `\"aria-label\"` attribute replaces the whole name."),
                 prop("new_tab_icon", "bool")

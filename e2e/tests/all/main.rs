@@ -221,6 +221,7 @@ mod use_timers;
 mod use_user_media;
 mod video;
 mod viewport_meta;
+mod visibility;
 mod visually_hidden;
 
 /// Every `.rs` file here needs a `mod` line: an unregistered test file silently never runs.

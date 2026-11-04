@@ -261,6 +261,7 @@ pub fn Icon(props: IconProps) -> Element {
     use_box()
         .framework_sx(&ICON_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&states)
         .style(style)
@@ -290,6 +291,8 @@ mod tests {
             class: Default::default(),
             sx: Default::default(),
             states: Input::None,
+            hidden_from: Input::None,
+            visible_from: Input::None,
             attributes: Vec::new(),
             variant: Input::None,
             gradient: None,

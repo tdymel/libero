@@ -369,6 +369,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
     use_box()
         .framework_sx(&SPLITTER_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)

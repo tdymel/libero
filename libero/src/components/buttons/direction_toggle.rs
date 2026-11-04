@@ -10,7 +10,7 @@ use crate::{
     context::IconSlot,
     hooks::{use_direction, use_localization, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{Responsive, Size},
+    theme::Responsive,
     tokens::Direction,
 };
 
@@ -30,12 +30,6 @@ base_props! {
         size: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
         radius: Input<Responsive<ThemeAwareValue>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// Names the press, given the direction it turns to. Replaces the localized names.
         #[props(default)]
         label: Option<Callback<Direction, String>>,

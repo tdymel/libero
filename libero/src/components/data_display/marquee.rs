@@ -418,6 +418,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
     use_box()
         .framework_sx(&MARQUEE_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&with_own(gap_sx, &props.sx))
         .parts(&props.parts)
         .states(&states)

@@ -45,11 +45,16 @@ base_props! {
 /// else a plain `<a>`.
 #[component]
 pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
+    let visible = crate::components::common::with_visibility(
+        &props.states,
+        &props.hidden_from,
+        &props.visible_from,
+    );
     let style_attributes = use_style_attributes(
         &props.class,
         props.framework_sx,
         crate::components::common::sx_source(&props.sx),
-        &props.states,
+        visible.as_ref().unwrap_or(&props.states),
         &props.variables,
         props.style,
         true,

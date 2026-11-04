@@ -253,6 +253,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .radius(radius.clone())
         .radii(props.radius.as_ref(), theme.tags_field.radius)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

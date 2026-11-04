@@ -388,6 +388,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
     let root = use_box()
         .framework_sx(&CIRCULAR_PROGRESS_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

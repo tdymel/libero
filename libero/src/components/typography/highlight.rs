@@ -121,6 +121,7 @@ pub fn Highlight(props: HighlightProps) -> Element {
 
     use_box()
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .prepare()

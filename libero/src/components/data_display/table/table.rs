@@ -1363,6 +1363,12 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
+    /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
+    #[props(default, into)]
+    hidden_from: Input<crate::theme::Size>,
+    /// Hidden below this breakpoint's width: `visible_from: "md"`.
+    #[props(default, into)]
+    visible_from: Input<crate::theme::Size>,
 }
 
 /// A sortable data table over rows of `T`.
@@ -2106,6 +2112,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
     let table = use_box()
         .framework_sx(&TABLE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)

@@ -170,6 +170,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         .radius(radius.clone())
         .radii(props.radius.as_ref(), theme.button.radius)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&field_states)

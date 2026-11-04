@@ -687,6 +687,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let root_style = use_box()
         .framework_sx(&SCROLLER_ROOT_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&root_states)

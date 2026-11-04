@@ -424,6 +424,7 @@ pub fn Dialog(props: DialogProps) -> Element {
     use_box()
         .framework_sx(&DIALOG_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)
@@ -462,6 +463,7 @@ pub fn DialogBody(mut props: DialogBodyProps) -> Element {
         .push(attr("data-slot", DialogPart::Body.slot()));
     use_box()
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
@@ -511,6 +513,7 @@ pub fn DialogActions(mut props: DialogActionsProps) -> Element {
     use_box()
         .framework_sx(&DIALOG_ACTIONS_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .prepare()

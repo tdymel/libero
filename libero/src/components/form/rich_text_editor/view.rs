@@ -926,6 +926,7 @@ pub fn RichTextEditor(props: RichTextEditorProps) -> Element {
         .radius(radius.clone())
         .radii(props.radius.as_ref(), theme.textarea.radius)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

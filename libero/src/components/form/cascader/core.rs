@@ -368,6 +368,7 @@ fn use_cascader_field(
         .radius(radius.clone())
         .radii(props.radius.as_ref(), use_theme().cascader.radius)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

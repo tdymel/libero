@@ -54,6 +54,7 @@ pub fn Center(props: CenterProps) -> Element {
     use_box()
         .framework_sx(&CENTER_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .variables(&variables)
@@ -70,6 +71,8 @@ mod tests {
             class: Default::default(),
             sx: Default::default(),
             states: Input::None,
+            hidden_from: Input::None,
+            visible_from: Input::None,
             attributes: Vec::new(),
             inline,
             children: rsx! {},

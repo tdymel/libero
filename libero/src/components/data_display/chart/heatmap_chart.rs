@@ -219,7 +219,13 @@ pub fn HeatmapChart(props: HeatmapChartProps) -> Element {
         &props.class,
         &props.sx,
         &props.parts,
-        &props.states,
+        crate::components::common::with_visibility(
+            &props.states,
+            &props.hidden_from,
+            &props.visible_from,
+        )
+        .as_ref()
+        .unwrap_or(&props.states),
         props.attributes,
     )
 }

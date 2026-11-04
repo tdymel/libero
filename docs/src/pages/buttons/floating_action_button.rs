@@ -147,10 +147,6 @@ pub fn FloatingActionButtonPage() -> Element {
                 prop("radius", "Responsive<ThemeAwareValue>")
                     .default(defaults.radius.as_str())
                     .doc("Corner radius. The default rounds an icon-only button into a circle and an extended one into a pill; `lg` gives a rounded square. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("placement", "Placement")
                     .default(defaults.placement.as_str())
                     .doc("The corner or edge it sits at. `start` and `end` follow the text direction."),

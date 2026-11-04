@@ -94,6 +94,10 @@ pub(super) struct MenuLevelProps {
     parts: Input<Parts<MenuPart>>,
     #[props(default)]
     states: Input<States>,
+    #[props(default)]
+    hidden_from: Input<crate::theme::Size>,
+    #[props(default)]
+    visible_from: Input<crate::theme::Size>,
 }
 
 /// One floating menu level. Submenus render here, beside the portal, so no level
@@ -351,6 +355,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         .framework_sx(&MENU_SX)
         .class(&props.class)
         .sx(own_sx.as_ref().unwrap_or(&props.sx))
+        .visibility(&props.hidden_from, &props.visible_from)
         .parts(&props.parts)
         .states(&states)
         .variables(&radius_variables)

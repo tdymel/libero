@@ -167,6 +167,8 @@ pub(crate) struct AccordionView<T: Options> {
     pub class: Input<ClassList>,
     pub sx: Input<crate::sx::Sx>,
     pub states: Input<States>,
+    pub hidden_from: Input<Size>,
+    pub visible_from: Input<Size>,
     pub attributes: Vec<Attribute>,
 }
 
@@ -217,6 +219,8 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
         class,
         sx: user_sx,
         states,
+        hidden_from,
+        visible_from,
         attributes,
     } = view;
 
@@ -328,6 +332,7 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
         .framework_sx(&ACCORDION_SX)
         .class(&class)
         .sx(&user_sx)
+        .visibility(&hidden_from, &visible_from)
         .states(&states)
         .prepare()
         .element(&root_element)

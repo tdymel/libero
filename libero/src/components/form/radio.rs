@@ -201,6 +201,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .disabled(disabled)
         .size(sizes)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

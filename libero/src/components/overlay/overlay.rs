@@ -94,6 +94,7 @@ pub fn Overlay(props: OverlayProps) -> Element {
     use_box()
         .framework_sx(&OVERLAY_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)

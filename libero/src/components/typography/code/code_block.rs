@@ -556,6 +556,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     let boxed = use_box()
         .framework_sx(&CODE_BLOCK_CONTAINER_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

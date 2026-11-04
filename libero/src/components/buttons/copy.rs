@@ -10,7 +10,7 @@ use crate::{
     context::IconSlot,
     hooks::{listener, use_clipboard, use_id, use_localization, use_silent_focus_out, use_timeout},
     sx::ThemeAwareValue,
-    theme::{Responsive, Size},
+    theme::Responsive,
 };
 
 base_props! {
@@ -30,12 +30,6 @@ base_props! {
         /// Per breakpoint too, as on `ActionIcon`.
         #[props(default, into)]
         radius: Input<Responsive<ThemeAwareValue>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// Replaces the localized name, e.g. "Copy link".
         #[props(default, into)]
         aria_label: Option<String>,

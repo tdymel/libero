@@ -329,12 +329,6 @@ base_props! {
         /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xl)`.
         #[props(default, into)]
         radius: Input<Responsive<ThemeAwareValue>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// Pair it with `onchange`; left out, a named chip keeps its own state.
         /// On an `onclick` chip it is the toggle's state, read out as `aria-pressed`.
         #[props(default)]

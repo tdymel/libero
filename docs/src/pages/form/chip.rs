@@ -35,10 +35,6 @@ pub fn ChipPage() -> Element {
                 prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.chip.radius.as_str())
                     .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("checked", "bool")
                     .doc("Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. A debug build warns when one comes without the other."),
                 disabled_prop("chip"),

@@ -161,6 +161,8 @@ pub struct PickerArgs<V: DateValue> {
     pub sx: Input<Sx>,
     pub parts: Input<Parts<ChronoPickerPart>>,
     pub states: Input<States>,
+    pub hidden_from: Input<crate::theme::Size>,
+    pub visible_from: Input<crate::theme::Size>,
     pub attributes: Vec<Attribute>,
 }
 
@@ -261,6 +263,8 @@ macro_rules! date_time_flow {
                 sx: $args.sx,
                 parts: $args.parts,
                 states: $args.states,
+                hidden_from: $args.hidden_from,
+                visible_from: $args.visible_from,
                 attributes: $args.attributes,
                 $($extra)*
             }
@@ -363,6 +367,8 @@ impl Sealed for NaiveDate {
                     sx: args.sx,
                     parts: args.parts,
                     states: args.states,
+                    hidden_from: args.hidden_from,
+                    visible_from: args.visible_from,
                     attributes: args.attributes,
                 }
             }
@@ -408,6 +414,8 @@ impl Sealed for NaiveTime {
                 sx: args.sx,
                 parts: args.parts,
                 states: args.states,
+                hidden_from: args.hidden_from,
+                visible_from: args.visible_from,
                 attributes: args.attributes,
             }
         }
@@ -439,6 +447,8 @@ impl Sealed for TimeDelta {
                 sx: args.sx,
                 parts: args.parts,
                 states: args.states,
+                hidden_from: args.hidden_from,
+                visible_from: args.visible_from,
                 attributes: args.attributes,
             }
         }
@@ -539,6 +549,8 @@ impl Sealed for DateRange<NaiveDate> {
                 sx: args.sx,
                 parts: args.parts,
                 states: args.states,
+                hidden_from: args.hidden_from,
+                visible_from: args.visible_from,
                 attributes: args.attributes,
             }
         }

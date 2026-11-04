@@ -283,12 +283,6 @@ base_props! {
         /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
         size: Input<Responsive<Size>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         #[props(default)]
         full_width: Option<bool>,
         /// `justify-content` of the icons and the label, as `justify: "space-between"` on a

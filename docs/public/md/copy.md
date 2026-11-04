@@ -38,8 +38,6 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. |
 | `size` | `Responsive<ThemeAwareValue>` | `md` | Button size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `aria_label` | `String` | `"Copy"` | The button's name, such as "Copy link". Unset, the localization's. |
 | `label` | `String` | - | Describes what a press copies, read after the name, such as "Add libero to your project". |
 | `disabled` | `bool` | `false` | Disables and dims the button. |

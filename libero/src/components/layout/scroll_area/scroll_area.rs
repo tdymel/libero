@@ -956,6 +956,7 @@ pub fn ScrollArea(mut props: ScrollAreaProps) -> Element {
                 .map_or(&SCROLL_AREA_BASE_SX, |base| base.0),
         )
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

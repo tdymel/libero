@@ -61,8 +61,6 @@ fn Demo() -> Element {
 | `variant` | `Responsive<Variant>` | `filled` | The unselected look. A checked chip is always a tonal container, with a check before its label. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `size` | `Responsive<Size>` | `md` | Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `xl` | Corner radius, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `checked` | `bool` | - | Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. A debug build warns when one comes without the other. |
 | `disabled` | `bool` | `false` | Disables and dims the chip. |
 | `readonly` | `bool` | `false` | A selectable chip stays focusable and posted with the form, but clicks and Space no longer toggle it. |

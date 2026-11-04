@@ -59,10 +59,6 @@ pub fn ButtonPage() -> Element {
                 prop("size", "Responsive<Size>")
                     .default(theme.button.size.as_str())
                     .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("full_width", "bool")
                     .default("false")
                     .doc("Stretches the button to fill its container."),

@@ -1285,6 +1285,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     use_box()
         .framework_sx(&IMAGE_CROPPER_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

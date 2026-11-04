@@ -435,6 +435,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     use_box()
         .framework_sx(&FORM_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

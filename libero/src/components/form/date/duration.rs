@@ -97,6 +97,8 @@ pub(super) struct DurationClockProps {
     sx: Input<Sx>,
     parts: Input<Parts<ChronoPickerPart>>,
     states: Input<States>,
+    hidden_from: Input<crate::theme::Size>,
+    visible_from: Input<crate::theme::Size>,
     attributes: Vec<Attribute>,
 }
 
@@ -276,6 +278,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
     let root_box = use_box()
         .framework_sx(&TIME_PICKER_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

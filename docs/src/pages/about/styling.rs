@@ -1,7 +1,8 @@
+use crate::Route;
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, CodeBlock, States, Table, Text, column},
+    components::{Anchor, Box, Code, CodeBlock, States, Table, Text, column},
     sx::{Sx, sx},
     theme::Size,
 };
@@ -450,7 +451,9 @@ pub fn StylingPage() -> Element {
                     Code { source: "hidden_from" }
                     " hides a component from a breakpoint up, "
                     Code { source: "visible_from" }
-                    " below it."
+                    " below it, on every component: see the "
+                    Anchor { to: Route::BoxPage {}, underline: "always", "Box demo" }
+                    "."
                 }
                 Text {
                     "A responsive value replaces the plain state word with one word per range, "

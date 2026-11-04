@@ -107,6 +107,7 @@ pub fn Container(props: ContainerProps) -> Element {
     use_box()
         .framework_sx(&CONTAINER_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&props.states)
         .variables(&variables)
@@ -132,6 +133,8 @@ mod tests {
             class: Default::default(),
             sx: Default::default(),
             states: Input::None,
+            hidden_from: Input::None,
+            visible_from: Input::None,
             attributes: Vec::new(),
             size: Size::Md.into(),
             gutters: Size::Lg.into(),

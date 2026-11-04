@@ -172,6 +172,8 @@ struct Group<T: Options, P: Part> {
     sx: Input<crate::sx::Sx>,
     parts: Input<Parts<P>>,
     states: Input<States>,
+    hidden_from: Input<crate::theme::Size>,
+    visible_from: Input<crate::theme::Size>,
     attributes: Vec<Attribute>,
 }
 
@@ -203,6 +205,8 @@ macro_rules! group {
             sx: $props.sx,
             parts: $props.parts,
             states: $props.states,
+            hidden_from: $props.hidden_from,
+            visible_from: $props.visible_from,
             attributes: $props.attributes,
         }
     };
@@ -341,6 +345,7 @@ fn check_group<T: Options, P: Part>(kind: Kind, props: Group<T, P>) -> Element {
         .disabled(disabled)
         .size(sizes)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

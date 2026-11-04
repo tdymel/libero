@@ -129,6 +129,7 @@ pub fn DataList(props: DataListProps) -> Element {
     use_box()
         .framework_sx(&DATA_LIST_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&states)
         .prepare()

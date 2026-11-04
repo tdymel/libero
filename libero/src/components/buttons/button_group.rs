@@ -284,6 +284,7 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
     use_box()
         .framework_sx(&BUTTON_GROUP_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .prepare()

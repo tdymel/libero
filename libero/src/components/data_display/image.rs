@@ -325,6 +325,7 @@ pub fn Image(props: ImageProps) -> Element {
         .framework_sx(&IMAGE_BASE_SX)
         .class(class)
         .sx(user_sx)
+        .visibility(&props.hidden_from, &props.visible_from)
         .states(&img_states)
         .variables(&variables)
         .prepare();
@@ -374,7 +375,13 @@ pub fn Image(props: ImageProps) -> Element {
                 variables: image_variables(&props.radius),
                 class: props.class,
                 sx: parts_under_sx(&props.parts, own_sx.clone()),
-                states: props.states,
+                // The words ride the states, so the button takes the image's visibility.
+                states: crate::components::common::with_visibility(
+                    &props.states,
+                    &props.hidden_from,
+                    &props.visible_from,
+                )
+                .unwrap_or(props.states),
                 attributes,
                 {image}
             }

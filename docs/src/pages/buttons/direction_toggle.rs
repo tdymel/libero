@@ -39,10 +39,6 @@ pub fn DirectionTogglePage() -> Element {
                 prop("radius", "Responsive<ThemeAwareValue>")
                     .default("sm")
                     .doc("Corner radius, independent of `size`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("label", "Callback<Direction, String>")
                     .doc("Replaces the two built-in names. Gets the direction a press turns the text to and returns what the press does."),
                 prop("disabled", "bool")

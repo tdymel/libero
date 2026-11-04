@@ -646,6 +646,8 @@ pub fn ImageList(props: ImageListProps) -> Element {
             masonry,
             gap: gap.base_ref().clone(),
             component: HtmlTag::Ul,
+            hidden_from: props.hidden_from.clone(),
+            visible_from: props.visible_from.clone(),
             class: props.class.clone(),
             sx: root_sx,
             states: list_states,

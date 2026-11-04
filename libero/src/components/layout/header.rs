@@ -401,6 +401,7 @@ pub fn Header(props: HeaderProps) -> Element {
     use_box()
         .framework_sx(&HEADER_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&states)
         .variables(&variables)
@@ -419,6 +420,8 @@ mod tests {
             class: Default::default(),
             sx: Default::default(),
             states: Input::None,
+            hidden_from: Input::None,
+            visible_from: Input::None,
             attributes: Vec::new(),
             position: Input::None,
             size: Input::None,

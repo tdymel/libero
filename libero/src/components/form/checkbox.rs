@@ -242,6 +242,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .radius(radius.clone())
         .radii(props.radius.as_ref(), theme.checkbox.radius)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&props.states)

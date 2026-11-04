@@ -38,12 +38,6 @@ base_props! {
         /// Unset, `xxl`: a circle, or a pill with `children`. Per breakpoint too.
         #[props(default, into)]
         radius: Input<Responsive<ThemeAwareValue>>,
-        /// Hidden from this breakpoint's width up: `hidden_from: "md"`.
-        #[props(default, into)]
-        hidden_from: Input<Size>,
-        /// Hidden below this breakpoint's width: `visible_from: "md"`.
-        #[props(default, into)]
-        visible_from: Input<Size>,
         /// The corner or edge it sits at; unset, `bottom-end`. `start` and `end` follow the direction.
         #[props(default, into)]
         placement: Input<Placement>,

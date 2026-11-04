@@ -43,8 +43,6 @@ fn Demo() -> Element {
 | `variant` | `Responsive<Variant>` | `outlined` | The trigger's visual style. Unset, `theme.tldr.variant`. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`. |
 | `size` | `Responsive<Size>` | `md` | The trigger's size step, the icon-only one too. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `Responsive<ThemeAwareValue>` | the trigger's own | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. The trigger's own is `xl` on the labelled chip, `sm` icon-only. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
-| `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
-| `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
 | `color` | `ThemeAwareValue` | `neutral` | The trigger's accent color. A theme color name or any CSS color. Unset, `theme.tldr.color`. |
 | `menu_parts` | `Parts<MenuPart>` | - | The menu's `parts`, the [`Menu`](menu.md) page's Style API table. The menu opens in a portal, out of the trigger's `sx`. |
 

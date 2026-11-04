@@ -151,6 +151,7 @@ pub fn Title(props: TitleProps) -> Element {
     use_box()
         .framework_sx(&TITLE_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&sx)
         .states(&states)
         .variables(&lines)

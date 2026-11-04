@@ -119,10 +119,6 @@ pub fn AvatarPage() -> Element {
                     prop("variant", "Responsive<Variant>")
                         .default(theme.avatar.variant.as_str())
                         .doc("The placeholder's look. Hidden once a picture loads. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
-                    prop("hidden_from", "Size")
-                        .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                    prop("visible_from", "Size")
-                        .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.avatar.color.as_str())
                         .doc("The placeholder's tint."),

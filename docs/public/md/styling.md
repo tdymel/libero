@@ -168,7 +168,8 @@ property:
 Some props take a value per breakpoint too: `size` on Button, Badge and Tabs,
 `variant` on Button and Badge, `radius` on Button. The CSS for a breakpoint range is added the first time a
 component uses it, so a page with plain values ships none. `hidden_from` hides a
-component from a breakpoint up, `visible_from` below it.
+component from a breakpoint up, `visible_from` below it, on every component: see
+the Box demo, [box.md](box.md).
 
 A responsive value replaces the plain state word with one word per range, as
 `md-:size-lg` (from md up) or `base-md:size-sm` (under md). A

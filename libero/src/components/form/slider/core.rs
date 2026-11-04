@@ -679,6 +679,10 @@ pub(in crate::components::form) struct SliderCoreProps {
     sx: Input<Sx>,
     #[props(default)]
     states: Input<States>,
+    #[props(default)]
+    hidden_from: Input<crate::theme::Size>,
+    #[props(default)]
+    visible_from: Input<crate::theme::Size>,
     size: Input<Responsive<Size>>,
     color: Input<ThemeAwareValue>,
     disabled: Option<bool>,
@@ -1556,6 +1560,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     use_box()
         .framework_sx(&SLIDER_ROOT_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&states)
         .variables(&root_variables)

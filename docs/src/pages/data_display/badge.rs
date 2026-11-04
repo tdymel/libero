@@ -59,10 +59,6 @@ pub fn BadgePage() -> Element {
                 prop("size", "Responsive<Size>")
                     .default(theme.badge.size.as_str())
                     .doc("Height, horizontal padding and font size, on a scale smaller than a chip's. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`."),
-                prop("hidden_from", "Size")
-                    .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
-                prop("visible_from", "Size")
-                    .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
                 prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.badge.radius.as_str())
                     .doc("A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is a pill at every height. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xxl)`. Breakpoints follow the window, not the parent."),

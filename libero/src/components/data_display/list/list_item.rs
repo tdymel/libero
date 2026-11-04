@@ -250,6 +250,7 @@ pub fn ListItem(props: ListItemProps) -> Element {
     use_box()
         .framework_sx(&LIST_ITEM_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .parts(&props.parts)
         .states(&states)

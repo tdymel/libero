@@ -113,6 +113,7 @@ pub fn QrCode(props: QrCodeProps) -> Element {
     let boxed = use_box()
         .framework_sx(&QR_CODE_BASE_SX)
         .class(&props.class)
+        .visibility(&props.hidden_from, &props.visible_from)
         .sx(&props.sx)
         .states(&props.states)
         .prepare();
