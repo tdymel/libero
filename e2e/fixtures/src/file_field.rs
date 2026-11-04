@@ -1,12 +1,22 @@
 //! `FileField`, as a dropzone taking several files.
 
 use dioxus::prelude::*;
-use libero::components::{
-    Button, CropEvent, CropOptions, FileField, FileRejection, FileTriggerArgs, Files, Flex, Form,
-    SelectionArgs, use_form,
+use libero::{
+    LiberoProvider,
+    components::{
+        Button, CropEvent, CropOptions, FileField, FileRejection, FileTriggerArgs, Files, Flex,
+        Form, SelectionArgs, use_form,
+    },
+    theme::{DialogDefaults, DialogFullScreen, Theme},
 };
 
 use crate::Routes;
+
+/// Every dialog full screen below `sm`, for the crop dialog on a phone (5696).
+static PHONE_DIALOGS: Theme = Theme {
+    dialog: DialogDefaults { full_screen: DialogFullScreen::Phone, ..Theme::DEFAULT.dialog },
+    ..Theme::DEFAULT
+};
 
 pub const ROUTES: Routes = &[
     ("/file-field", || rsx! { FileFieldPage {} }),
@@ -15,6 +25,7 @@ pub const ROUTES: Routes = &[
     ("/file-field/modes", || rsx! { FileModesPage {} }),
     ("/file-field/pick", || rsx! { FilePickPage {} }),
     ("/file-field/crop", || rsx! { FileCropPage {} }),
+    ("/file-field/crop-phone", || rsx! { LiberoProvider { themes: &PHONE_DIALOGS, FileCropPage {} } }),
     ("/file-field/crop-limit", || rsx! { FileCropLimitPage {} }),
     ("/file-field/reject", || rsx! { FileRejectPage {} }),
     ("/file-field/reset", || rsx! { FileResetPage {} }),

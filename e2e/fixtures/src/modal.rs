@@ -66,7 +66,9 @@ fn FullScreenModalPage() -> Element {
     let dialog = use_modal(|s: ModalScope<()>| {
         rsx! {
             Dialog { title: "Filters", full_screen: "phone",
-                Button { id: "done", onclick: move |_| s.close(), "Done" }
+                DialogActions {
+                    Button { id: "done", onclick: move |_| s.close(), "Done" }
+                }
             }
         }
     });

@@ -413,6 +413,35 @@ fn a_broken_image_in_the_crop_dialog_says_so() {
     drop(file);
 }
 
+/// 5696: under a theme that makes dialogs full screen on a phone, Cancel and Apply sit at
+/// the foot of the crop dialog, not under the picture.
+#[test]
+fn the_crop_dialogs_actions_stay_at_the_foot_of_a_phone() {
+    let file = TempFile::new("e2e-crop-phone", PNG);
+    block_on(async {
+        let fixture = Fixture::open("/file-field/crop-phone", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::file_field::drop_files(page, "[data-fixture-ready] [role=group]", file.drop_arg())
+            .await;
+        wait::for_visible(page, "[role=dialog] [data-slot=actions]")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "(() => { const r = document.querySelector('[role=dialog] [data-slot=actions]').getBoundingClientRect(); \
+             const d = document.querySelector('[role=dialog]').getBoundingClientRect(); \
+             return Math.abs(d.height - innerHeight) <= 1 && r.bottom <= innerHeight + 1 && r.bottom >= innerHeight - 40; })()",
+            "the actions at the foot of the full-screen dialog",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+    drop(file);
+}
+
 /// The same crop through Browse, the PNG handed to the page's canvas and back
 /// as base64 in a WebView (1230).
 async fn a_picked_image_is_cropped<D: Driver>(d: &mut D, _route: &str) -> Result<()> {

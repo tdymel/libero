@@ -180,6 +180,38 @@ fn link_dialog_shortcut_help_block_menu_and_announcements() {
     });
 }
 
+/// 5697: the link dialog's Save sits in its actions and links the selection on a click.
+#[test]
+fn the_link_dialogs_save_button_links_the_selection() {
+    const SAVE: &str = "[role=dialog] [data-slot=actions] > button:last-child";
+    block_on(async {
+        let fixture = Fixture::open("/rich-text-editor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_bounded(format!("{EDITOR}.focus()"))
+            .await
+            .unwrap();
+        keyboard::type_text(page, "ab").await.unwrap();
+        out_eq(page, "ab\n").await;
+        select_first_leaf(page).await;
+        keyboard::press_with(page, KEY_K, CTRL).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement === document.querySelector('[role=dialog] input')",
+            "focus in the link field",
+        )
+        .await
+        .unwrap();
+        keyboard::type_text(page, "https://example.com")
+            .await
+            .unwrap();
+        pointer::click(page, SAVE).await.unwrap();
+        out_eq(page, "[ab](https://example.com)\n").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 const MORE: &str = "document.querySelector('[role=toolbar] [aria-label=\"More formatting\"]')";
 
 /// Turning a phone to portrait moves Undo into More; that redraw panicked the app (4771).

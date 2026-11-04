@@ -10,8 +10,7 @@ use crate::{
     components::{
         buttons::Button,
         form::{FieldStatus, TextField},
-        layout::Flex,
-        overlay::{Dialog, Shortcut},
+        overlay::{Dialog, DialogActions, DialogBody, Shortcut},
     },
     hooks::current_localization,
     localization::RichTextEditorLabels,
@@ -42,14 +41,14 @@ pub(crate) fn LinkDialog(args: LinkArgs, onchoose: EventHandler<LinkChoice>) -> 
     };
     rsx! {
         Dialog { title: words.link,
-            // The browser's URL check would block Save before the field's own error shows.
-            form {
-                novalidate: true,
-                onsubmit: move |event: FormEvent| {
-                    event.prevent_default();
-                    save();
-                },
-                Flex { direction: "column", gap: "md",
+            DialogBody {
+                // The browser's URL check would block Save before the field's own error shows.
+                form {
+                    novalidate: true,
+                    onsubmit: move |event: FormEvent| {
+                        event.prevent_default();
+                        save();
+                    },
                     TextField {
                         // Not the caller's form data: a surrounding Fieldset's `required` skips it (4018).
                         required: false,
@@ -66,17 +65,17 @@ pub(crate) fn LinkDialog(args: LinkArgs, onchoose: EventHandler<LinkChoice>) -> 
                             refused.set(false);
                         },
                     }
-                    Flex { gap: "sm", justify: "flex-end",
-                        if on_link {
-                            Button {
-                                variant: "subtle",
-                                onclick: move |_| onchoose.call(LinkChoice::Remove),
-                                "{words.link_remove}"
-                            }
-                        }
-                        Button { r#type: "submit", "{words.link_save}" }
+                }
+            }
+            DialogActions {
+                if on_link {
+                    Button {
+                        variant: "subtle",
+                        onclick: move |_| onchoose.call(LinkChoice::Remove),
+                        "{words.link_remove}"
                     }
                 }
+                Button { onclick: move |_| save(), "{words.link_save}" }
             }
         }
     }

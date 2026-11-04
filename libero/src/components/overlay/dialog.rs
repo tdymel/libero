@@ -260,6 +260,7 @@ base_props! {
         /// `theme.dialog.full_screen`, else centred. Per breakpoint too:
         /// `responsive(true).md(false)`; `"phone"` is `responsive(true).sm(false)`.
         /// A [`DialogBody`] then scrolls and a [`DialogActions`] stays at the foot.
+/// Its children then form a column, so a bare `Button` stretches: use those two parts.
         #[props(default, into)]
         full_screen: Input<Responsive<bool>>,
         /// Layered onto Dialog's own - e.g. `Drawer`'s anchor/size vars.

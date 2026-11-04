@@ -11,7 +11,7 @@ use crate::{
         feedback::Alert,
         form::{CropEvent, CropOptions, CropRect, ImageCropper},
         layout::Flex,
-        overlay::Dialog,
+        overlay::{Dialog, DialogActions, DialogBody},
     },
     hooks::{ModalScope, use_localization, use_modal},
     localization::fill,
@@ -147,36 +147,38 @@ fn CropDialog(
 
     rsx! {
         Dialog { title: words.title,
-            Flex { direction: "column", gap: "md", align: "center",
-                if let Some(src) = src {
-                    ImageCropper {
-                        src,
-                        alt,
-                        aspect: options.aspect,
-                        shape: options.shape,
-                        pan: options.pan,
-                        overhang: options.overhang,
-                        backdrop: options.backdrop,
-                        value: rect(),
-                        onchange: move |next| rect.set(Some(next)),
-                        onerror: move |()| failed.set(true),
-                        // Tall photos fit the viewport; the box maps onto what shows.
-                        sx: sx().selector("& > [data-slot='image']", sx().max_height("60vh")),
+            DialogBody {
+                Flex { direction: "column", gap: "md", align: "center",
+                    if let Some(src) = src {
+                        ImageCropper {
+                            src,
+                            alt,
+                            aspect: options.aspect,
+                            shape: options.shape,
+                            pan: options.pan,
+                            overhang: options.overhang,
+                            backdrop: options.backdrop,
+                            value: rect(),
+                            onchange: move |next| rect.set(Some(next)),
+                            onerror: move |()| failed.set(true),
+                            // Tall photos fit the viewport; the box maps onto what shows.
+                            sx: sx().selector("& > [data-slot='image']", sx().max_height("60vh")),
+                        }
+                    }
+                    if unreadable || failed() {
+                        Alert { color: "error", role: "alert", width: "100%", "{words.load_failed}" }
+                    } else if crop_failed() {
+                        Alert { color: "error", role: "alert", width: "100%", "{words.crop_failed}" }
                     }
                 }
-                if unreadable || failed() {
-                    Alert { color: "error", role: "alert", width: "100%", "{words.load_failed}" }
-                } else if crop_failed() {
-                    Alert { color: "error", role: "alert", width: "100%", "{words.crop_failed}" }
-                }
-                Flex { gap: "sm", justify: "flex-end", width: "100%",
-                    Button { variant: "outlined", onclick: move |_| close.call(()), "{words.cancel}" }
-                    Button {
-                        disabled: unreadable || failed() || rect().is_none(),
-                        loading: cropping(),
-                        onclick: apply,
-                        "{words.apply}"
-                    }
+            }
+            DialogActions {
+                Button { variant: "outlined", onclick: move |_| close.call(()), "{words.cancel}" }
+                Button {
+                    disabled: unreadable || failed() || rect().is_none(),
+                    loading: cropping(),
+                    onclick: apply,
+                    "{words.apply}"
                 }
             }
         }
