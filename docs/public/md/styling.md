@@ -224,8 +224,9 @@ sx().when(
 
 `dark` and `light` style while a dark or light theme shows: the root's
 `data-lsx-scheme` says which once a theme is pinned (the pair's, a named one or
-a lone one), the OS's setting while nothing is. A theme counts as dark by its
-`surface`. Prefer a theme color, which follows the theme by itself.
+a lone one), the OS's setting while nothing is. Inside a `ThemeScope` they follow
+the scope's theme. A theme counts as dark by its `surface`. Prefer a theme color,
+which follows the theme by itself.
 
 ```rust,ignore
 sx()

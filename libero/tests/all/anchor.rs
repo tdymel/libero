@@ -128,8 +128,9 @@ fn a_hover_anchor_is_underlined_at_rest_in_dark() {
         .unwrap_or_else(|| panic!("no hover state in {state}"));
     let selector = format!(r#"[data-state~="{state}"]"#);
     let rest = &html[html.find(&selector).expect("the hover rule")..];
-    let window = &rest[..500];
-    let dark = format!("{selector}{{text-decoration:underline;}}");
+    let window = &rest[..rest.len().min(1500)];
+    let skip = ":not(:where([data-lsx-theme-scope][data-lsx-scheme], [data-lsx-theme-scope][data-lsx-scheme] *))";
+    let dark = format!("{selector}{skip}{{text-decoration:underline;}}");
     assert!(
         rest.starts_with(&format!("{selector}{{text-decoration:none;}}")),
         "{window}"
@@ -141,6 +142,8 @@ fn a_hover_anchor_is_underlined_at_rest_in_dark() {
         assert!(window.contains(guard), "{guard} in {window}");
     }
     assert_eq!(window.matches(&dark).count(), 2, "{window}");
+    let pinned = r#":where([data-lsx-theme-scope][data-lsx-scheme="dark"])"#;
+    assert_eq!(window.matches(pinned).count(), 2, "{window}");
 }
 
 #[test]

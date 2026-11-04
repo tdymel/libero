@@ -5,6 +5,7 @@ use crate::{
     context::{CssLayer, ThemeScopeContext},
     css::Stylesheet,
     hooks::use_css,
+    sx::SCHEME_ATTRIBUTE,
     theme::{THEME_SCOPE_ATTRIBUTE, theme_scope_css},
     utils::warn,
 };
@@ -26,7 +27,9 @@ use crate::{
 /// # }
 /// ```
 ///
-/// Values read in Rust (`use_theme()`) and `Sx::dark`/`Sx::light` keep following the page.
+/// `use_theme()` and `Sx::dark`/`Sx::light` inside follow the scope's theme, by its surface's
+/// scheme. One level only: a scope inside a scope pinned to the other scheme gets both schemes'
+/// styles, the later declared one wins.
 ///
 /// Docs: <https://libero-ui.dev/about/theming>
 #[component]
@@ -47,20 +50,37 @@ pub fn ThemeScope(
         css
     });
     let scope = use_memo(move || css.read().is_some().then(|| theme.cloned()));
-    use_context_provider(|| ThemeScopeContext(scope));
+    let own = use_memo(move || themes.read().get(&theme.read()));
+    let parent = use_hook(try_consume_context::<ThemeScopeContext>);
+    let resolved =
+        use_memo(move || own().or_else(|| parent.and_then(|parent| parent.theme.cloned())));
+    use_context_provider(|| ThemeScopeContext {
+        name: scope,
+        theme: resolved,
+    });
     use_css(
         css().map(|css| Stylesheet::from(&*css)),
         CssLayer::Framework,
     );
 
-    let attribute = vec![Attribute::new(
-        THEME_SCOPE_ATTRIBUTE,
-        scope().map_or(dioxus::core::AttributeValue::None, |name| {
-            dioxus::core::AttributeValue::Text(name)
-        }),
-        None,
-        false,
-    )];
+    let attribute = vec![
+        Attribute::new(
+            THEME_SCOPE_ATTRIBUTE,
+            scope().map_or(dioxus::core::AttributeValue::None, |name| {
+                dioxus::core::AttributeValue::Text(name)
+            }),
+            None,
+            false,
+        ),
+        Attribute::new(
+            SCHEME_ATTRIBUTE,
+            own().map_or(dioxus::core::AttributeValue::None, |theme| {
+                dioxus::core::AttributeValue::Text(theme.surface.color_scheme().to_string())
+            }),
+            None,
+            false,
+        ),
+    ];
     rsx! {
         div { ..attribute, {children} }
     }

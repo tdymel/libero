@@ -1,17 +1,20 @@
 use dioxus::prelude::*;
 
 use crate::{
-    context::LiberoContext,
+    context::{LiberoContext, ThemeScopeContext},
     sx::ThemeAwareValue,
     theme::{GlassTint, Gradient, Theme, ThemeSet, glass_gradient_declarations, glass_tint},
 };
 
-/// The active theme. Reactive, so a Rust-side read never disagrees with the CSS vars.
+/// The active theme: the nearest [`ThemeScope`](crate::ThemeScope)'s, else the page's.
+/// Reactive, so a Rust-side read never disagrees with the CSS vars.
 /// Panics outside a `LiberoProvider`.
 ///
 /// Docs: <https://libero-ui.dev/about/theming>
 pub fn use_theme() -> &'static Theme {
-    *use_context::<LiberoContext>().theme.read()
+    let page = use_context::<LiberoContext>().theme;
+    let scoped = try_use_context::<ThemeScopeContext>().and_then(|scope| scope.theme.cloned());
+    scoped.unwrap_or_else(|| *page.read())
 }
 
 /// The active [`ThemeSet`], and how to swap it: a theme picker's base.

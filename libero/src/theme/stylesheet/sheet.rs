@@ -133,9 +133,6 @@ pub(crate) fn theme_sheet_css(light: &'static Theme, dark: Option<&'static Theme
     css
 }
 
-/// The attribute [`ThemeScope`](crate::ThemeScope) puts on its box.
-pub(crate) const THEME_SCOPE_ATTRIBUTE: &str = "data-lsx-theme-scope";
-
 /// `theme`'s block under `[data-lsx-theme-scope="name"]`, or `None` if `set` has no such theme.
 /// Holds only the vars another theme of `set` disagrees on, as the pinned blocks do, plus every
 /// `var()`-valued one: those resolve where declared, so the inherited copy keeps the page's ink.
@@ -206,7 +203,7 @@ thread_local! {
 }
 
 // In `sx`, which `Sx::dark` and `Sx::light` build the same selectors from.
-pub(crate) use crate::sx::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE};
+pub(crate) use crate::sx::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE, THEME_SCOPE_ATTRIBUTE};
 
 fn theme_selector(name: &str) -> String {
     format!(":root[{THEME_ATTRIBUTE}=\"{name}\"]")

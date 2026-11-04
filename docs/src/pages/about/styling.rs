@@ -496,7 +496,9 @@ pub fn StylingPage() -> Element {
                     " style while a dark or light theme shows: the root's "
                     Code { source: "data-lsx-scheme" }
                     " says which once a theme is pinned (the pair's, a named one or a lone one), "
-                    "the OS's setting while nothing is. A theme counts as dark by its "
+                    "the OS's setting while nothing is. Inside a "
+                    Code { source: "ThemeScope" }
+                    " they follow the scope's theme. A theme counts as dark by its "
                     Code { source: "surface" }
                     ". Prefer a theme color, which follows the theme by itself."
                 }

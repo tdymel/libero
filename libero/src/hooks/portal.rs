@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::context::{PortalEntry, PortalHost, ThemeScopeContext};
-use crate::theme::THEME_SCOPE_ATTRIBUTE;
+use crate::sx::{SCHEME_ATTRIBUTE, THEME_SCOPE_ATTRIBUTE};
 use crate::utils::unique_id;
 
 /// One component's claim on a slot in `PortalOutlet`, written through
@@ -45,15 +45,24 @@ impl PortalSlot {
 impl PortalSlot {
     /// `content` in a box carrying the nearest [`ThemeScope`](crate::ThemeScope)'s theme.
     fn scoped(&self, content: Element) -> Element {
-        let Some(name) = self.scope.and_then(|scope| scope.0()) else {
+        let Some(name) = self.scope.and_then(|scope| scope.name.cloned()) else {
             return content;
         };
-        let attribute = vec![Attribute::new(
-            THEME_SCOPE_ATTRIBUTE,
-            dioxus::core::AttributeValue::Text(name),
-            None,
-            false,
-        )];
+        let scheme = self
+            .scope
+            .and_then(|scope| scope.theme.cloned())
+            .map_or(dioxus::core::AttributeValue::None, |theme| {
+                dioxus::core::AttributeValue::Text(theme.surface.color_scheme().to_string())
+            });
+        let attribute = vec![
+            Attribute::new(
+                THEME_SCOPE_ATTRIBUTE,
+                dioxus::core::AttributeValue::Text(name),
+                None,
+                false,
+            ),
+            Attribute::new(SCHEME_ATTRIBUTE, scheme, None, false),
+        ];
         // `contents`: the box must not become the overlay's containing block or take a line.
         rsx! {
             div { display: "contents", ..attribute, {content} }

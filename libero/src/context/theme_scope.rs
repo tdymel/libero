@@ -1,6 +1,12 @@
 use dioxus::prelude::*;
 
-/// The theme name of the nearest [`ThemeScope`](crate::ThemeScope), `None` for an unknown one.
-/// Portalled overlays read it to carry the scope out of the tree.
+use crate::theme::Theme;
+
+/// The nearest [`ThemeScope`](crate::ThemeScope): its theme name, `None` for an unknown one
+/// (portalled overlays read it to carry the scope out of the tree), and its theme, which an
+/// unknown inner scope takes from the scope around it.
 #[derive(Clone, Copy)]
-pub(crate) struct ThemeScopeContext(pub(crate) Memo<Option<String>>);
+pub(crate) struct ThemeScopeContext {
+    pub(crate) name: Memo<Option<String>>,
+    pub(crate) theme: Memo<Option<&'static Theme>>,
+}

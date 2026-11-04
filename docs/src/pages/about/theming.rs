@@ -293,9 +293,13 @@ pub fn ThemingPage() -> Element {
                     Code { source: "ThemeScope" }
                     " shows its children in another theme of the set, such as a dark preview on a "
                     "light page. It paints that theme's surface and text, and the menus and dialogs "
-                    "opened inside follow it. Values read in Rust and "
+                    "opened inside follow it, and so do "
+                    Code { source: "use_theme()" }
+                    ", "
                     Code { source: "Sx::dark" }
-                    " keep following the page."
+                    " and "
+                    Code { source: "Sx::light" }
+                    ". One level only: a scope inside a scope of the other scheme is not resolved."
                 }
                 Flex { gap: "md", wrap: "wrap",
                     for name in ["light", "dark"] {

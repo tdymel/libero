@@ -40,3 +40,46 @@ e2e::scenario!(
     "/theme-scope",
     scopes_paint_their_theme
 );
+
+const RED: &str = "rgb(255, 0, 0)";
+const GREEN: &str = "rgb(0, 128, 0)";
+
+/// Todo 5681: a probe's `Sx::dark` arm follows its scope, whichever scheme the page shows.
+async fn probes_follow_their_scope<D: Driver>(d: &mut D, page: &str) -> Result<()> {
+    for (probe, want) in [
+        ("#probe-page", page),
+        ("#probe-light", RED),
+        ("#probe-dark", GREEN),
+    ] {
+        eventually(d, &format!("{probe} to be {want}"), async |d| {
+            Ok(d.style(probe, "background-color").await? == want)
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+async fn dark_arms_follow_the_scope_in_a_light_page<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    probes_follow_their_scope(d, RED).await
+}
+
+async fn dark_arms_follow_the_scope_in_a_dark_page<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    probes_follow_their_scope(d, GREEN).await
+}
+
+e2e::scenario!(
+    dark_arms_follow_the_scope_in_a_light_page,
+    "/theme-scope",
+    dark_arms_follow_the_scope_in_a_light_page
+);
+e2e::scenario!(
+    dark_arms_follow_the_scope_in_a_dark_page,
+    "/theme-scope/dark-page",
+    dark_arms_follow_the_scope_in_a_dark_page
+);

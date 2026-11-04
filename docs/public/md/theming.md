@@ -148,8 +148,9 @@ paint, paste `libero::theme::COLOR_SCHEME_RESTORE_SCRIPT` into the head of your
 
 `ThemeScope` shows its children in another theme of the set, such as a dark
 preview on a light page. It paints that theme's surface and text, and the menus
-and dialogs opened inside follow it. Values read in Rust and `Sx::dark` keep
-following the page.
+and dialogs opened inside follow it, and so do `use_theme()` and `Sx::dark` and
+`Sx::light`. One level only: a scope inside a scope of the other scheme is not
+resolved.
 
 ```rust,ignore
 ThemeScope { theme: "dark",

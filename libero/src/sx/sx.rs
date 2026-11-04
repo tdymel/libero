@@ -16,6 +16,9 @@ pub(crate) const THEME_ATTRIBUTE: &str = "data-lsx-theme";
 /// The attribute a pinned theme's document root carries with its surface's scheme, `light` or `dark`.
 pub(crate) const SCHEME_ATTRIBUTE: &str = "data-lsx-scheme";
 
+/// The attribute [`ThemeScope`](crate::ThemeScope) puts on its box, with [`SCHEME_ATTRIBUTE`].
+pub(crate) const THEME_SCOPE_ATTRIBUTE: &str = "data-lsx-theme-scope";
+
 /// The dark half's media query, which the web backend also reads the platform scheme from.
 pub(crate) const DARK_SCHEME_QUERY: &str = "(prefers-color-scheme: dark)";
 
@@ -187,6 +190,7 @@ impl Sx {
     /// Styles while a dark theme shows: the root's `data-lsx-scheme` says so once a theme
     /// is pinned (the pair's, a [named](crate::theme::ThemeSet::named) or a lone one), the
     /// OS's `prefers-color-scheme` while nothing is pinned. A theme counts as dark by its surface.
+    /// Inside a [`ThemeScope`](crate::ThemeScope) it follows the scope, one level deep.
     ///
     /// ```
     /// # use libero::sx::sx;
@@ -201,16 +205,22 @@ impl Sx {
         self.scheme("light", "(prefers-color-scheme: light)", nested)
     }
 
-    /// The `:where` guards keep a bare `&`'s specificity, as [`rtl`](Self::rtl) does.
+    /// The `:where` guards keep a bare `&`'s specificity, as [`rtl`](Self::rtl) does. The root
+    /// arms skip a pinned [`ThemeScope`](crate::ThemeScope), whose own arms come after them.
     fn scheme(self, name: &str, query: &str, nested: Sx) -> Self {
+        let scope = format!("[{THEME_SCOPE_ATTRIBUTE}][{SCHEME_ATTRIBUTE}]");
+        let outside = format!("&:not(:where({scope}, {scope} *))");
+        let pinned = format!("[{THEME_SCOPE_ATTRIBUTE}][{SCHEME_ATTRIBUTE}=\"{name}\"]");
         self.selector(
-            format!(":where(:root[{SCHEME_ATTRIBUTE}=\"{name}\"]) &"),
+            format!(":where(:root[{SCHEME_ATTRIBUTE}=\"{name}\"]) {outside}"),
             nested.clone(),
         )
         .selector(
-            format!(":where(:root:not([{SCHEME_ATTRIBUTE}])) &"),
-            Sx::new().media(query, nested),
+            format!(":where(:root:not([{SCHEME_ATTRIBUTE}])) {outside}"),
+            Sx::new().media(query, nested.clone()),
         )
+        .selector(format!(":where({pinned}) &"), nested.clone())
+        .selector(format!("&:where({pinned})"), nested)
     }
 
     /// Styles from the viewport width of `breakpoint` up (`min-width`, mobile first).

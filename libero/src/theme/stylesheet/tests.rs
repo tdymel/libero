@@ -766,7 +766,9 @@ fn the_cached_theme_sheet_is_the_built_one() {
 /// `Sx::dark` and `Sx::light` key on the root's scheme, not the theme's name (todo 5383).
 #[test]
 fn sx_dark_and_light_follow_the_root_scheme() {
-    use crate::sx::{DARK_SCHEME_QUERY, SCHEME_ATTRIBUTE, THEME_ATTRIBUTE, sx};
+    use crate::sx::{
+        DARK_SCHEME_QUERY, SCHEME_ATTRIBUTE, THEME_ATTRIBUTE, THEME_SCOPE_ATTRIBUTE, sx,
+    };
 
     let system = format!(":root:not([{SCHEME_ATTRIBUTE}])");
     for (name, query) in [
@@ -783,7 +785,14 @@ fn sx_dark_and_light_follow_the_root_scheme() {
         assert!(css.contains(&format!(":where({pinned}) .")), "{css}");
         assert!(css.contains(&format!("@media {query}")), "{css}");
         assert!(css.contains(&format!(":where({system}) .")), "{css}");
-        assert!(!css.contains(THEME_ATTRIBUTE), "{css}");
+        assert!(!css.contains(&format!("[{THEME_ATTRIBUTE}=")), "{css}");
+        // A pinned scope has its own arms, after the root's (todo 5681).
+        let scoped = format!(":where([{THEME_SCOPE_ATTRIBUTE}][{SCHEME_ATTRIBUTE}=\"{name}\"])");
+        assert!(
+            css.find(&scoped).unwrap() > css.find(&pinned).unwrap(),
+            "{css}"
+        );
+        assert!(css.contains(&format!("{scoped}{{")), "{css}");
     }
 }
 
