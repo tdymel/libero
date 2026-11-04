@@ -39,6 +39,7 @@ Accessibility. The rest are shown on the component or guide page they belong to.
 | `use_hotkeys` | Runs a handler on a keyboard shortcut, from anywhere in the page. | [Hotkeys](use_hotkeys.md) |
 | `use_media_query` | Whether a CSS media query matches, live. | [Media query](use_media_query.md) |
 | `use_is_mobile` | Whether the viewport is narrower than 768px, live. | [Media query](use_media_query.md) |
+| `use_responsive` | A per-breakpoint value read in Rust; a server-rendered page switches after mount. | [Styling](styling.md) |
 | `use_media` | Plays and reads an `<audio>` or `<video>` you render yourself. | [Media](use_media.md) |
 | `use_fullscreen` | Puts one element in fullscreen, drawn where the platform refuses it. | [Fullscreen](use_fullscreen.md) |
 | `use_back` | Runs a handler on Android's Back button instead of leaving the app. | [Back button](use_back.md) |

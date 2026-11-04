@@ -149,6 +149,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseMediaQueryPage {},
         ),
         row(
+            "use_responsive",
+            "A per-breakpoint value read in Rust; a server-rendered page switches after mount.",
+            Route::StylingPage {},
+        ),
+        row(
             "use_media",
             "Plays and reads an `<audio>` or `<video>` you render yourself.",
             Route::UseMediaPage {},
