@@ -20,7 +20,7 @@ what `resolve` answered, or `None` when dismissed.
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Dialog, Flex, Text},
+    components::{Button, Dialog, DialogActions, DialogBody, Flex, Text},
     hooks::{ModalScope, use_modal},
 };
 
@@ -40,27 +40,20 @@ fn Demo() -> Element {
                 title: "Unsaved changes",
                 size: "md",
                 full_screen: "phone",
-                Flex {
-                    direction: "column",
-                    gap: "md",
-                    Text { "{document} has changes you have not saved." }
-                    Flex {
-                        direction: "row",
-                        gap: "sm",
-                        wrap: "wrap",
-                        Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
-                        Button {
-                            variant: "filled",
-                            color: "error",
-                            onclick: move |_| s.resolve(SaveChoice::Discard),
-                            "Discard"
-                        }
-                        Button {
-                            variant: "filled",
-                            color: "primary",
-                            onclick: move |_| s.resolve(SaveChoice::Save),
-                            "Save"
-                        }
+                DialogBody { Text { "{document} has changes you have not saved." } }
+                DialogActions {
+                    Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
+                    Button {
+                        variant: "filled",
+                        color: "error",
+                        onclick: move |_| s.resolve(SaveChoice::Discard),
+                        "Discard"
+                    }
+                    Button {
+                        variant: "filled",
+                        color: "primary",
+                        onclick: move |_| s.resolve(SaveChoice::Save),
+                        "Save"
                     }
                 }
             }

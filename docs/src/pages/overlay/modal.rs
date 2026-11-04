@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Dialog, DialogFullScreen, Flex, Text},
+    components::{Button, Code, Dialog, DialogActions, DialogBody, DialogFullScreen, Flex, Text},
     hooks::{ModalScope, use_modal},
     theme::responsive,
 };
@@ -47,27 +47,20 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
                  Dialog {{\n            \
                      title: \"Unsaved changes\",\n            \
                      size: \"{}\",\n            \
-                     {}Flex {{\n                \
-                         direction: \"column\",\n                \
-                         gap: \"md\",\n                \
-                         Text {{ \"{{document}} has changes you have not saved.\" }}\n                \
-                         Flex {{\n                    \
-                             direction: \"row\",\n                    \
-                             gap: \"sm\",\n                    \
-                             wrap: \"wrap\",\n                    \
-                             Button {{ variant: \"text\", onclick: move |_| s.close(), \"Keep editing\" }}\n                    \
-                             Button {{\n                        \
-                                 variant: \"filled\",\n                        \
-                                 color: \"error\",\n                        \
-                                 onclick: move |_| s.resolve(SaveChoice::Discard),\n                        \
-                                 \"Discard\"\n                    \
-                             }}\n                    \
-                             Button {{\n                        \
-                                 variant: \"filled\",\n                        \
-                                 color: \"primary\",\n                        \
-                                 onclick: move |_| s.resolve(SaveChoice::Save),\n                        \
-                                 \"Save\"\n                    \
-                             }}\n                \
+                     {}DialogBody {{ Text {{ \"{{document}} has changes you have not saved.\" }} }}\n            \
+                     DialogActions {{\n                \
+                         Button {{ variant: \"text\", onclick: move |_| s.close(), \"Keep editing\" }}\n                \
+                         Button {{\n                    \
+                             variant: \"filled\",\n                    \
+                             color: \"error\",\n                    \
+                             onclick: move |_| s.resolve(SaveChoice::Discard),\n                    \
+                             \"Discard\"\n                \
+                         }}\n                \
+                         Button {{\n                    \
+                             variant: \"filled\",\n                    \
+                             color: \"primary\",\n                    \
+                             onclick: move |_| s.resolve(SaveChoice::Save),\n                    \
+                             \"Save\"\n                \
                          }}\n            \
                      }}\n        \
                  }}\n    \
@@ -123,28 +116,20 @@ fn ModalDemo(size: String, full_screen: String, awaited: bool) -> Element {
                     "responsive" => responsive(true).md(false),
                     full_screen => DialogFullScreen::from(full_screen).into(),
                 },
-                Flex {
-                    direction: "column",
-                    gap: "md",
-                    Text { "{document} has changes you have not saved." }
-                    Flex {
-                        direction: "row",
-                        gap: "sm",
-                        // Wraps rather than truncating the labels on an xs/sm dialog.
-                        wrap: "wrap",
-                        Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
-                        Button {
-                            variant: "filled",
-                            color: "error",
-                            onclick: move |_| s.resolve(SaveChoice::Discard),
-                            "Discard"
-                        }
-                        Button {
-                            variant: "filled",
-                            color: "primary",
-                            onclick: move |_| s.resolve(SaveChoice::Save),
-                            "Save"
-                        }
+                DialogBody { Text { "{document} has changes you have not saved." } }
+                DialogActions {
+                    Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
+                    Button {
+                        variant: "filled",
+                        color: "error",
+                        onclick: move |_| s.resolve(SaveChoice::Discard),
+                        "Discard"
+                    }
+                    Button {
+                        variant: "filled",
+                        color: "primary",
+                        onclick: move |_| s.resolve(SaveChoice::Save),
+                        "Save"
                     }
                 }
             }

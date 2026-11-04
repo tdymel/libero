@@ -3,11 +3,15 @@ use crate::components::{
     responsive_size_code, responsive_switch,
 };
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Dialog, DialogPart, Text};
+use libero::components::{Button, Code, Dialog, DialogActions, DialogBody, DialogPart, Text};
 use libero::theme::{Responsive, Size};
 use libero::{hooks::use_element, platform::ElementApi, use_theme};
 
-const CONTENT: &str = r#"Text { "notes.md has changes you have not saved." }"#;
+const CONTENT: &str = r#"DialogBody { Text { "notes.md has changes you have not saved." } }
+DialogActions {
+    Button { variant: "outlined", "Cancel" }
+    Button { "Save" }
+}"#;
 
 /// Outside a modal the close button calls `onclose`, so the snippet owns the
 /// open state and a way back.
@@ -78,7 +82,11 @@ fn DialogDemo(titled: bool, close_button: bool, size: Responsive<Size>, radius: 
             onmounted: dialog.mount(),
             size,
             radius,
-            Text { "notes.md has changes you have not saved." }
+            DialogBody { Text { "notes.md has changes you have not saved." } }
+            DialogActions {
+                Button { variant: "outlined", "Cancel" }
+                Button { "Save" }
+            }
         }
     }
 }
@@ -111,7 +119,7 @@ pub fn DialogPage() -> Element {
                         .doc("Caps the width from the dialog scale. `md` is 510px. A full-screen dialog ignores it, so with `full_screen: \"phone\"` it does nothing below the `sm` breakpoint. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("full_screen", "Responsive<bool>")
                         .default(theme.dialog.full_screen.as_str())
-                        .doc("Inside a modal, fills the screen edge to edge with square corners instead of centring: `\"phone\"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `\"always\"` at every width, `\"never\"` or `false` not at all. Or one per breakpoint, `full_screen: responsive(true).md(false)`; `\"phone\"` is `responsive(true).sm(false)`. It is CSS, so a server-rendered page draws it right away. Breakpoints follow the window, not the parent. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`, so one theme line makes every dialog full screen on a phone. The Modal page's demo shows it."),
+                        .doc("Inside a modal, fills the screen edge to edge with square corners instead of centring: `\"phone\"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `\"always\"` at every width, `\"never\"` or `false` not at all. Or one per breakpoint, `full_screen: responsive(true).md(false)`; `\"phone\"` is `responsive(true).sm(false)`. It is CSS, so a server-rendered page draws it right away. Breakpoints follow the window, not the parent. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`, so one theme line makes every dialog full screen on a phone. A `DialogBody` then scrolls and a `DialogActions` stays at the foot. The Modal page's demo shows it."),
                     prop("variables", "Variables")
                         .doc("CSS variables layered onto the dialog's own, as `Drawer` does."),
                     prop("parts", "Parts<DialogPart>")
@@ -122,6 +130,14 @@ pub fn DialogPage() -> Element {
                     (DialogPart::Header, "The row holding the title and the close button. Rendered only with a title or a close button."),
                     (DialogPart::Title, "The title heading."),
                     (DialogPart::Close, "The close button."),
+                    (DialogPart::Body, "A `DialogBody`. Full screen, it fills the space between the header and the actions and scrolls."),
+                    (DialogPart::Actions, "A `DialogActions` row. Full screen, it sits at the foot."),
+                ]),
+                props("DialogBody", vec![
+                    prop("children", "Element").default("required").doc("The content. A direct child of `Dialog`. Full screen, the dialog is a column capped at the screen's height: this part grows to the space left and scrolls, so the actions stay in view."),
+                ]),
+                props("DialogActions", vec![
+                    prop("children", "Element").default("required").doc("The buttons, in a wrapping row at the end. A direct child of `Dialog`, after the body. Full screen, the row sits at the foot of the screen, above a home indicator, even under short content."),
                 ]),
             ],
             accessibility: a11y()

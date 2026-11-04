@@ -1,7 +1,7 @@
 # Dialog
 
 Crate: `libero`
-Import: `use libero::components::Dialog;`
+Import: `use libero::components::{Dialog, DialogActions, DialogBody};`
 Feature: `dialog` (on by default, turns on `action-icon`, `title`; [features.md](features.md))
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/dialog.rs>
 Index: [index.md](index.md) lists every other page
@@ -19,7 +19,7 @@ state.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Dialog, Text};
+use libero::components::{Button, Dialog, DialogActions, DialogBody, Text};
 
 #[component]
 fn Demo() -> Element {
@@ -30,7 +30,11 @@ fn Demo() -> Element {
             Dialog {
                 title: "Unsaved changes",
                 onclose: move |_| open.set(false),
-                Text { "notes.md has changes you have not saved." }
+                DialogBody { Text { "notes.md has changes you have not saved." } }
+                DialogActions {
+                    Button { variant: "outlined", "Cancel" }
+                    Button { "Save" }
+                }
             }
         } else {
             Button { variant: "outlined", onclick: move |_| open.set(true), "Reopen" }
@@ -51,13 +55,25 @@ fn Demo() -> Element {
 | `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
 | `radius` | `Responsive<ThemeAwareValue>` | `md` | Corner radius from the radius scale, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `size` | `Responsive<ThemeAwareValue>` | `md` | Caps the width from the dialog scale. `md` is 510px. A full-screen dialog ignores it, so with `full_screen: "phone"` it does nothing below the `sm` breakpoint. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
-| `full_screen` | `Responsive<bool>` | `never` | Inside a modal, fills the screen edge to edge with square corners instead of centring: `"phone"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `"always"` at every width, `"never"` or `false` not at all. Or one per breakpoint, `full_screen: responsive(true).md(false)`; `"phone"` is `responsive(true).sm(false)`. It is CSS, so a server-rendered page draws it right away. Breakpoints follow the window, not the parent. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`, so one theme line makes every dialog full screen on a phone. The Modal page's demo shows it. |
+| `full_screen` | `Responsive<bool>` | `never` | Inside a modal, fills the screen edge to edge with square corners instead of centring: `"phone"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `"always"` at every width, `"never"` or `false` not at all. Or one per breakpoint, `full_screen: responsive(true).md(false)`; `"phone"` is `responsive(true).sm(false)`. It is CSS, so a server-rendered page draws it right away. Breakpoints follow the window, not the parent. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`, so one theme line makes every dialog full screen on a phone. A `DialogBody` then scrolls and a `DialogActions` stays at the foot. The Modal page's demo shows it. |
 | `variables` | `Variables` | - | CSS variables layered onto the dialog's own, as `Drawer` does. |
 | `parts` | `Parts<DialogPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size("lg"))`. |
 | `children` | `Element` | required | The dialog's content. |
 
 Like every component, `Dialog` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
+
+### DialogBody
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `children` | `Element` | required | The content. A direct child of `Dialog`. Full screen, the dialog is a column capped at the screen's height: this part grows to the space left and scrolls, so the actions stay in view. |
+
+### DialogActions
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `children` | `Element` | required | The buttons, in a wrapping row at the end. A direct child of `Dialog`, after the body. Full screen, the row sits at the foot of the screen, above a home indicator, even under short content. |
 
 ## Style API
 
@@ -70,6 +86,8 @@ explains how parts work.
 | `DialogPart::Header` | `header` | The row holding the title and the close button. Rendered only with a title or a close button. |
 | `DialogPart::Title` | `title` | The title heading. |
 | `DialogPart::Close` | `close` | The close button. |
+| `DialogPart::Body` | `body` | A `DialogBody`. Full screen, it fills the space between the header and the actions and scrolls. |
+| `DialogPart::Actions` | `actions` | A `DialogActions` row. Full screen, it sits at the foot. |
 
 ## Accessibility
 

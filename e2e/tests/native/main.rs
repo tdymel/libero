@@ -20,6 +20,7 @@ mod color_scheme;
 mod combobox;
 mod copy;
 mod date;
+mod dialog_parts;
 mod direction_toggle;
 mod docs_shell;
 mod element_api;

@@ -38,6 +38,7 @@ mod copy;
 mod data_list;
 mod date;
 mod dialog;
+mod dialog_parts;
 mod direction_toggle;
 mod divider;
 mod docs_header;

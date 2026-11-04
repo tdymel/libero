@@ -40,7 +40,9 @@ pub(crate) mod use_modal;
 #[cfg(feature = "dialog")]
 pub use crate::theme::DialogFullScreen;
 #[cfg(feature = "dialog")]
-pub use dialog::{Dialog, DialogPart, DialogProps};
+pub use dialog::{
+    Dialog, DialogActions, DialogActionsProps, DialogBody, DialogBodyProps, DialogPart, DialogProps,
+};
 #[cfg(feature = "drawer")]
 pub(crate) use drawer::Drawer;
 #[cfg(feature = "drawer")]

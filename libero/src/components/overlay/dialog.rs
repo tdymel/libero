@@ -48,14 +48,26 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
 /// Edge to edge over `Modal`'s frame: its negative margins cancel the frame's `md`
 /// padding, and `stretch` and `flex-grow` fill it. Plain CSS, so no centred first frame.
 /// Its padding clears a notch and a home indicator on all four sides, so a `Sidebar` inside skips them (5531).
+/// A column capped at the viewport: a [`DialogBody`] scrolls, its [`DialogActions`] stay at the foot,
+/// and plain content scrolls the dialog itself, as it did the modal (5634).
 fn full_screen_sx() -> Sx {
     let padding = SizeCss::SPACING.value(Size::Lg);
     sx().margin(format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Md)))
         .align_self("stretch")
         .flex_grow("1")
         .max_width("none")
+        .max_height("100dvh")
+        .overflow_y("auto")
+        .display("flex")
+        .flex_direction("column")
         .border_radius("0")
         .box_shadow("none")
+        .selector("& > *", sx().flex_shrink("0"))
+        .selector(
+            "& > [data-slot='body']",
+            sx().flex("1 1 auto").min_height("0").overflow_y("auto"),
+        )
+        .selector("& > [data-slot='actions']", sx().margin_top("auto"))
         .with("padding-top", safe_area_padding(&padding, "top"))
         .with("padding-right", safe_area_padding(&padding, "right"))
         .with("padding-bottom", safe_area_padding(&padding, "bottom"))
@@ -205,6 +217,10 @@ parts_enum! {
         Header = "header" => "& > [data-slot='header']",
         Title = "title" => "& > [data-slot='header'] > [data-slot='title']",
         Close = "close" => "& > [data-slot='header'] > [data-slot='close']",
+        /// A [`DialogBody`]. Full screen, it fills the space between the header and the actions and scrolls.
+        Body = "body" => "& > [data-slot='body']",
+        /// A [`DialogActions`] row. Full screen, it sits at the foot.
+        Actions = "actions" => "& > [data-slot='actions']",
     }
 }
 
@@ -243,6 +259,7 @@ base_props! {
         /// below the `sm` breakpoint, `"always"` at every width. Unset,
         /// `theme.dialog.full_screen`, else centred. Per breakpoint too:
         /// `responsive(true).md(false)`; `"phone"` is `responsive(true).sm(false)`.
+        /// A [`DialogBody`] then scrolls and a [`DialogActions`] stays at the foot.
         #[props(default, into)]
         full_screen: Input<Responsive<bool>>,
         /// Layered onto Dialog's own - e.g. `Drawer`'s anchor/size vars.
@@ -414,6 +431,91 @@ pub fn Dialog(props: DialogProps) -> Element {
         .render(HtmlTag::Div, attributes, children)
 }
 
+base_props! {
+    pub struct DialogBodyProps {
+        children: Element,
+    }
+}
+
+/// The scrolling content of a [`Dialog`]. A direct child of it. Full screen, it fills the
+/// space between the header and the [`DialogActions`] and scrolls; otherwise a plain block.
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Dialog, DialogActions, DialogBody};
+/// # fn app() -> Element {
+/// rsx! {
+///     Dialog { title: "Terms", full_screen: "phone",
+///         DialogBody { "A long text." }
+///         DialogActions { Button { "Accept" } }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/dialog>
+#[component]
+pub fn DialogBody(mut props: DialogBodyProps) -> Element {
+    props
+        .attributes
+        .push(attr("data-slot", DialogPart::Body.slot()));
+    use_box()
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare()
+        .render(HtmlTag::Div, props.attributes, props.children)
+}
+
+// The gap is padding, so the foot's `margin-top: auto` keeps the room when the body fills.
+static DIALOG_ACTIONS_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .flex_wrap("wrap")
+        .justify_content("flex-end")
+        .gap("sm")
+        .padding_top("md")
+});
+
+base_props! {
+    pub struct DialogActionsProps {
+        children: Element,
+    }
+}
+
+/// The buttons row of a [`Dialog`], at its end. A direct child of it. Full screen, it sits
+/// at the foot of the screen below a scrolling [`DialogBody`], above the home indicator.
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Dialog, DialogActions, DialogBody};
+/// # fn app() -> Element {
+/// rsx! {
+///     Dialog { title: "Delete file?", full_screen: "phone",
+///         DialogBody { "notes.md goes for good." }
+///         DialogActions {
+///             Button { variant: "outlined", "Cancel" }
+///             Button { "Delete" }
+///         }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/dialog>
+#[component]
+pub fn DialogActions(mut props: DialogActionsProps) -> Element {
+    props
+        .attributes
+        .push(attr("data-slot", DialogPart::Actions.slot()));
+    use_box()
+        .framework_sx(&DIALOG_ACTIONS_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare()
+        .render(HtmlTag::Div, props.attributes, props.children)
+}
+
 /// Its own scope, so a dialog re-rendered for its `children` skips the header.
 #[component]
 fn DialogHeader(
@@ -471,6 +573,8 @@ mod tests {
                 ("header", "& > [data-slot='header']"),
                 ("title", "& > [data-slot='header'] > [data-slot='title']"),
                 ("close", "& > [data-slot='header'] > [data-slot='close']"),
+                ("body", "& > [data-slot='body']"),
+                ("actions", "& > [data-slot='actions']"),
             ]
         );
     }

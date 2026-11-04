@@ -2,7 +2,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Dialog, Flex, Menu, MenuItem, Paper, Text, use_menu},
+    components::{
+        Button, Dialog, DialogActions, DialogBody, Flex, Menu, MenuItem, Paper, Text, use_menu,
+    },
     context::Dismiss,
     hooks::{ModalScope, use_modal},
 };
@@ -24,7 +26,39 @@ pub const ROUTES: Routes = &[
     ("/modal/paper-static", || rsx! { StaticPaperModalPage {} }),
     ("/modal/tabindex", || rsx! { TabindexModalPage {} }),
     ("/modal/full-screen", || rsx! { FullScreenModalPage {} }),
+    ("/modal/dialog-parts", || rsx! { DialogPartsPage { lines: 60 } }),
+    ("/modal/dialog-parts-short", || rsx! { DialogPartsPage { lines: 1 } }),
 ];
+
+/// 5634: a full-screen dialog with a body that scrolls and actions pinned at the foot.
+#[component]
+fn DialogPartsPage(lines: u32) -> Element {
+    let dialog = use_modal(move |s: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Terms", full_screen: "always",
+                DialogBody {
+                    for line in 0..lines {
+                        Text { "Clause {line}: a long line of terms the reader has to scroll to." }
+                    }
+                }
+                DialogActions {
+                    Button { id: "decline", variant: "outlined", onclick: move |_| s.close(), "Decline" }
+                    Button { id: "accept", onclick: move |_| s.close(), "Accept" }
+                }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                dialog.open();
+            },
+            "Open terms"
+        }
+    }
+}
 
 /// 3978: a `full_screen: "phone"` dialog, edge to edge below `sm`, centred above.
 #[component]

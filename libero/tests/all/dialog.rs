@@ -1,7 +1,10 @@
 use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Dialog};
+use libero::{
+    LiberoProvider,
+    components::{Dialog, DialogActions, DialogBody},
+};
 
 /// `Dialog` is a `Paper`, so the surface has to reach it - and the dialog's
 /// own chrome has to survive the composition.
@@ -104,4 +107,51 @@ fn a_changed_title_redraws_the_memoized_header() {
     let html = dioxus_ssr::render(&dom);
     assert!(html.contains("Second"), "{html}");
     assert!(!html.contains("First"), "{html}");
+}
+
+/// 5634: the body and the actions are slotted children, and the full-screen block pins them.
+#[test]
+fn the_body_and_the_actions_are_slotted_parts() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Dialog { aria_label: "Parts", full_screen: "phone",
+                    DialogBody { "scrolls" }
+                    DialogActions { "buttons" }
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(html.contains("data-slot=\"body\""), "{html}");
+    assert!(html.contains("data-slot=\"actions\""), "{html}");
+    assert!(html.contains("flex-wrap:wrap"), "{html}");
+    for rule in [
+        "[data-slot='body']",
+        "min-height:0",
+        "[data-slot='actions']",
+        "margin-top:auto",
+        "max-height:100dvh",
+    ] {
+        assert!(html.contains(rule), "{rule}: {html}");
+    }
+}
+
+/// 5634: a dialog without the parts renders none of their slots.
+#[test]
+fn a_dialog_without_the_parts_has_no_slots() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Dialog { aria_label: "Plain", "content" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(!html.contains("data-slot=\"body\""), "{html}");
+    assert!(!html.contains("data-slot=\"actions\""), "{html}");
 }
