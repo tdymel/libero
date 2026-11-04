@@ -5,8 +5,8 @@ use pictogram_icons_lucide as lucide;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Accordion, AccordionOpen, Box, Button, Code, Flex, Icon, OptionLabel, OptionList, Options,
-        Text,
+        Accordion, AccordionOpen, AccordionPart, Box, Button, Code, Flex, Icon, OptionLabel,
+        OptionList, Options, Text,
     },
     sx::sx,
     theme::{Responsive, Size, responsive},
@@ -173,6 +173,19 @@ pub fn AccordionPage() -> Element {
                     prop("rotate_chevron", "bool")
                         .default("true")
                         .doc("`false` keeps the chevron pointing down when a section opens."),
+                    prop("flush", "bool")
+                        .default("false")
+                        .doc("`true` drops the horizontal padding of the triggers and panels, so the rows run edge to edge and line up with the content around the accordion."),
+                    prop("parts", "Parts<AccordionPart>")
+                        .doc("Styles for the inner parts in the Style API tab, under `sx`."),
+                ])
+                .parts("AccordionPart", vec![
+                    (AccordionPart::Item, "One section: its heading and panel."),
+                    (AccordionPart::Heading, "The heading round a trigger, or round a plain section's label."),
+                    (AccordionPart::Trigger, "The section's button. `aria-expanded` is `true` while its panel is open."),
+                    (AccordionPart::Label, "The label inside the trigger."),
+                    (AccordionPart::Chevron, "The chevron at the trigger's end, or its start under `chevron_position`."),
+                    (AccordionPart::Panel, "The open section's body, inside its collapsing region."),
                 ]),
             ],
             accessibility: a11y()
@@ -248,6 +261,7 @@ pub fn AccordionPage() -> Element {
                     Control::toggle("chevron_position", ["end", "start"])
                         .labels(["End", "Start"]),
                     Control::switch("rotate_chevron").default("true"),
+                    Control::switch("flush"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named section rather than for a prop of its own.
                     Control::switch("disabled_option").code(|_, values| {
@@ -302,6 +316,7 @@ pub fn AccordionPage() -> Element {
                                 collapsible: values.str("collapsible") == "true",
                                 chevron_position: values.str("chevron_position"),
                                 rotate_chevron: values.str("rotate_chevron") == "true",
+                                flush: values.str("flush") == "true",
                                 options: options.clone(),
                                 option_label: (values.str("rich_label") == "true").then_some(rich_label),
                                 open: open(),

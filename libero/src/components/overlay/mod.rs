@@ -60,7 +60,9 @@ pub use loading_overlay::{LoadingOverlay, LoadingOverlayProps};
 #[cfg(feature = "menu")]
 pub(crate) use menu::MenuFocus;
 #[cfg(feature = "menu")]
-pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuPart, MenuProps, MenuState, use_menu};
+pub use menu::{
+    Menu, MenuEdge, MenuEntry, MenuItem, MenuPart, MenuProps, MenuRadioMark, MenuState, use_menu,
+};
 #[cfg(feature = "modal")]
 pub(crate) use modal::Modal;
 #[cfg(feature = "overlay-backdrop")]

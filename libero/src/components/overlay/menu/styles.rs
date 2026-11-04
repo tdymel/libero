@@ -3,17 +3,17 @@ use crate::{
     components::{
         common::{
             COARSE_POINTER, COARSE_TARGET, LogicalTextAlign, Part, ROW_HOVER_TINT,
-            disabled_look_sx, inset_focus_ring_sx,
+            disabled_look_sx, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx, on_tint_color,
         },
         form::phone_sheet::{narrow_query, phone_sheet_sx},
         layout::paper_sx,
     },
     hooks::{POPOVER_AVAILABLE_HEIGHT, placement_sx},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS,
-        MENU_LABEL_FONT, MENU_MAX_HEIGHT, MENU_PADDING, MenuDefaults, Size, SizeCss,
-        Z_INDEX_POPOVER,
+        Color, ColorShade, ColorValue, CssVar, MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT,
+        MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT, MENU_MAX_HEIGHT, MENU_PADDING,
+        MenuDefaults, Size, SizeCss, Z_INDEX_POPOVER,
     },
 };
 
@@ -93,6 +93,8 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
             format!("{item}[aria-disabled=\"true\"]"),
             disabled_look_sx("not-allowed"),
         )
+        // After hover and focus, whose tint the marked row keeps under both.
+        .selector(marked_rows(item), marked_row_sx())
         // Wraps, never an ellipsis: cut text is unreadable (WCAG 1.4.10).
         .selector(
             MenuPart::Label.selector(),
@@ -147,6 +149,23 @@ pub(super) static MENU_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+/// A radio marked by background, as the current choice, under its hover and focus too.
+fn marked_rows(item: &str) -> String {
+    let marked = format!("{item}[data-mark=\"background\"][aria-checked=\"true\"]");
+    format!("{marked}, {marked}:hover, {marked}:focus")
+}
+
+/// The tint is too faint to mark the row alone (it is the hover grey's neighbour), so a bar
+/// at its start does, and forced colours get `Highlight`.
+fn marked_row_sx() -> Sx {
+    let primary = |shade| ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, shade));
+    let tint = primary(ColorShade::S1).resolve(None).unwrap_or_default();
+    let bar = on_tint_color(&primary(ColorShade::S6)).unwrap_or_default();
+    sx().background(tint)
+        .and(on_start_bar_sx("0px", &bar))
+        .and(forced_on_sx())
+}
+
 const SHEET_TITLE: &str = "& > [data-slot='sheet-title']";
 
 /// A coloured row's colour, for its label and leading slot.
@@ -156,6 +175,24 @@ pub(super) const ITEM_COLOR: CssVar = CssVar::new("--lsx-menu-item-color");
 mod tests {
     use super::*;
     use crate::css::Stylesheet;
+
+    /// The current choice stays visible under hover and focus, and under forced colours.
+    #[test]
+    fn a_marked_row_keeps_its_tint_and_bar_under_hover_and_focus() {
+        let css = Stylesheet::from(&MENU_SX);
+        let css = css.as_str();
+        let marked = "[data-mark=\"background\"][aria-checked=\"true\"]";
+        for state in ["", ":hover", ":focus"] {
+            let selector = format!("{marked}{state}");
+            assert!(css.contains(&selector), "{selector} missing in {css}");
+        }
+        let at = css.find(marked).unwrap();
+        assert!(
+            css[at..].contains("background-image:linear-gradient("),
+            "{css}"
+        );
+        assert!(css[at..].contains("Highlight !important"), "{css}");
+    }
 
     #[test]
     fn a_coarse_pointer_gets_finger_sized_rows() {

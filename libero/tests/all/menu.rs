@@ -7,7 +7,7 @@ use crate::common::{attributes_of, body, drive_once, render_with, tag_with, tags
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Button, Menu, MenuEntry, MenuItem, use_menu},
+    components::{Button, Menu, MenuEntry, MenuItem, MenuRadioMark, use_menu},
 };
 use std::cell::Cell;
 
@@ -273,6 +273,60 @@ fn a_checked_item_is_a_radio_that_says_so() {
     let settings = tags_with(&html, r#"data-menu-index="2""#);
     assert_eq!(settings[0]["role"], "menuitem");
     assert!(!settings[0].contains_key("aria-checked"));
+}
+
+/// `MenuRadioMark::Background` shows the current radio by its row's tint: no check
+/// glyph and, with no other checkable item, no check column; it stays `aria-checked` (todo 5722).
+#[test]
+fn a_background_marked_radio_draws_no_check() {
+    let html = opened(|| {
+        vec![
+            MenuItem::new("Light")
+                .radio(false)
+                .mark(MenuRadioMark::Background)
+                .onselect(|_| {})
+                .into(),
+            MenuItem::new("Dark")
+                .radio(true)
+                .mark(MenuRadioMark::Background)
+                .onselect(|_| {})
+                .into(),
+        ]
+    });
+    let radios = tags_with(&html, r#"role="menuitemradio""#);
+
+    assert_eq!(radios.len(), 2, "{html}");
+    assert_eq!(radios[0]["aria-checked"], "false", "{radios:?}");
+    assert_eq!(radios[1]["aria-checked"], "true", "{radios:?}");
+    assert_eq!(radios[1]["data-mark"], "background", "{radios:?}");
+    assert_eq!(radios[1]["tabindex"], "0", "{radios:?}");
+    assert_eq!(html.matches(r#"data-slot="check""#).count(), 0, "{html}");
+    assert_eq!(html.matches("<svg").count(), 0, "{html}");
+}
+
+/// A level with a real check keeps the column on every row, a background radio included.
+#[test]
+fn a_background_radio_keeps_the_column_a_checkbox_asks_for() {
+    let html = opened(|| {
+        vec![
+            MenuItem::new("Dark")
+                .radio(true)
+                .mark(MenuRadioMark::Background)
+                .onselect(|_| {})
+                .into(),
+            MenuItem::new("Ruler")
+                .checkbox(true)
+                .onselect(|_| {})
+                .into(),
+        ]
+    });
+
+    assert_eq!(html.matches(r#"data-slot="check""#).count(), 2, "{html}");
+    assert_eq!(
+        html.matches("<svg").count(),
+        1,
+        "only the checkbox's check: {html}"
+    );
 }
 
 /// A `checkbox` item is a `menuitemcheckbox` in the same check slot. An on/off

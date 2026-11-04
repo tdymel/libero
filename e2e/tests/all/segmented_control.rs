@@ -617,3 +617,23 @@ fn a_colourless_icon_stays_visible_on_the_filled_pick() {
         }
     });
 }
+
+/// Todo 5719: `OptionLabel::with_icon` centres its icon on the label's text line.
+#[test]
+fn a_label_icon_is_centred_on_its_text() {
+    const CENTRED: &str = "(() => { const label = document.querySelector('[role=radiogroup] label'); \
+         const text = [...label.childNodes].find(n => n.nodeType === 3); \
+         const range = document.createRange(); range.selectNodeContents(text); \
+         const t = range.getBoundingClientRect(); \
+         const i = label.querySelector('[aria-hidden=true]').getBoundingClientRect(); \
+         return Math.abs((t.top + t.bottom) / 2 - (i.top + i.bottom) / 2) <= 1; })()";
+    block_on(async {
+        let fixture = Fixture::open("/segmented-control/icons", Viewport::Desktop)
+            .await
+            .unwrap();
+        e2e::wait::for_js_true(&fixture.page, CENTRED, "the icon centred on the text")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

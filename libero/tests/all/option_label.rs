@@ -20,7 +20,9 @@ fn labelled(page: Page) -> OptionLabel {
 
 /// The icon's hidden span right before the name, so the name stays the accessible name.
 fn assert_icon_before_name(html: &str, name: &str) {
-    let icon = format!(r#"<span aria-hidden="true"><svg data-icon="{name}"></svg></span>{name}"#);
+    let icon = format!(
+        r#"<span aria-hidden="true" style="display:inline-flex;align-items:center;vertical-align:middle;"><svg data-icon="{name}"></svg></span>{name}"#
+    );
     assert!(html.contains(&icon), "{icon} missing in {html}");
 }
 

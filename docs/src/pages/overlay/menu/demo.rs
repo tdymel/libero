@@ -1,6 +1,6 @@
 use crate::components::align_of;
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu};
+use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, MenuRadioMark, Text, use_menu};
 use libero::{
     hooks::Side,
     sx::sx,
@@ -19,7 +19,12 @@ pub fn MenuDemo(
     loop_focus: bool,
     disabled: bool,
     docked: bool,
+    mark_background: bool,
 ) -> Element {
+    let mark = match mark_background {
+        true => MenuRadioMark::Background,
+        false => MenuRadioMark::Check,
+    };
     // demo-code: preamble start
     let menu = use_menu();
     let mut last = use_signal(|| String::from("nothing yet"));
@@ -29,6 +34,7 @@ pub fn MenuDemo(
     let sort_by = move |name: &'static str| -> MenuEntry {
         MenuItem::new(name)
             .radio(sort() == name)
+            .mark(mark)
             .onselect(move |_| sort.set(name))
             .into()
     };

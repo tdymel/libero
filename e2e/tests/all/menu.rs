@@ -1,7 +1,7 @@
 //! `Menu`: the overlay archetype as a non-modal popup. Tab closes every level and moves on
 //! from the trigger.
 
-use anyhow::Result;
+use anyhow::{Result, ensure};
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
@@ -9,10 +9,11 @@ use e2e::passes::pointer::tap;
 use e2e::suite::Step;
 use e2e::wait::{ElementBounded, PageBounded};
 use e2e::{
-    Fixture, Suite, Viewport,
+    Fixture, Suite, Viewport, js,
     passes::{keyboard, pointer},
     wait,
 };
+use serde_json::Value;
 
 use crate::settle::painted;
 
@@ -844,6 +845,57 @@ fn a_menu_of_choices_opens_on_the_checked_one() {
                 "Date picked",
             )
             .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// Todo 5722: a background-marked radio has no check and keeps its tint and start bar while
+/// focused, so it differs from the focused unmarked row beside it.
+#[test]
+fn a_background_marked_radio_differs_from_a_focused_row() {
+    const ROW: &str = "[role=menuitemradio]";
+    block_on(async {
+        let fixture = Fixture::open("/menu-marked", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.getAttribute('aria-checked') === 'true'",
+                "focus on the marked Name",
+            )
+            .await?;
+            let name = js::<Value>(
+                page,
+                &format!(
+                    "(() => {{ const el = document.querySelector('{ROW}[aria-checked=true]'); \
+                     const s = getComputedStyle(el); \
+                     return {{ bg: s.backgroundColor, bar: s.backgroundImage, checks: document.querySelectorAll('[data-slot=check]').length }}; }})()"
+                ),
+            )
+            .await;
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.getAttribute('aria-checked') === 'false'",
+                "focus on Date",
+            )
+            .await?;
+            let date = js::<String>(
+                page,
+                &format!("getComputedStyle(document.querySelector('{ROW}[aria-checked=false]')).backgroundColor"),
+            )
+            .await;
+            ensure!(name["checks"] == 0, "check column: {name}");
+            ensure!(name["bar"].as_str().is_some_and(|bar| bar.contains("linear-gradient")), "bar: {name}");
+            ensure!(name["bg"] != date, "marked {name} vs focused {date}");
+            Ok(())
         }
         .await;
 

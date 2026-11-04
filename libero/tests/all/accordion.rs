@@ -9,7 +9,10 @@ use crate::common::{attributes_of, body, drive_until, render};
 use dioxus::{core::ScopeId, prelude::*};
 use libero::{
     LiberoProvider,
-    components::{Accordion, AccordionOpen, OptionLabel, OptionList, Options},
+    components::{
+        Accordion, AccordionOpen, AccordionPart, OptionLabel, OptionList, Options, Parts,
+    },
+    sx::sx,
 };
 
 #[derive(Clone, Debug, PartialEq, Options)]
@@ -191,7 +194,7 @@ fn a_section_without_a_panel_is_a_plain_heading() {
     assert_eq!(triggers.len(), 2, "{html}");
     assert_eq!(triggers[1]["id"], "plain-trigger-2");
     assert!(
-        body.contains("<h3 data-accordion-heading=\"\" id=\"plain-heading-1\" tabindex=\"-1\"><span data-accordion-plain=\"\">Payment method</span></h3>"),
+        body.contains("<h3 data-accordion-heading=\"\" data-slot=\"heading\" id=\"plain-heading-1\" tabindex=\"-1\"><span data-accordion-plain=\"\">Payment method</span></h3>"),
         "{html}"
     );
     assert!(!body.contains("plain-region-1"), "{html}");
@@ -422,4 +425,59 @@ fn a_closed_panel_opens_with_the_signal_value_of_now() {
     };
     let (html, _) = step(&mut dom, open, "Review second");
     assert!(html.contains("Review second"), "{html}");
+}
+
+/// Each part is a `data-slot` of the markup, beside the `data-accordion-*` attributes (todo 5718).
+#[test]
+fn every_part_is_a_slot_of_the_markup() {
+    let html = body(&render(one_app));
+    for slot in ["item", "heading", "trigger", "label", "chevron", "panel"] {
+        assert!(
+            html.contains(&format!("data-slot=\"{slot}\"")),
+            "{slot} in {html}"
+        );
+    }
+    assert!(html.contains("data-accordion-item"), "{html}");
+}
+
+#[test]
+fn the_parts_prop_styles_a_part_by_its_slot_path() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Accordion::<Step> {
+                    open: AccordionOpen::One(None),
+                    parts: Parts::new().part(AccordionPart::Trigger, sx().color("red")),
+                }
+            }
+        }
+    }
+    let html = render(app);
+    assert!(
+        html.contains("> [data-slot='trigger']{color:red;}"),
+        "{html}"
+    );
+}
+
+#[test]
+fn flush_is_a_state_of_the_root() {
+    fn plain() -> Element {
+        rsx! { LiberoProvider { Accordion::<Step> { open: AccordionOpen::One(None) } } }
+    }
+    fn flush() -> Element {
+        rsx! {
+            LiberoProvider { Accordion::<Step> { open: AccordionOpen::One(None), flush: true } }
+        }
+    }
+    let has_flush = |html: &str| {
+        let body = body(html);
+        let state = &attributes_of(&body, "div")["data-state"];
+        state.split(' ').any(|token| token == "flush")
+    };
+    assert!(!has_flush(&render(plain)));
+    assert!(has_flush(&render(flush)));
+    assert!(
+        render(flush).contains("[data-state~=\"flush\"]"),
+        "the flush rule is missing"
+    );
 }

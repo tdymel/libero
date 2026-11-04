@@ -57,9 +57,17 @@ fn wrap(values: &DemoValues, source: &str) -> String {
         }
         _ => "direction: \"row\",\n        align: \"center\",",
     };
+    let background = values.str("radio_mark") == "background";
+    // The marker line stays only for `Background`, naming the value.
+    let preamble: Vec<String> = FILE
+        .section("preamble")
+        .lines()
+        .filter(|line| background || line.trim() != ".mark(mark)")
+        .map(|line| line.replace(".mark(mark)", ".mark(MenuRadioMark::Background)"))
+        .collect();
+    let preamble = preamble.join("\n");
     format!(
-        "{}\n\nrsx! {{\n    Flex {{\n        {layout}\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
-        FILE.section("preamble"),
+        "{preamble}\n\nrsx! {{\n    Flex {{\n        {layout}\n        gap: \"md\",\n{}        Text {{ size: \"sm\", role: \"status\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
         indent(&indent(source))
     )
 }
@@ -148,6 +156,9 @@ pub fn MenuPage() -> Element {
                         .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Drawn as a hint (\"Ctrl+X\") and kept out of the name. `Control`, `Shift`, `Alt` and `Meta` are drawn in the localization's `menu` words (\"Strg+Umschalt+S\" in German). You bind the key yourself."),
                     prop("radio", "bool")
                         .doc("Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item."),
+                    prop("mark", "MenuRadioMark")
+                        .default("Check")
+                        .doc("How a `radio` item shows that it is the current choice. `Check` draws a check in the leading column. `Background` tints the row and marks its start edge, with no check column unless another item needs one. It stays `aria-checked`, and a checkbox keeps its check."),
                     prop("checkbox", "bool")
                         .doc("Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins."),
                     prop("disabled", "bool")
@@ -220,6 +231,10 @@ pub fn MenuPage() -> Element {
                     Control::switch("close_on_select").default(theme.menu.close_on_select.to_string()),
                     Control::switch("loop_focus").default(theme.menu.loop_focus.to_string()),
                     Control::switch("disabled"),
+                    // The mark is printed with the items, not as a prop of `Menu`.
+                    Control::toggle("radio_mark", ["check", "background"])
+                        .labels(["Check", "Background"])
+                        .code(|_, _| vec![]),
                     // Docks the menu on the trigger's edge, as wide as the trigger; best with side `top`.
                     Control::switch("docked").default("true").code(|_, values| match values.str("docked").as_str() {
                         "true" => vec![DOCKED.to_string()],
@@ -236,6 +251,7 @@ pub fn MenuPage() -> Element {
                         loop_focus: values.str("loop_focus") == "true",
                         disabled: values.str("disabled") == "true",
                         docked: values.str("docked") == "true",
+                        mark_background: values.str("radio_mark") == "background",
                     }
                 },
             }

@@ -19,8 +19,25 @@ pub const ROUTES: Routes = &[
     ("/accordion-insert", || rsx! { InsertPage {} }),
     ("/accordion-small", || rsx! { SmallPage {} }),
     ("/accordion-plain", || rsx! { PlainPage {} }),
+    ("/accordion-flush", || rsx! { FlushPage {} }),
     ("/accordion-flip", || rsx! { FlipPage {} }),
 ];
+
+/// Todo 5718: the same open accordion twice, the second `flush`.
+#[component]
+fn FlushPage() -> Element {
+    rsx! {
+        for (id, flush) in [("std", false), ("flush", true)] {
+            Accordion {
+                id,
+                flush,
+                open: AccordionOpen::One(Some(Step::Shipping)),
+                onchange: |_| {},
+                panel: |_: Step| rsx! { Text { "Body." } },
+            }
+        }
+    }
+}
 
 /// Todo 5385: F2 takes Shipping's panel away while its trigger holds the focus.
 #[component]

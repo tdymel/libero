@@ -2,6 +2,9 @@
 
 use dioxus::prelude::*;
 
+/// The icon is centred on the text line, not set on its baseline. Inline, as this file takes no feature.
+const LABEL_ICON_STYLE: &str = "display:inline-flex;align-items:center;vertical-align:middle;";
+
 /// A value one choice stands for; `#[derive(Options)]` writes it for a unit enum.
 ///
 /// `PartialEq` is identity: a type whose fields change must compare its id alone,
@@ -152,7 +155,7 @@ impl OptionLabel {
     pub fn with_icon(name: impl Into<String>, icon: Element) -> Self {
         let name = name.into();
         let content = rsx! {
-            span { aria_hidden: "true", {icon} }
+            span { aria_hidden: "true", style: LABEL_ICON_STYLE, {icon} }
             "{name}"
         };
         Self {

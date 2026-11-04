@@ -769,13 +769,14 @@ pub fn NavigationBarItem(props: NavigationBarItemProps) -> Element {
     }
 }
 
-/// The route matches `to`, or sits below its path; the root only matches itself.
+/// The route matches `to`, or sits below the path of `to`; the root only matches itself.
 fn item_matches(route: &str, to: &str) -> bool {
     if route_matches(route, to) {
         return true;
     }
-    let base = to.trim_end_matches('/');
-    if base.is_empty() || to.contains(['?', '#']) {
+    let to_path = to.split(['?', '#']).next().unwrap_or(to);
+    let base = to_path.trim_end_matches('/');
+    if base.is_empty() {
         return false;
     }
     let path = route.split(['?', '#']).next().unwrap_or(route);
@@ -810,9 +811,13 @@ mod tests {
     }
 
     #[test]
-    fn a_query_or_fragment_in_to_stays_exact() {
-        assert!(!item_matches("/search/more?q=rust", "/search?q=rust"));
-        assert!(!item_matches("/form/x#summary", "/form#summary"));
+    fn a_query_or_fragment_in_to_matches_sub_paths_by_its_path() {
+        assert!(item_matches("/games/12", "/games?tab=x"));
+        assert!(item_matches("/games/12?tab=y", "/games?tab=x"));
+        assert!(item_matches("/form/x#summary", "/form#summary"));
+        assert!(!item_matches("/games", "/games?tab=x"));
+        assert!(!item_matches("/gamesx/12", "/games?tab=x"));
+        assert!(!item_matches("/home", "/?tab=x"));
     }
 
     /// The slot names are public: a rename here is a breaking change.

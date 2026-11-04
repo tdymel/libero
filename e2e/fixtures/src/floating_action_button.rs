@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    FloatingActionButton, Menu, MenuItem, NavigationBar, NavigationBarItem, Pictogram, use_menu,
+    FloatingActionButton, Icon, Menu, MenuItem, NavigationBar, NavigationBarItem, Pictogram, use_menu,
 };
 use libero::LiberoProvider;
 use libero::hooks::{Align, Side};
@@ -18,6 +18,7 @@ pub const ROUTES: Routes = &[
     ("/floating-action-button/rtl", || rsx! { div { dir: "rtl", FabPage {} } }),
     ("/floating-action-button/bar", || rsx! { BarPage {} }),
     ("/floating-action-button/hide", || rsx! { HidePage {} }),
+    ("/floating-action-button/icon", || rsx! { IconPage {} }),
     ("/floating-action-button/menu", || rsx! { MenuPage {} }),
     ("/floating-action-button/menu-local-rtl", || rsx! { div { dir: "rtl", MenuPage {} } }),
     ("/floating-action-button/menu-states", || rsx! { MenuStatesPage {} }),
@@ -25,6 +26,22 @@ pub const ROUTES: Routes = &[
         LiberoProvider { direction: Direction::Rtl, MenuStatesPage {} }
     }),
 ];
+
+/// Todo 5724: an unsized `Icon` round the glyph follows the button's size.
+#[component]
+fn IconPage() -> Element {
+    rsx! {
+        for size in ["sm", "lg"] {
+            FloatingActionButton {
+                id: "{size}",
+                aria_label: "{size}",
+                size,
+                fixed: false,
+                icon: rsx! { Icon { variant: "standard", Pictogram { icon: lucide::plus::outlined } } },
+            }
+        }
+    }
+}
 
 #[component]
 fn HidePage() -> Element {

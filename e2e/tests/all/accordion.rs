@@ -16,6 +16,33 @@ const TRIGGER: &str = "[data-accordion-heading] > button";
 const FIRST: &str = "#checkout-trigger-0";
 const CONTINUE: &str = "#continue";
 
+/// Todo 5718: `flush` drops the horizontal padding of the trigger and the panel, so the rows
+/// run edge to edge; the plain accordion keeps it.
+#[test]
+fn a_flush_accordion_drops_its_horizontal_padding() {
+    const PADDING: &str = "(() => { const pad = root => [`#${root}-trigger-0`, `#${root}-region-0 [data-accordion-body]`] \
+         .map(sel => parseFloat(getComputedStyle(document.querySelector(sel)).paddingInlineStart)); \
+         return { std: pad('std'), flush: pad('flush') }; })()";
+    block_on(async {
+        let fixture = Fixture::open("/accordion-flush", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#flush-region-0 [data-accordion-body]")
+            .await
+            .unwrap();
+        let report = js::<serde_json::Value>(page, PADDING).await;
+        assert_eq!(report["flush"], serde_json::json!([0, 0]), "{report}");
+        let std_pads = report["std"].as_array().unwrap();
+        assert!(
+            std_pads.iter().all(|pad| pad.as_f64().unwrap() > 0.0),
+            "{report}"
+        );
+        fixture.console.assert_clean("the flush accordion").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 5269: under a finger a stacked trigger is 44px tall at every size, by its own box.
 #[test]
 fn a_small_trigger_is_44px_tall_under_a_finger() {

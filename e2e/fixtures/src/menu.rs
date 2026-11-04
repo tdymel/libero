@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, FileField, FileTriggerArgs, Files, Flex, Menu, MenuEntry, MenuItem, MenuPart, Parts,
+    Button, FileField, FileTriggerArgs, Files, Flex, Menu, MenuEntry, MenuItem, MenuPart, MenuRadioMark, Parts,
     Text, use_menu,
 };
 use libero::LiberoProvider;
@@ -14,6 +14,7 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/menu", || rsx! { MenuPage {} }),
+    ("/menu-marked", || rsx! { MenuMarkedPage {} }),
     ("/menu-open-on-mount", || rsx! { MenuOpenOnMountPage {} }),
     ("/menu-items-late", || rsx! { MenuItemsLatePage {} }),
     ("/menu-items-shrink", || rsx! { MenuItemsShrinkPage {} }),
@@ -372,6 +373,27 @@ fn MenuChoicesPage() -> Element {
         Menu {
             state: menu,
             items,
+            Button { variant: "outlined", attributes: menu.a11y_attributes(), "View" }
+        }
+    }
+}
+
+/// Todo 5722: the current radio shown by its row's background, not a check.
+#[component]
+fn MenuMarkedPage() -> Element {
+    let menu = use_menu();
+    let mut sort = use_signal(|| "Name");
+    let choice = move |label: &'static str| {
+        MenuItem::new(label)
+            .radio(sort() == label)
+            .mark(MenuRadioMark::Background)
+            .onselect(move |_| sort.set(label))
+            .into()
+    };
+    rsx! {
+        Menu {
+            state: menu,
+            items: vec![choice("Name"), choice("Date")],
             Button { variant: "outlined", attributes: menu.a11y_attributes(), "View" }
         }
     }

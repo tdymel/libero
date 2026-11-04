@@ -521,3 +521,26 @@ fn a_finger_gets_44px_at_every_size() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5724: an unsized `Icon` round the glyph follows the button's size step.
+#[test]
+fn a_wrapped_icon_follows_the_size() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-action-button/icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#lg").await.unwrap();
+        let widths = js::<Vec<f64>>(
+            page,
+            "['#sm', '#lg'].map(id => document.querySelector(id + ' [data-slot=icon]').getBoundingClientRect().width)",
+        )
+        .await;
+        assert!(
+            widths[0] > 0.0 && widths[0] < widths[1],
+            "icon widths sm, lg: {widths:?}"
+        );
+        fixture.console.assert_clean("measuring").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

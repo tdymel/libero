@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use super::core::{AccordionView, SectionSpec, render_accordion};
 use crate::{
     components::common::{
-        HtmlTag, Input, OptionLabel, OptionSource, Options, base_props, input_from_str,
+        HtmlTag, Input, OptionLabel, OptionSource, Options, base_props, input_from_str, parts_enum,
         use_name_warning,
     },
     hooks::{use_root_id, use_theme},
@@ -80,7 +80,26 @@ impl<T: PartialEq + Clone> AccordionOpen<T> {
     }
 }
 
+parts_enum! {
+    /// [`Accordion`]'s inner parts, for its `parts` prop. Direct paths, so an accordion in a panel keeps its own.
+    pub enum AccordionPart {
+        /// One section: its heading and panel.
+        Item = "item" => "& > [data-slot='item']",
+        /// The `h1`..`h6` round a trigger, or round a plain section's label.
+        Heading = "heading" => "& > [data-slot='item'] > [data-slot='heading']",
+        /// The section's button; `aria-expanded` is `true` while its panel is open.
+        Trigger = "trigger" => "& > [data-slot='item'] > [data-slot='heading'] > [data-slot='trigger']",
+        /// The label inside the trigger.
+        Label = "label" => "& > [data-slot='item'] > [data-slot='heading'] > [data-slot='trigger'] > [data-slot='label']",
+        /// The chevron at the trigger's end, or its start under `chevron_position`.
+        Chevron = "chevron" => "& > [data-slot='item'] > [data-slot='heading'] > [data-slot='trigger'] > [data-slot='chevron']",
+        /// The open section's body, inside its collapsing region.
+        Panel = "panel" => "& > [data-slot='item'] > [role='region'] > * > [data-slot='panel']",
+    }
+}
+
 base_props! {
+    parts(AccordionPart);
     pub struct AccordionProps<T: Options> {
         /// The open sections; the variant picks one or many. Controlled, with `onchange`.
         #[props(default)]
@@ -121,6 +140,10 @@ base_props! {
         /// Default `true`. `false` keeps the chevron pointing down when a section opens.
         #[props(default)]
         rotate_chevron: Option<bool>,
+        /// Default `false`. `true` drops the horizontal padding of the triggers and panels, so
+        /// the rows run edge to edge and line up with the content around the accordion.
+        #[props(default)]
+        flush: Option<bool>,
     }
 }
 
@@ -246,8 +269,10 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
                 .chevron_position
                 .copied_or(AccordionChevronPosition::default()),
             rotate_chevron: props.rotate_chevron.unwrap_or(true),
+            flush: props.flush.unwrap_or(false),
             class: props.class,
             sx: props.sx,
+            parts: props.parts,
             states: props.states,
             hidden_from: props.hidden_from,
             visible_from: props.visible_from,

@@ -8,6 +8,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{FloatingActionButton, Menu, MenuItem, use_menu},
+    sx::ThemeAwareValue,
+    theme::{Size, responsive},
 };
 
 fn icon_only() -> Element {
@@ -95,6 +97,31 @@ fn the_shadow_leaves_the_focus_ring_to_the_button() {
         html.contains("--lsx-own-shadow:var(--lsx-shadow-md)"),
         "{html}"
     );
+}
+
+/// A wrapped `Icon` follows the button's step (todo 5724), at each breakpoint of a responsive size.
+#[test]
+fn an_icon_round_the_glyph_follows_the_size_step() {
+    assert!(
+        render(icon_only).contains("--lsx-icon-size:var(--lsx-icon-size-xl)"),
+        "default step"
+    );
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FloatingActionButton {
+                    aria_label: "New message",
+                    size: responsive(ThemeAwareValue::from(Size::Sm)).md(Size::Lg.into()),
+                    icon: rsx! { svg {} },
+                }
+            }
+        }
+    }
+    let html = render(app);
+    for step in ["sm", "lg"] {
+        let rule = format!("--lsx-icon-size:var(--lsx-icon-size-{step})");
+        assert!(html.contains(&rule), "{rule} missing in {html}");
+    }
 }
 
 #[test]

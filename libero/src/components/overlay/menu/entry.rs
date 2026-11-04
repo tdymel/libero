@@ -61,6 +61,7 @@ pub struct MenuItem {
     pub(super) leading: Option<Element>,
     pub(super) trailing: Option<Element>,
     pub(super) check: Option<Check>,
+    pub(super) radio_mark: MenuRadioMark,
     pub(super) shortcut: Option<String>,
     pub(super) disabled: bool,
     pub(super) description: Option<String>,
@@ -68,6 +69,16 @@ pub struct MenuItem {
     pub(super) new_tab_hint: bool,
     pub(super) new_tab_icon: Option<bool>,
     pub(super) color: Option<ThemeAwareValue>,
+}
+
+/// How a [`radio`](MenuItem::radio) item shows that it is the current choice.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum MenuRadioMark {
+    /// A check in the leading column.
+    #[default]
+    Check,
+    /// A tinted row with a bar at its start; no check column unless another item needs one.
+    Background,
 }
 
 /// A checkable item's kind and state: one choice of several, or a toggle.
@@ -107,6 +118,7 @@ impl MenuItem {
             leading: None,
             trailing: None,
             check: None,
+            radio_mark: MenuRadioMark::Check,
             shortcut: None,
             disabled: false,
             description: None,
@@ -194,6 +206,21 @@ impl MenuItem {
         self.with_check(Check::Checkbox(checked))
     }
 
+    /// How a [`radio`](Self::radio) item shows that it is the current choice; a checkbox
+    /// keeps its check. `Background` tints the current row and marks its start edge, so
+    /// the choice does not read as hover or focus; it stays `aria-checked`.
+    ///
+    /// ```no_run
+    /// # use libero::components::{MenuItem, MenuRadioMark};
+    /// # let _ =
+    /// MenuItem::new("Day").radio(true).mark(MenuRadioMark::Background)
+    /// # ;
+    /// ```
+    pub fn mark(mut self, mark: MenuRadioMark) -> Self {
+        self.radio_mark = mark;
+        self
+    }
+
     fn with_check(mut self, check: Check) -> Self {
         if cfg!(debug_assertions)
             && let Some(before) = self.check
@@ -255,10 +282,20 @@ impl MenuItem {
         self
     }
 
+    /// A radio marked by background draws no check, so it asks for no check column.
+    pub(super) fn draws_check(&self) -> bool {
+        self.check.is_some() && !self.marks_by_background()
+    }
+
+    pub(super) fn marks_by_background(&self) -> bool {
+        matches!(self.check, Some(Check::Radio(_))) && self.radio_mark == MenuRadioMark::Background
+    }
+
     /// Draws the same row: everything but the callbacks, which a row reads when it runs.
     pub(super) fn draws_like(&self, other: &Self) -> bool {
         self.disabled == other.disabled
             && self.check == other.check
+            && self.radio_mark == other.radio_mark
             && self.new_tab_hint == other.new_tab_hint
             && self.new_tab_icon == other.new_tab_icon
             && self.submenu_items().is_some() == other.submenu_items().is_some()

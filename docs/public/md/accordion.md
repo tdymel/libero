@@ -60,9 +60,26 @@ fn Demo() -> Element {
 | `collapsible` | `bool` | `true` | `false` keeps the open section open in `One` mode: its trigger turns `aria-disabled` and only opening another closes it. `Many` mode ignores it. |
 | `chevron_position` | `AccordionChevronPosition` | `end` | `end` or `start`: the chevron after or before the label. Logical, so right-to-left flips it. |
 | `rotate_chevron` | `bool` | `true` | `false` keeps the chevron pointing down when a section opens. |
+| `flush` | `bool` | `false` | `true` drops the horizontal padding of the triggers and panels, so the rows run edge to edge and line up with the content around the accordion. |
+| `parts` | `Parts<AccordionPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Accordion` also takes the shared props `sx`, `class`,
 `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. An `id` seeds the ids of its parts.
+
+## Style API
+
+Style a part with the `parts` prop, or address it as `[data-slot='…']` in your
+own CSS. The names are stable. [Style API in Styling](styling.md#style-api)
+explains how parts work.
+
+| Part | `data-slot` | Description |
+|---|---|---|
+| `AccordionPart::Item` | `item` | One section: its heading and panel. |
+| `AccordionPart::Heading` | `heading` | The heading round a trigger, or round a plain section's label. |
+| `AccordionPart::Trigger` | `trigger` | The section's button. `aria-expanded` is `true` while its panel is open. |
+| `AccordionPart::Label` | `label` | The label inside the trigger. |
+| `AccordionPart::Chevron` | `chevron` | The chevron at the trigger's end, or its start under `chevron_position`. |
+| `AccordionPart::Panel` | `panel` | The open section's body, inside its collapsing region. |
 
 ## Accessibility
 

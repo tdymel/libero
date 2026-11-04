@@ -300,7 +300,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
                 .collect(),
         }));
         let tabbable = tabbable();
-        let checks = flat.iter().any(|item| item.check.is_some());
+        let checks = flat.iter().any(|item| item.draws_check());
         let (mut index, mut group, mut separator) = (0usize, lone.is_some() as usize, 0usize);
         draw_rows(
             lone.map_or(&props.items, |(_, items)| items),

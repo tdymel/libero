@@ -16,6 +16,7 @@ pub const ROUTES: Routes = &[
     ("/navigation-bar/fixed", || rsx! { FixedPage {} }),
     ("/navigation-bar/scroller", || rsx! { ScrollerPage {} }),
     ("/navigation-bar/unselected", || rsx! { UnselectedPage {} }),
+    ("/navigation-bar/below", || rsx! { BelowPage {} }),
     ("/navigation-bar/rail", || rsx! { RailPage { dir: "ltr" } }),
     ("/navigation-bar/rail-rtl", || rsx! { RailPage { dir: "rtl" } }),
     ("/navigation-bar/responsive", || rsx! { ResponsivePage {} }),
@@ -95,6 +96,19 @@ fn UnselectedPage() -> Element {
             NavigationBarItem { id: "not-current", to: "/navigation-bar/unselected", selected: false,
                 icon: rsx! { Pictogram { icon: lucide::house::outlined } },
                 "Same"
+            }
+        }
+    }
+}
+
+/// A link whose `to` has a query, to the path this page sits below (todo 5720).
+#[component]
+fn BelowPage() -> Element {
+    rsx! {
+        NavigationBar { "aria-label": "Links",
+            NavigationBarItem { id: "parent", to: "/navigation-bar?tab=x",
+                icon: rsx! { Pictogram { icon: lucide::house::outlined } },
+                "Parent"
             }
         }
     }

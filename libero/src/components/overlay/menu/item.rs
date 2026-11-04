@@ -80,6 +80,7 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
     } = props;
     let has_submenu = item.submenu_items().is_some();
     let check = item.check;
+    let marked = item.marks_by_background();
     let disabled = item.disabled;
     let item_id = format!("{level_id}-item-{index}");
     let child_id = format!("{level_id}-{index}");
@@ -134,9 +135,9 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
 
     let content = rsx! {
         // On every row of a level with a checkable item, so labels line up.
-        if check.is_some() || checks {
+        if item.draws_check() || checks {
             span { "data-slot": MenuPart::Check.slot(),
-                if check.is_some_and(Check::is_checked) {
+                if check.is_some_and(Check::is_checked) && !marked {
                     Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
                 }
             }
@@ -195,6 +196,7 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
                 "aria-keyshortcuts": item.shortcut.clone(),
                 tabindex,
                 "data-slot": MenuPart::Item.slot(),
+                "data-mark": marked.then_some("background"),
                 "data-menu-index": "{index}",
                 "aria-disabled": disabled.then_some("true"),
                 "aria-describedby": described_by,
@@ -218,6 +220,7 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
             "aria-keyshortcuts": item.shortcut.clone(),
             tabindex,
             "data-slot": MenuPart::Item.slot(),
+            "data-mark": marked.then_some("background"),
             "data-menu-index": "{index}",
             "aria-disabled": disabled.then_some("true"),
             "aria-haspopup": has_submenu.then_some("menu"),

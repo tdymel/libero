@@ -158,6 +158,7 @@ also on every submenu.
 | `trailing` | `Element` | - | At the far end, such as a badge. It joins the accessible name. Nothing interactive. |
 | `shortcut` | `&str` | - | The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`"Control+X"`). Drawn as a hint ("Ctrl+X") and kept out of the name. `Control`, `Shift`, `Alt` and `Meta` are drawn in the localization's `menu` words ("Strg+Umschalt+S" in German). You bind the key yourself. |
 | `radio` | `bool` | - | Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item. |
+| `mark` | `MenuRadioMark` | `Check` | How a `radio` item shows that it is the current choice. `Check` draws a check in the leading column. `Background` tints the row and marks its start edge, with no check column unless another item needs one. It stays `aria-checked`, and a checkbox keeps its check. |
 | `checkbox` | `bool` | - | Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins. |
 | `disabled` | `bool` | `false` | Stays in the arrow-key order but cannot be chosen, and typeahead skips it. |
 | `description` | `String` | - | Read after the label through `aria-describedby`, never shown. Say why a `disabled` item cannot be chosen. |

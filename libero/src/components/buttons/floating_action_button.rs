@@ -9,8 +9,8 @@ use crate::{
     hooks::use_theme,
     sx::{REDUCED_MOTION, Sx, ThemeAwareValue, sx},
     theme::{
-        Gradient, ICON_SIZE, OWN_SHADOW, Responsive, Size, SizeCss, TRANSITION_DURATION,
-        TRANSITION_EASING, Z_INDEX_HEADER,
+        Gradient, ICON_DEFAULT_SIZE, ICON_SIZE, OWN_SHADOW, Responsive, Size, SizeCss,
+        TRANSITION_DURATION, TRANSITION_EASING, Z_INDEX_HEADER,
     },
 };
 
@@ -196,7 +196,13 @@ pub fn FloatingActionButton(props: FloatingActionButtonProps) -> Element {
         ThemeAwareValue::Size(size) => size,
         _ => defaults.size,
     });
+    // An unsized `Icon` round the glyph follows the step, as a bare svg does.
+    let icon_step = |rules: Sx, size: Size| rules.var(ICON_DEFAULT_SIZE, ICON_SIZE.value(size));
     let mut button_sx = elevation_sx(SizeCss::SHADOW.value(defaults.elevation));
+    button_sx = button_size.breakpoints().fold(
+        icon_step(button_sx, button_size.base()),
+        |rules, (at, size)| rules.breakpoint(at, icon_step(sx(), size)),
+    );
     if extended {
         // As the icon-only glyph: `Icon`'s size at the step, where `Button` leaves an unsized svg at 0.
         let glyph_sx = |rules: Sx, size: Size| {

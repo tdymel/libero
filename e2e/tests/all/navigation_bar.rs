@@ -191,6 +191,27 @@ fn an_unselected_link_to_the_current_route_is_not_the_current_page() {
     });
 }
 
+/// A `to` with a query marks its item on the sub-paths below its path (todo 5720).
+#[test]
+fn a_link_with_a_query_is_current_below_its_path() {
+    block_on(async {
+        let fixture = Fixture::open("/navigation-bar/below", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#parent").await.unwrap();
+
+        let current = js::<String>(
+            page,
+            "document.querySelector('#parent').getAttribute('aria-current')",
+        )
+        .await;
+        assert_eq!(current, "page");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The name comes from the label, the badge's count from the caller's
 /// `aria-label`; the icon stays out of the tree.
 #[test]

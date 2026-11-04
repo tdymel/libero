@@ -3,11 +3,12 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
+use super::accordion::AccordionPart;
 use crate::{
     components::{
         common::{
             COARSE_POINTER, COARSE_TARGET, ClassList, HtmlTag, Input, LogicalTextAlign,
-            OptionLabel, Options, States, disabled_look_sx, draw_svg, has_shortcut_modifier,
+            OptionLabel, Options, Parts, States, disabled_look_sx, draw_svg, has_shortcut_modifier,
             inset_focus_ring_sx, use_closing_focus, use_identity_keys,
         },
         layout::{Collapse, use_box},
@@ -129,6 +130,18 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
                 sx().with("flex", "1 1 auto"),
             ),
         )
+        // Edge to edge: the rows keep their vertical padding only.
+        .when(
+            "flush",
+            sx().selector(
+                "& > [data-accordion-item] > [data-accordion-heading] > button, & > [data-accordion-item] > [data-accordion-heading] > [data-accordion-plain]",
+                sx().with("padding-inline", "0"),
+            )
+            .selector(
+                "& > [data-accordion-item] [data-accordion-body]",
+                sx().with("padding-inline", "0"),
+            ),
+        )
         // Inside `Collapse`'s clipped box, so the padding animates with the height. The
         // top pad keeps a first child's ring clear of the clip; wide content wraps or scrolls (1.4.10).
         .selector(
@@ -164,6 +177,8 @@ pub(crate) struct AccordionView<T: Options> {
     pub size: Responsive<Size>,
     pub chevron_position: AccordionChevronPosition,
     pub rotate_chevron: bool,
+    pub flush: bool,
+    pub parts: Input<Parts<AccordionPart>>,
     pub class: Input<ClassList>,
     pub sx: Input<crate::sx::Sx>,
     pub states: Input<States>,
@@ -188,21 +203,23 @@ fn heading(level: HtmlTag, plain_id: Option<String>, trigger: Element) -> Elemen
     let tabindex = plain_id.as_ref().map(|_| "-1");
     match level {
         HtmlTag::H1 => {
-            rsx! { h1 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+            rsx! { h1 { "data-accordion-heading": "", "data-slot": "heading", id: plain_id, tabindex, {trigger} } }
         }
         HtmlTag::H2 => {
-            rsx! { h2 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+            rsx! { h2 { "data-accordion-heading": "", "data-slot": "heading", id: plain_id, tabindex, {trigger} } }
         }
         HtmlTag::H4 => {
-            rsx! { h4 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+            rsx! { h4 { "data-accordion-heading": "", "data-slot": "heading", id: plain_id, tabindex, {trigger} } }
         }
         HtmlTag::H5 => {
-            rsx! { h5 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+            rsx! { h5 { "data-accordion-heading": "", "data-slot": "heading", id: plain_id, tabindex, {trigger} } }
         }
         HtmlTag::H6 => {
-            rsx! { h6 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } }
+            rsx! { h6 { "data-accordion-heading": "", "data-slot": "heading", id: plain_id, tabindex, {trigger} } }
         }
-        _ => rsx! { h3 { "data-accordion-heading": "", id: plain_id, tabindex, {trigger} } },
+        _ => {
+            rsx! { h3 { "data-accordion-heading": "", "data-slot": "heading", id: plain_id, tabindex, {trigger} } }
+        }
     }
 }
 
@@ -216,6 +233,8 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
         size,
         chevron_position,
         rotate_chevron,
+        flush,
+        parts,
         class,
         sx: user_sx,
         states,
@@ -295,6 +314,7 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
         .responsive(&size, |size| size.state_name())
         .with(chevron_position.state_name(), true)
         .with("static-chevron", !rotate_chevron)
+        .with("flush", flush)
         .into();
     use_range_css(
         &ACCORDION_SX,
@@ -331,6 +351,7 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
     use_box()
         .framework_sx(&ACCORDION_SX)
         .class(&class)
+        .parts(&parts)
         .sx(&user_sx)
         .visibility(&hidden_from, &visible_from)
         .states(&states)
@@ -374,7 +395,7 @@ fn AccordionSection<T: Options>(
     // After the hooks: `has_panel` can flip a mounted section.
     if plain {
         return rsx! {
-            div { "data-accordion-item": "",
+            div { "data-accordion-item": "", "data-slot": "item",
                 {heading(level, Some(format!("{root}-heading-{index}")), rsx! { span { "data-accordion-plain": "", {content} } })}
             }
         };
@@ -426,6 +447,7 @@ fn AccordionSection<T: Options>(
             // `aria-disabled`, not `disabled`: the section stays a tab stop.
             "aria-disabled": if disabled || pinned { "true" } else { "false" },
             "data-accordion-pinned": pinned.then_some(""),
+            "data-slot": "trigger",
             "aria-label": name,
             onclick: move |_| {
                 if !disabled && !pinned {
@@ -433,12 +455,12 @@ fn AccordionSection<T: Options>(
                 }
             },
             onkeydown,
-            span { {content} }
-            span { "data-accordion-chevron": "", {chevron} }
+            span { "data-slot": "label", {content} }
+            span { "data-accordion-chevron": "", "data-slot": "chevron", {chevron} }
         }
     };
     rsx! {
-        div { "data-accordion-item": "", id: "{item_id}",
+        div { "data-accordion-item": "", "data-slot": "item", id: "{item_id}",
             {heading(level, None, trigger)}
             Collapse {
                 open,
@@ -446,7 +468,7 @@ fn AccordionSection<T: Options>(
                 id: "{region_id}",
                 role: "region",
                 aria_labelledby: "{trigger_id}",
-                div { "data-accordion-body": "", {body} }
+                div { "data-accordion-body": "", "data-slot": "panel", {body} }
             }
         }
     }

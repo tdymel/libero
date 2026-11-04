@@ -44,7 +44,7 @@ mod timeline;
 mod video;
 
 #[cfg(feature = "accordion")]
-pub use accordion::{Accordion, AccordionOpen, AccordionProps};
+pub use accordion::{Accordion, AccordionOpen, AccordionPart, AccordionProps};
 #[cfg(feature = "audio")]
 pub use audio::{Audio, AudioPart, AudioProps};
 #[cfg(any(feature = "audio", feature = "video"))]
