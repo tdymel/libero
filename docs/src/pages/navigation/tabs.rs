@@ -103,7 +103,7 @@ pub fn TabsPage() -> Element {
                     prop("options", "OptionSource<T>").default("T::options()").doc("The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
-                        .doc("Overrides a tab's label. Runs during render, so the strip follows a locale signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a text name for screen readers."),
+                        .doc("Overrides a tab's label. Runs during render, so the strip follows a locale signal. `OptionLabel::with_icon` puts an icon before the name, `OptionLabel::rich` draws a tab as rsx and takes a text name for screen readers."),
                     prop("size", "Responsive<Size>").default(theme.tabs.size.as_str()).doc("Tab strip size. On a touch screen a tab is at least 44px tall, so `xs` and `sm` tabs draw taller there. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Md)`."),
                     prop("hidden_from", "Size").doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
                     prop("visible_from", "Size").doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
@@ -123,7 +123,7 @@ pub fn TabsPage() -> Element {
                 props("OptionLabel", vec![
                     prop("name", "String").default("required").doc("The tab's visible text and accessible name."),
                     prop("content", "Element")
-                        .doc("Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab. Keep it inline: an `Icon` fits, a `Flex` does not."),
+                        .doc("Drawn in place of the name, via `OptionLabel::rich`, or an icon and the name via `OptionLabel::with_icon`. `name` still names the tab. Keep it inline: an `Icon` fits, a `Flex` does not."),
                 ]).without_base_props(),
             ],
             accessibility: a11y()
@@ -152,8 +152,10 @@ pub fn TabsPage() -> Element {
                     "selected panel is built. "
                     Code { source: "option_label" }
                     " renames tabs during render, so the strip follows a locale signal, and "
+                    Code { source: "OptionLabel::with_icon" }
+                    " puts an icon before the name, and "
                     Code { source: "OptionLabel::rich" }
-                    " draws a tab as rsx, such as an icon."
+                    " draws a tab as any rsx."
                 }
             },
             // snippet: let mut section = use_signal(|| Section::Account);

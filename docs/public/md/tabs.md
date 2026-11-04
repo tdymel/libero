@@ -56,7 +56,7 @@ fn Demo() -> Element {
 | `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. Without it the selection never changes, and `Tabs` warns. |
 | `panel` | `Callback<T, Element>` | - | The body of the selected tab. Only the selected panel is built. Without it nothing shows below the strip, and `Tabs` warns. |
 | `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so the strip follows a locale signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a text name for screen readers. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so the strip follows a locale signal. `OptionLabel::with_icon` puts an icon before the name, `OptionLabel::rich` draws a tab as rsx and takes a text name for screen readers. |
 | `size` | `Responsive<Size>` | `md` | Tab strip size. On a touch screen a tab is at least 44px tall, so `xs` and `sm` tabs draw taller there. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Md)`. |
 | `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
 | `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
@@ -75,7 +75,7 @@ attributes.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `name` | `String` | required | The tab's visible text and accessible name. |
-| `content` | `Element` | - | Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab. Keep it inline: an `Icon` fits, a `Flex` does not. |
+| `content` | `Element` | - | Drawn in place of the name, via `OptionLabel::rich`, or an icon and the name via `OptionLabel::with_icon`. `name` still names the tab. Keep it inline: an `Icon` fits, a `Flex` does not. |
 
 `OptionLabel` is a value, not a component, and takes no shared props. A string
 converts into one (`"Konto".into()`).

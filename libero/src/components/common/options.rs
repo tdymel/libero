@@ -96,6 +96,7 @@ impl OptionLabel {
     ///             rsx! {
     ///                 Icon {
     ///                     variant: "standard",
+    ///                     color: "currentColor",
     ///                     size: "sm",
     ///                     match alignment {
     ///                         Alignment::Left => rsx! { AlignLeftIcon {} },

@@ -41,7 +41,8 @@ pub struct TabsProps<T: Options> {
     /// The tabs, default every `Options::options()`. Groups draw flattened; a pending source draws none.
     #[props(default, into)]
     options: OptionSource<T>,
-    /// Overrides `Options::label` during render; `OptionLabel::rich` draws rsx.
+    /// Overrides `Options::label` during render; `OptionLabel::with_icon` adds an icon,
+    /// `OptionLabel::rich` draws rsx.
     #[props(default)]
     option_label: Option<Callback<T, OptionLabel>>,
     /// The tab strip's font and padding scale; the panel keeps its surroundings' font.

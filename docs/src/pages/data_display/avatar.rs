@@ -7,7 +7,7 @@ use libero::{
     use_theme,
 };
 
-static AVATAR_IMAGE: Asset = asset!("/assets/avatar.svg");
+static AVATAR_IMAGE: Asset = asset!("/assets/portrait.svg");
 
 const MISSING_SRC: &str = "/does-not-exist.png";
 
