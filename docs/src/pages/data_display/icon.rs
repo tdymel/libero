@@ -52,7 +52,7 @@ pub fn IconPage() -> Element {
                         .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop."),
+                        .doc("The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop. Unset inside a `SegmentedControl` segment, the glyph follows the segment's text colour."),
                     prop("size", "Responsive<ThemeAwareValue>")
                         .default(theme.icon.size.as_str())
                         .doc("Width and height. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),

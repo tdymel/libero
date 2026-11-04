@@ -1,7 +1,9 @@
 //! `SegmentedControl`, for the `RadioSet` archetype.
 
 use dioxus::prelude::*;
-use libero::components::{Fields, Flex, Form, OptionList, Options, SegmentedControl};
+use libero::components::{
+    Fields, Flex, Form, Icon, OptionLabel, OptionList, Options, SegmentedControl,
+};
 
 use crate::{Routes, common::Between};
 
@@ -27,7 +29,28 @@ pub const ROUTES: Routes = &[
         || rsx! { SegmentedControlPage { selected_check: false } },
     ),
     ("/segmented-control/lone", || rsx! { LonePage {} }),
+    ("/segmented-control/icons", || rsx! { IconsPage {} }),
 ];
+
+/// Todo 5701: segments drawn with a colourless `Icon`, which follows the segment's colour.
+#[component]
+fn IconsPage() -> Element {
+    let mut alignment = use_signal(|| Alignment::Center);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            SegmentedControl {
+                label: "Alignment",
+                value: alignment(),
+                onchange: move |next| alignment.set(next),
+                option_label: |alignment: Alignment| OptionLabel::with_icon(
+                    alignment.label(),
+                    rsx! { Icon { variant: "standard", size: "sm", "★" } },
+                ),
+            }
+        }
+    }
+}
 
 /// Todo 2465: one enabled segment, so the arrows are the page's.
 #[component]

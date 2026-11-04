@@ -589,3 +589,31 @@ fn a_lone_segment_leaves_the_arrows_to_the_page() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5701: a colourless `Icon` takes the segment's text colour, so on the filled pick it
+/// stays visible (3:1 against the segment's fill) in both schemes.
+#[test]
+fn a_colourless_icon_stays_visible_on_the_filled_pick() {
+    use e2e::Scheme;
+    use e2e::passes::contrast::COLOUR_JS;
+    const PICKED: &str = "[role=radiogroup] label[data-state~=checked]";
+    let visible = format!(
+        "(() => {{ {COLOUR_JS} const label = document.querySelector('{PICKED}'); \
+         const icon = label.querySelector('[data-slot=icon]'); \
+         const ink = RGBA(getComputedStyle(icon).color); \
+         const fill = RGBA(getComputedStyle(label).backgroundColor); \
+         return getComputedStyle(icon).color === getComputedStyle(label).color \
+         && CONTRAST(ink, fill) >= 3; }})()"
+    );
+    block_on(async {
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            let fixture = Fixture::open_in("/segmented-control/icons", Viewport::Desktop, scheme)
+                .await
+                .unwrap();
+            e2e::wait::for_js_true(&fixture.page, &visible, "the icon to follow the pick")
+                .await
+                .unwrap_or_else(|e| panic!("{scheme:?}: {e}"));
+            fixture.close().await.unwrap();
+        }
+    });
+}

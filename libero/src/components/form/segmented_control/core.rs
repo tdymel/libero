@@ -19,7 +19,7 @@ use crate::{
     hooks::{ElementHandle, id_selector, use_range_css},
     platform::{ElementApi, focus_selector, logical_key, next_task},
     sx::{StaticSx, Sx, sx},
-    theme::{BUTTON_HEIGHT, ButtonDefaults, Responsive, Size, SizeCss},
+    theme::{BUTTON_HEIGHT, ButtonDefaults, ICON_SLOT_COLOR, Responsive, Size, SizeCss},
 };
 
 /// The segment itself. A `<label>`, because the radio it wraps is what
@@ -161,6 +161,8 @@ fn segment_sx() -> Sx {
     ButtonDefaults::theme_vars()
         // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
         .var(SizeCss::RADIUS.override_var(), "inherit")
+        // A colourless `Icon` in the label follows the segment's text colour.
+        .var(ICON_SLOT_COLOR, "currentColor")
         .position("relative")
         .display("inline-flex")
         .align_items("center")

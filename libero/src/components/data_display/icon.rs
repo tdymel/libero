@@ -14,8 +14,8 @@ use crate::{
     hooks::{use_cache, use_gradient_style, use_range_css, use_theme},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD,
-        Responsive, SizeCss,
+        CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_COLOR,
+        ICON_SLOT_PAD, Responsive, SizeCss,
     },
 };
 
@@ -113,9 +113,14 @@ fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
     let base = base_color("Icon", props.color.as_ref());
     let contrast = contrast_color(&base);
     let colors = variant_colors(variant, &base);
+    // A colourless icon lets a slot (a segment) set its glyph colour; it is undefined elsewhere.
+    let glyph = text_color(&base).map(|color| match props.color.as_ref() {
+        Some(_) => color,
+        None => ICON_SLOT_COLOR.value_or(color),
+    });
 
     variables()
-        .with(ICON_COLOR_VAR, text_color(&base))
+        .with(ICON_COLOR_VAR, glyph)
         .with(ICON_FILL_VAR, fill_color(&base))
         .with(
             ICON_CONTRAST_VAR,

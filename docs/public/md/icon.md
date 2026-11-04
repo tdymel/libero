@@ -41,7 +41,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `component` | `HtmlTag` | `span` | Element to render as. |
 | `variant` | `Responsive<Variant>` | `filled` | The look, shared with `Button`. An icon is not interactive, so it has no hover state. With `standard`, which draws no container, the svg fills the box; every other variant insets it to 60%, and `--lsx-icon-glyph` in `sx` picks another share. Or one per breakpoint, `variant: responsive(Variant::Standard).md(Variant::Filled)`. Breakpoints follow the window, not the parent. |
-| `color` | `ThemeAwareValue` | `primary` | The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop. |
+| `color` | `ThemeAwareValue` | `primary` | The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop. Unset inside a `SegmentedControl` segment, the glyph follows the segment's text colour. |
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `Responsive<ThemeAwareValue>` | `md` | Width and height. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent. |

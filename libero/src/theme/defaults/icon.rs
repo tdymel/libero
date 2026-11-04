@@ -6,6 +6,8 @@ pub const ICON_SIZE: SizeCss = SizeCss::new("--lsx-icon-size-");
 pub(crate) const ICON_DEFAULT_SIZE: CssVar = CssVar::new("--lsx-icon-size");
 /// Set by a field's slot on an unsized icon: the padding that grows the container to the slot button's box.
 pub(crate) const ICON_SLOT_PAD: CssVar = CssVar::new("--lsx-icon-slot-pad");
+/// Set by a segment on its label: a colourless `Icon` inside takes it as its glyph colour.
+pub(crate) const ICON_SLOT_COLOR: CssVar = CssVar::new("--lsx-icon-slot-color");
 pub(crate) const ICON_DEFAULT_RADIUS: CssVar = CssVar::new("--lsx-icon-radius-default");
 
 /// Theme defaults for `Icon`, set on [`Theme`](crate::theme::Theme).

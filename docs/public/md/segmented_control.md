@@ -82,7 +82,7 @@ fn Demo() -> Element {
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `name` | `String` | required | The segment's accessible name, and its text when there is no `content`. |
-| `content` | `Element` | - | Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. A segment is a `<label>`, so phrasing content only: an `Icon` works, a `Flex` does not. Give the `Icon` `color: "currentColor"`, or it is primary on the filled selected segment. |
+| `content` | `Element` | - | Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. A segment is a `<label>`, so phrasing content only: an `Icon` works, a `Flex` does not. An `Icon` without `color` takes the segment's text colour, also on the filled selected segment. |
 
 `OptionLabel` is a value, not a component, so it takes no shared props. A bare
 string converts (`"Konto".into()`). `OptionLabel::with_icon(name, icon)` draws the

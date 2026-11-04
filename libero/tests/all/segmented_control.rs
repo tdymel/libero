@@ -3,7 +3,7 @@ use crate::common::{attributes_of, body, classes_of, has_rule_for, render, tags_
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{OptionItem, OptionList, Options, SegmentedControl},
+    components::{Icon, OptionItem, OptionLabel, OptionList, Options, SegmentedControl},
 };
 
 #[derive(Clone, PartialEq, Options)]
@@ -278,6 +278,36 @@ fn only_the_selected_segment_draws_a_hidden_check() {
     let label = &before[before.rfind("<label").unwrap()..];
     assert!(label.contains("-segment-1"), "{label}");
     assert!(!body(&render(plain)).contains("data-slot=\"check\""));
+}
+
+/// Todo 5701: the segment hands a colourless `Icon` its own text colour.
+#[test]
+fn a_segment_sets_the_slot_colour_of_the_icons_in_it() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl {
+                    value: Emphasis::Italic,
+                    onchange: move |_| {},
+                    option_label: |emphasis: Emphasis| OptionLabel::with_icon(
+                        emphasis.label(),
+                        rsx! { Icon { variant: "standard", size: "sm", "*" } },
+                    ),
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains("data-slot=\"icon\""), "{html}");
+    let body = body(&html);
+    let group = &body[body[1..].find("<div").expect("the group") + 1..];
+    let root = format!(".{} > label{{", classes_of(group, "div")[0]);
+    let rule = &html[html.find(&root).expect("the segment rule")..];
+    assert!(
+        rule.contains("--lsx-icon-slot-color:currentColor;"),
+        "{html}"
+    );
 }
 
 /// Todo 5421: the prop wins over the theme, both ways.

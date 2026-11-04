@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{Options, SegmentedControl};
+use libero::components::{Icon, OptionLabel, Options, SegmentedControl};
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Alignment {
@@ -40,5 +40,33 @@ fn the_checked_segment_paints_in_place_after_a_resize() {
         selected(&page),
         before,
         "the checked segment moved off its box"
+    );
+}
+
+/// Todo 5701: Blitz resolves the slot colour's nested `var()` fallback, so a colourless
+/// `Icon` in a segment takes the segment's text colour, and one outside keeps primary.
+#[test]
+fn a_colourless_icon_takes_the_segment_colour() {
+    fn app() -> Element {
+        rsx! {
+            SegmentedControl {
+                label: "Alignment",
+                value: Alignment::Center,
+                onchange: move |_| {},
+                option_label: |alignment: Alignment| OptionLabel::with_icon(
+                    alignment.label(),
+                    rsx! { Icon { variant: "standard", size: "sm", "*" } },
+                ),
+            }
+            Icon { id: "outside", variant: "standard", "*" }
+        }
+    }
+    let page = mount(app);
+    let label = "label[data-state~=checked]";
+    let icon = "label[data-state~=checked] [data-slot=icon]";
+    assert_eq!(page.computed(icon, "color"), page.computed(label, "color"));
+    assert_ne!(
+        page.computed("#outside", "color"),
+        page.computed(label, "color")
     );
 }

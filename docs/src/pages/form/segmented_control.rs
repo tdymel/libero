@@ -50,7 +50,6 @@ fn renamed(alignment: Alignment) -> OptionLabel {
 }
 
 // A segment is a `label`, so its content stays phrasing: `Icon` is a `span`, a `Flex` a `div`.
-// `currentColor` keeps the icon readable on the filled selected segment.
 fn rich(alignment: Alignment) -> OptionLabel {
     // demo-code: rich start
     OptionLabel::with_icon(
@@ -58,7 +57,6 @@ fn rich(alignment: Alignment) -> OptionLabel {
         rsx! {
             Icon {
                 variant: "standard",
-                color: "currentColor",
                 size: "sm",
                 match alignment {
                     Alignment::Left => rsx! { Pictogram { icon: lucide::text_align_start::outlined } },
@@ -195,7 +193,7 @@ pub fn SegmentedControlPage() -> Element {
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The segment's accessible name, and its text when there is no `content`."),
                     prop("content", "Element")
-                        .doc("Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. A segment is a `<label>`, so phrasing content only: an `Icon` works, a `Flex` does not. Give the `Icon` `color: \"currentColor\"`, or it is primary on the filled selected segment."),
+                        .doc("Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. A segment is a `<label>`, so phrasing content only: an `Icon` works, a `Flex` does not. An `Icon` without `color` takes the segment's text colour, also on the filled selected segment."),
                 ]),
             ],
             accessibility: a11y()
@@ -242,6 +240,8 @@ pub fn SegmentedControlPage() -> Element {
                 controls: [vec![
                     Control::toggle("labels", ["derived", "renamed", "rich"])
                         .labels(["Derived", "Renamed", "Rich"])
+                        // Rich, so the icon segments show without another switch.
+                        .default("rich")
                         .code(|_, values| match values.str("labels").as_str() {
                             "renamed" => vec![format!(
                                 "option_label: |alignment: Alignment| -> OptionLabel {{\n{}}}",

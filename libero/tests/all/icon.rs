@@ -24,6 +24,26 @@ fn icon_renders_its_variant_and_colour_variables() {
     assert!(attributes["style"].contains("--lsx-icon-color:var(--lsx-success-text-6);"));
 }
 
+/// Todo 5701: a colourless icon lets a slot set its glyph colour; an explicit one does not.
+#[test]
+fn only_a_colourless_icon_reads_the_slot_colour() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Icon { id: "plain", "★" }
+                Icon { id: "named", color: Color::Success, "★" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let slot = "--lsx-icon-color:var(--lsx-icon-slot-color, ";
+    let plain = &html[html.find("id=\"plain\"").unwrap()..html.find("id=\"named\"").unwrap()];
+    assert!(plain.contains(slot), "{plain}");
+    let named = &html[html.find("id=\"named\"").unwrap()..];
+    assert!(!named.contains("lsx-icon-slot-color"), "{named}");
+}
+
 /// An unnamed icon is decoration: a caller svg inside would read as an
 /// unnamed image otherwise (todo 612).
 #[test]
