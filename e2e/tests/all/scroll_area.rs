@@ -1467,9 +1467,9 @@ e2e::scenario!(
 );
 
 /// One 120px wheel notch down over `selector`'s centre, waited until it scrolled. The page
-/// is in front: a tab behind draws a frame a second and a loaded run outwaits the poll (5433).
+/// is in front (5433); a wheel a loaded run drops is sent again each half second (5661).
 async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {
-    let at = pointer::centre_of(page, selector).await.unwrap();
+    const RESEND: std::time::Duration = std::time::Duration::from_millis(500);
     let top = format!("document.querySelector('{selector}').scrollTop");
     let before: f64 = page
         .evaluate_bounded(top.as_str())
@@ -1477,19 +1477,28 @@ async fn wheel_step(page: &chromiumoxide::Page, selector: &str) {
         .unwrap()
         .into_value()
         .unwrap();
+    let sent = std::cell::Cell::new(None::<std::time::Instant>);
     e2e::frames::in_front(page, async {
-        page.execute_bounded(
-            DispatchMouseEventParams::builder()
-                .r#type(DispatchMouseEventType::MouseWheel)
-                .x(at.x)
-                .y(at.y)
-                .delta_x(0.0)
-                .delta_y(120.0)
-                .build()
-                .unwrap(),
-        )
-        .await?;
-        wait::for_js_true(page, &format!("{top} !== {before}"), "the wheel to scroll").await
+        wait::until("the wheel to scroll", || async {
+            if sent.get().is_none_or(|at| at.elapsed() >= RESEND) {
+                sent.set(Some(std::time::Instant::now()));
+                let at = pointer::centre_of(page, selector).await?;
+                page.execute_bounded(
+                    DispatchMouseEventParams::builder()
+                        .r#type(DispatchMouseEventType::MouseWheel)
+                        .x(at.x)
+                        .y(at.y)
+                        .delta_x(0.0)
+                        .delta_y(120.0)
+                        .build()
+                        .map_err(|error| anyhow!(error))?,
+                )
+                .await?;
+            }
+            let now: f64 = page.evaluate_bounded(top.as_str()).await?.into_value()?;
+            Ok(now != before)
+        })
+        .await
     })
     .await
     .unwrap();
