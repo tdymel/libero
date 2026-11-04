@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 
+use super::variant_vars::{VARIANT_VARS, variant_var};
 use crate::{
     components::{
         common::{
@@ -126,23 +127,6 @@ fn variant_sx(variant: Variant) -> Sx {
             &BUTTON_ON_STATE_VAR,
         ),
     )
-}
-
-/// The colour vars [`button_variables`] writes, which differ per variant.
-const VARIANT_VARS: [CssVar; 8] = [
-    BUTTON_COLOR_VAR,
-    BUTTON_FILL_VAR,
-    BUTTON_CONTRAST_VAR,
-    BUTTON_HOVER_VAR,
-    BUTTON_SELECTED_VAR,
-    BUTTON_ON_STATE_VAR,
-    BUTTON_CONTAINER_VAR,
-    BUTTON_ON_CONTAINER_VAR,
-];
-
-/// `var` for one variant of a responsive one, as `--lsx-button-hover-v-filled`.
-pub(crate) fn variant_var(var: &CssVar, variant: Variant) -> CssVar {
-    CssVar::Owned(format!("{}-v-{}", var.name(), variant.as_str()))
 }
 
 /// Beside the children, never shrinking, as on `Chip`: `leading` is before them.

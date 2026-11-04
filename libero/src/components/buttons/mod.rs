@@ -20,15 +20,16 @@ mod theme_switcher;
 mod tldr;
 #[cfg(feature = "toolbar")]
 mod toolbar;
+mod variant_vars;
 
 #[cfg(feature = "action-icon")]
 pub(crate) use action_icon::{ACTION_ICON_GROWS, TooltipOpenDelay, is_compact, size_words};
 #[cfg(feature = "action-icon")]
 pub use action_icon::{ActionIcon, ActionIconProps};
 #[cfg(feature = "button")]
-pub use button::{Button, ButtonPart, ButtonProps, LoadingPosition};
+pub(crate) use button::button_variables;
 #[cfg(feature = "button")]
-pub(crate) use button::{button_variables, variant_var};
+pub use button::{Button, ButtonPart, ButtonProps, LoadingPosition};
 #[cfg(feature = "button-group")]
 pub use button_group::{ButtonGroup, ButtonGroupProps};
 #[cfg(feature = "copy")]
@@ -50,3 +51,4 @@ pub use toolbar::{
     Toolbar, ToolbarGroup, ToolbarGroupProps, ToolbarPart, ToolbarProps, ToolbarSeparator,
     ToolbarSeparatorProps,
 };
+pub(crate) use variant_vars::variant_var;

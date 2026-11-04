@@ -1,7 +1,7 @@
 use dioxus::{core::AttributeValue, prelude::*};
 use pictogram_icons_lucide as lucide;
 
-use super::button::variant_var;
+use super::variant_vars::variant_var;
 use crate::{
     components::{
         common::{
