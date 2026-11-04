@@ -33,7 +33,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | - | The text color: a theme color name in its text shade, or any CSS color. Unset, the text inherits. Under a gradient, its first stop. |
 | `gradient` | `Gradient` | - | Paints the glyphs with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in print and in native windows, the system text colour in forced colours. |
 | `truncate` | `Truncate` | - | Cuts the text on one line with an ellipsis at its `end` or `start`. The element becomes a block, so a `span` truncates too. Set a `title` if the cut text matters; the full text stays in the accessible name. `line_clamp` wins when both are set. |
-| `line_clamp` | `Responsive<u32>` | - | Cuts the text after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the text is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(3).md(0)`, where `0` lifts the clamp in that range. |
+| `line_clamp` | `Responsive<u32>` | - | Cuts the text after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the text is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(3).md(0)`, where `0` lifts the clamp in that range, or cuts one line with `truncate` when one is set. |
 | `children` | `Element` | required | The text. |
 
 Like every component, `Text` also takes the shared props `sx`, `class`,

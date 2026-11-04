@@ -265,7 +265,12 @@ pub fn Repository(props: RepositoryProps) -> Element {
     let group = use_button_group();
     let variant = props
         .variant
-        .copied_or(group.variant.unwrap_or(theme.repository.variant));
+        // Plain: Rust reads it for the label's ink, so a responsive group's takes its base.
+        .copied_or(
+            group
+                .variant
+                .map_or(theme.repository.variant, |variants| variants.base()),
+        );
     // An unset gradient takes the theme's: no label reads on `muted` into its second stop
     // at 4.5:1 (todo 1650).
     let color = props

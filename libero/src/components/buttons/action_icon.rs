@@ -397,10 +397,10 @@ fn fill_from_group(props: &mut ActionIconProps, group: &ButtonGroupContext) {
     }
     fill(
         &mut props.size,
-        group.size.map(|size| ThemeAwareValue::Size(size).into()),
+        group.size.map(|sizes| sizes.map(ThemeAwareValue::Size)),
     );
-    fill(&mut props.radius, group.radius.clone().map(Into::into));
-    fill(&mut props.variant, group.variant.map(Into::into));
+    fill(&mut props.radius, group.radius.clone());
+    fill(&mut props.variant, group.variant);
     fill(&mut props.color, group.color.clone());
     props.selected = props
         .selected

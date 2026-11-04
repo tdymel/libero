@@ -2,14 +2,18 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 
-use crate::{components::common::Variant, sx::ThemeAwareValue, theme::Size};
+use crate::{
+    components::common::Variant,
+    sx::ThemeAwareValue,
+    theme::{Responsive, Size},
+};
 
 /// A `ButtonGroup`'s defaults for the buttons inside it; a button's own prop wins.
 #[derive(Clone, Default, PartialEq)]
 pub(crate) struct ButtonGroupContext {
-    pub size: Option<Size>,
-    pub radius: Option<ThemeAwareValue>,
-    pub variant: Option<Variant>,
+    pub size: Option<Responsive<Size>>,
+    pub radius: Option<Responsive<ThemeAwareValue>>,
+    pub variant: Option<Responsive<Variant>>,
     pub color: Option<ThemeAwareValue>,
     pub disabled: Option<bool>,
     pub focusable_when_disabled: Option<bool>,

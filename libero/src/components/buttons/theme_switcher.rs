@@ -152,7 +152,7 @@ pub fn ThemeSwitcher(props: ThemeSwitcherProps) -> Element {
     let variant = Input::Value(
         props
             .variant
-            .copied_or(group.variant.unwrap_or(theme.theme_switcher.variant).into()),
+            .copied_or(group.variant.unwrap_or(theme.theme_switcher.variant.into())),
     );
     let color = props
         .color

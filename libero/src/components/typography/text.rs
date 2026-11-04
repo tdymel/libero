@@ -50,7 +50,8 @@ base_props! {
         truncate: Input<Truncate>,
         /// Cuts the text after this many lines with an ellipsis; over `truncate`, and `0`
         /// is off. Blitz has no line clamp: it cuts at the line height, without an ellipsis.
-        /// Per breakpoint too, `responsive(2).md(0)`, where `0` lifts the clamp in that range.
+        /// Per breakpoint too, `responsive(2).md(0)`, where `0` lifts the clamp in that range,
+        /// or cuts one line with `truncate` when one is set.
         #[props(default, into)]
         line_clamp: Input<Responsive<u32>>,
         children: Element,
@@ -89,29 +90,29 @@ pub fn Text(props: TextProps) -> Element {
     let style = gradient.or_else(|| colored.then(|| variables().with(TEXT_COLOR, plain).render()));
 
     let cut = Cut::of(&props.truncate, &props.line_clamp);
+    let runs = cut.runs(&props.truncate, &props.line_clamp);
     let states: Input<States> = cut
-        .states()
-        .into_iter()
-        .fold(
+        .with_states(
             props
                 .states
                 .unwrap_or_default()
                 .responsive(&sizes, |size| size.state_name())
                 .with("colored", colored)
                 .with("gradient", props.gradient.is_some()),
-            |states, (state, on)| states.with(state, on),
+            runs.as_ref(),
         )
         .into();
     let lines = cut.variables();
     let sx = with_own(clamp_sx(&props.line_clamp), &props.sx);
-    use_range_css(
-        &TEXT_BASE_SX,
-        sizes.range_copies(
-            |size| size.state_name(),
-            |size| TextDefaults::size_sx(size).and(clamp_height_sx(TEXT_LINE_HEIGHT, size)),
-        ),
+    let mut copies = sizes.range_copies(
+        |size| size.state_name(),
+        |size| TextDefaults::size_sx(size).and(clamp_height_sx(TEXT_LINE_HEIGHT, size)),
     );
-    let children = match cut.is_start() {
+    if let Some(runs) = &runs {
+        copies.extend(runs.range_copies(|word| word, |word| TEXT_BASE_SX.axis_block(word)));
+    }
+    use_range_css(&TEXT_BASE_SX, copies);
+    let children = match cut.isolates(runs.as_ref()) {
         true => rsx! { bdi { {props.children} } },
         false => props.children,
     };

@@ -363,7 +363,7 @@ pub fn Button(props: ButtonProps) -> Element {
     let item = use_toolbar_item();
     let variants = props
         .variant
-        .copied_or(group.variant.unwrap_or(theme.button.variant).into());
+        .copied_or(group.variant.unwrap_or(theme.button.variant.into()));
     let variant = variants.base();
     let color_prop = props.color.as_ref().or(group.color.as_ref());
     let color = base_color("Button", color_prop);
@@ -403,10 +403,10 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let sizes = props
         .size
-        .copied_or(group.size.unwrap_or(theme.button.size).into());
+        .copied_or(group.size.unwrap_or(theme.button.size.into()));
     // The `Loader` takes one size; the overlay's follows the breakpoints in CSS.
     let size = sizes.base();
-    let group_radius = group.radius.clone().map(Responsive::new);
+    let group_radius = group.radius.clone();
     let radius = ResponsiveScale::new(
         props.radius.as_ref().or(group_radius.as_ref()),
         theme.button.radius,

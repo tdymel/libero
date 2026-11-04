@@ -2,7 +2,7 @@ use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop
 use dioxus::prelude::*;
 use libero::components::Pictogram;
 use libero::components::{ActionIcon, Button, ButtonGroup, Input, Orientation, Text};
-use libero::theme::responsive;
+use libero::theme::{Size, responsive};
 use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
@@ -35,14 +35,14 @@ pub fn ButtonGroupPage() -> Element {
                 prop("orientation", "Responsive<Orientation>")
                     .default("horizontal")
                     .doc("`\"vertical\"` stacks the buttons, each as wide as the widest. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint."),
-                prop("variant", "Variant")
-                    .doc("Default `variant` of the buttons inside; a button's own prop wins, as for `color`, `size`, `radius`, `disabled` and `focusable_when_disabled`. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider."),
+                prop("variant", "Responsive<Variant>")
+                    .doc("Default `variant` of the buttons inside; a button's own prop wins, as for `color`, `size`, `radius`, `disabled` and `focusable_when_disabled`. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. Or one per breakpoint, `variant: responsive(Variant::Filled).md(Variant::Outlined)`."),
                 prop("color", "ThemeAwareValue")
                     .doc("Default `color` of the buttons inside."),
-                prop("size", "Size")
-                    .doc("Default `size` of the buttons inside."),
-                prop("radius", "ThemeAwareValue")
-                    .doc("The group's outer corners, or any CSS, e.g. `radius: \"0\"`. The corners between two buttons are always square."),
+                prop("size", "Responsive<Size>")
+                    .doc("Default `size` of the buttons inside. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`."),
+                prop("radius", "Responsive<ThemeAwareValue>")
+                    .doc("The group's outer corners, or any CSS, e.g. `radius: \"0\"`. The corners between two buttons are always square. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xl)`."),
                 prop("disabled", "bool")
                     .doc("Disables every button inside that does not set `disabled` itself, and takes it out of the Tab order unless `focusable_when_disabled` says otherwise."),
                 prop("focusable_when_disabled", "bool")
@@ -106,7 +106,16 @@ pub fn ButtonGroupPage() -> Element {
                     .default("filled"),
                     // A bare `primary` is what an unset `color` resolves to, so that swatch prints nothing.
                     Control::color("color"),
-                    Control::sizes("size").default("md"),
+                    Control::sizes("size")
+                        .default("md")
+                        .code(|_, values| match (responsive_on(values), values.str("size").as_str()) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Xs).md(Size::{:?})",
+                                Size::from(size)
+                            )],
+                            (false, "md") => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
                     Control::sizes("radius")
                         .default("sm"),
                     Control::switch("disabled"),
@@ -148,7 +157,10 @@ pub fn ButtonGroupPage() -> Element {
                             "primary" => Input::None,
                             color => Input::from(color),
                         },
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, chosen) => responsive(Size::Xs).md(chosen),
+                            (false, chosen) => chosen.into(),
+                        },
                         radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
                         focusable_when_disabled: values.str("focusable_when_disabled") == "true",

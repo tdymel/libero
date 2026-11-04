@@ -3,6 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
 
 mod demo;
@@ -193,6 +194,26 @@ const GROUPING: &str = r#"default_row_grouping: vec!["Role".to_string()],
 default_group_expansion: 1"#;
 
 /// Ten thousand rows, windowed.
+/// `xs` below `md`, the chosen size from it, while `responsive` is on.
+fn size_of(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Xs).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
+
 fn windowed(values: &DemoValues) -> bool {
     values.str("virtual_row_height") == "true"
 }
@@ -347,7 +368,7 @@ pub fn TablePage() -> Element {
                     prop("onexpandednodeschange", "EventHandler<Vec<String>>").default("None").doc("Called with the open tree rows a toggle asks for."),
                     prop("default_node_expansion", "usize").default("0").doc("How many tree levels start open, the first time there are rows, beside `default_expanded_nodes`: 1 opens the roots. 0 starts every row closed. Ignored with `expanded_nodes`."),
                     prop("cell_focus", "bool").default("false").doc("Makes the table a `role=\"grid\"` whose header and body cells are one tab stop: Tab enters on one cell, the first header cell until focus moves, and the arrows, Home, End, Ctrl+Home, Ctrl+End, PageUp and PageDown move it. On a header cell Enter or Space sorts and Ctrl+Enter opens its column menu; on a body cell Shift+Space selects the row with `selectable`. The stop stays where it was left and follows its row through a sort. A button or field in a cell stays a tab stop of its own, and a widget that takes the arrows keeps them. The leading checkbox, detail and reorder cells, group rows, the filter row and the footer stay out of the key map. Paged, `aria-rowcount` counts every page's rows; with a hidden column each cell carries its `aria-colindex`. An editable column turns it on. Give the rows a `.row_header()` column."),
-                    prop("size", "Size").default(theme.table.size.as_str()).doc("Cell padding and font size."),
+                    prop("size", "Responsive<Size>").default(theme.table.size.as_str()).doc("Cell padding and font size. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`. Breakpoints follow the window, not the parent. The padding follows in CSS; the windowed row height, the toolbar, the pager and the filters read it in Rust, so a server-rendered page shows the base there until it loads."),
                     prop("density", "Option<Size>").default("None").doc("The size a `TableDensityButton` picked, over `size`; set, it is controlled."),
                     prop("default_density", "Option<Size>").default("None").doc("Seeds the density once. Ignored when `density` is set."),
                     prop("ondensitychange", "Option<EventHandler<Size>>").default("None").doc("The density a `TableDensityButton` pick asks for."),
@@ -529,7 +550,10 @@ pub fn TablePage() -> Element {
                 ],
                 controls: vec![
                     Control::sizes("size")
-                        .default(theme.table.size.as_str()),
+                        .default(theme.table.size.as_str())
+                        .code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::switch("striped"),
                     // On, as the page's own `must` asks: the caption and toolbar stay put on a phone.
                     Control::switch("scroll").default("true").code(|_, values| match values.str("scroll") == "true" {

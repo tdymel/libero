@@ -169,6 +169,71 @@ fn avatar_radius_sx(size: Size) -> Sx {
 
 static AVATAR_BASE_SX: StaticSx = StaticSx::new(avatar_sx);
 
+/// An avatar's size, variant and radius as `states`, `sx` and vars, its range copies registered
+/// on `base`: shared with the group's overflow chip.
+pub(super) struct AvatarAxes<'a> {
+    /// For the colour vars: `Tonal` if any range is, the only look reading the container colours.
+    pub variant: Variant,
+    /// A plain radius, for the override var.
+    pub plain_radius: Option<&'a ThemeAwareValue>,
+    /// A responsive radius's override var per breakpoint, for under the caller's `sx`.
+    pub radius_sx: Option<Sx>,
+    pub states: States,
+}
+
+pub(super) fn use_avatar_axes<'a>(
+    base: &'static StaticSx,
+    sizes: Responsive<Size>,
+    variants: Responsive<Variant>,
+    radius: Option<&'a Responsive<ThemeAwareValue>>,
+    theme_radius: Size,
+    states: States,
+) -> AvatarAxes<'a> {
+    let variant = match variants
+        .breakpoints()
+        .any(|(_, variant)| variant == Variant::Tonal)
+    {
+        true => Variant::Tonal,
+        false => variants.base(),
+    };
+    // A plain radius stays on the override var; a responsive one rides the states and `sx`.
+    let radii = radius.filter(|radii| !radii.is_plain());
+    let radius_steps =
+        radii.map(|radii| radii.map(|value| ScaleOrCss::new(Some(&value), theme_radius).size));
+    let plain_radius = radius.filter(|_| radii.is_none()).map(Responsive::base_ref);
+    let radius_sx = radii.and_then(|radii| {
+        responsive_sx(radii, |sx, value| {
+            let css = ScaleOrCss::new(Some(&value), theme_radius)
+                .custom_css(AVATAR_RADII)
+                .unwrap_or_else(|| "initial".into());
+            sx.var(AVATAR_RADIUS.override_var(), css)
+        })
+    });
+
+    let states = states
+        .responsive(&sizes, |size| size.state_name())
+        .responsive(&variants, Variant::state_name);
+    let states = match &radius_steps {
+        Some(steps) => states.responsive(steps, |size| size.radius_state_name()),
+        None => states,
+    };
+
+    // Only the ranges this instance uses; a plain one registers nothing.
+    let mut copies = sizes.range_copies(|size| size.state_name(), AvatarDefaults::size_sx);
+    if let Some(steps) = &radius_steps {
+        copies.extend(steps.range_copies(|size| size.radius_state_name(), avatar_radius_sx));
+    }
+    copies.extend(variants.range_copies(Variant::state_name, variant_sx));
+    use_range_css(base, copies);
+
+    AvatarAxes {
+        variant,
+        plain_radius,
+        radius_sx,
+        states,
+    }
+}
+
 /// The picture lies over the fallback, for a renderer that fires no `error`.
 const LAYERED: &str = "layered";
 /// A picture shows with an `overhang`.
@@ -293,32 +358,17 @@ pub fn Avatar(props: AvatarProps) -> Element {
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.avatar.color));
 
-    // Only `Tonal` reads the container colours: computed if any range is tonal.
-    let variant = match variants
-        .breakpoints()
-        .any(|(_, variant)| variant == Variant::Tonal)
-    {
-        true => Variant::Tonal,
-        false => variants.base(),
-    };
-    // A plain radius stays on the override var; a responsive one rides the states and `sx`.
-    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
-    let radius_steps = radii
-        .map(|radii| radii.map(|value| ScaleOrCss::new(Some(&value), theme.avatar.radius).size));
-    let plain_radius = props
-        .radius
-        .as_ref()
-        .filter(|_| radii.is_none())
-        .map(Responsive::base_ref);
-    let radius_sx = radii.and_then(|radii| {
-        responsive_sx(radii, |sx, value| {
-            let css = ScaleOrCss::new(Some(&value), theme.avatar.radius)
-                .custom_css(AVATAR_RADII)
-                .unwrap_or_else(|| "initial".into());
-            sx.var(AVATAR_RADIUS.override_var(), css)
-        })
-    });
-    let own_sx = radius_sx.map(|radius_sx| with_own(Some(radius_sx), &props.sx));
+    let axes = use_avatar_axes(
+        &AVATAR_BASE_SX,
+        sizes,
+        variants,
+        props.radius.as_ref(),
+        theme.avatar.radius,
+        props.states.unwrap_or_default(),
+    );
+    let own_sx = axes
+        .radius_sx
+        .map(|radius_sx| with_own(Some(radius_sx), &props.sx));
     let user_sx = own_sx.as_ref().unwrap_or(&props.sx);
 
     let src = own_src;
@@ -329,34 +379,18 @@ pub fn Avatar(props: AvatarProps) -> Element {
     let overhang = props.overhang.unwrap_or(theme.avatar.overhang);
     let overhangs = overhang > 0 && src.is_some() && !failed;
 
-    let variables = avatar_variables(Some(&color), variant, plain_radius);
+    let variables = avatar_variables(Some(&color), axes.variant, axes.plain_radius);
     let variables: Input<Variables> = match overhangs {
         true => variables.with(AVATAR_OVERHANG, Some(format!("{overhang}%"))),
         false => variables,
     }
     .into();
-    let states = props
+    let states: Input<States> = axes
         .states
-        .unwrap_or_default()
-        .responsive(&sizes, |size| size.state_name())
-        .responsive(&variants, Variant::state_name);
-    let states = match &radius_steps {
-        Some(steps) => states.responsive(steps, |size| size.radius_state_name()),
-        None => states,
-    };
-    let states: Input<States> = states
         .with(LAYERED, layered)
         .with(OVERHANG, overhangs)
         .with(BARE, overhangs && !layered)
         .into();
-
-    // Only the ranges this instance uses; a plain one registers nothing.
-    let mut copies = sizes.range_copies(|size| size.state_name(), AvatarDefaults::size_sx);
-    if let Some(steps) = &radius_steps {
-        copies.extend(steps.range_copies(|size| size.radius_state_name(), avatar_radius_sx));
-    }
-    copies.extend(variants.range_copies(Variant::state_name, variant_sx));
-    use_range_css(&AVATAR_BASE_SX, copies);
 
     let fallback = match (props.children, props.initials) {
         (Some(children), _) => children,

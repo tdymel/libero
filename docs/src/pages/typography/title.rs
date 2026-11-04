@@ -80,7 +80,7 @@ pub fn TitlePage() -> Element {
                 prop("truncate", "Truncate")
                     .doc("Cuts the title on one line with an ellipsis at its `end` or `start`. `line_clamp` wins when both are set."),
                 prop("line_clamp", "Responsive<u32>")
-                    .doc("Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(2).md(0)`, where `0` lifts the clamp in that range."),
+                    .doc("Cuts the title after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the title is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(2).md(0)`, where `0` lifts the clamp in that range, or cuts one line with `truncate` when one is set."),
                 prop("children", "Element").default("required").doc("The heading text. An `Anchor` inside it takes the title's font, size and weight."),
             ])],
             accessibility: a11y()

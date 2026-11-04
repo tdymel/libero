@@ -7,7 +7,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_cache, use_theme},
+    hooks::{use_cache, use_responsive, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR,
@@ -111,7 +111,8 @@ base_props! {
         /// `px` or `rem` length, counting a `rem` as 16px; another CSS value packs by the
         /// theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's
         /// vertical gap with it; a plain row gap keeps its size. Per breakpoint too,
-        /// `gap: responsive(Size::Xs).md(Size::Lg)`; masonry packs by the base gap.
+        /// `gap: responsive(Size::Xs).md(Size::Lg)`; masonry packs by each breakpoint's gap, by
+        /// the base one until mount when server-rendered.
         #[props(default, into)]
         gap: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
@@ -218,7 +219,18 @@ pub fn GridZone(props: GridZoneProps) -> Element {
             })
         });
     let own_sx = with_own(breakpoint_gaps, &props.sx);
-    let custom = gap.custom_css(SizeCss::SPACING);
+    // Masonry packs by the gap in effect, per breakpoint from mount (5660); a plain one reads no signal.
+    let packing = props
+        .gap
+        .as_ref()
+        .filter(|_| props.masonry)
+        .map_or_else(|| Responsive::new(None), |gaps| gaps.map(Some));
+    let packing = use_responsive(&packing)();
+    let packed = match &packing {
+        Some(value) => ScaleOrCss::new(Some(value), theme.grid.zone_gap),
+        None => gap.clone(),
+    };
+    let custom = packed.custom_css(SizeCss::SPACING);
     let measured = custom.as_deref().and_then(css_px);
     if props.masonry
         && let Some(css) = custom.as_deref().filter(|_| measured.is_none())
@@ -230,7 +242,9 @@ pub fn GridZone(props: GridZoneProps) -> Element {
             )
         });
     }
-    let full_gap_px = measured.map_or(theme.spacing.get(gap.size).into(), |px| px.round() as u32);
+    let full_gap_px = measured.map_or(theme.spacing.get(packed.size).into(), |px| {
+        px.round() as u32
+    });
     let gap_px = match *gap_cap.read() {
         Some(cap) if props.masonry => full_gap_px.min(cap),
         _ => full_gap_px,

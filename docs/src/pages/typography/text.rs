@@ -46,12 +46,28 @@ fn clamp(values: &DemoValues) -> Option<u32> {
     values.str("cut").parse().ok()
 }
 
+/// With `responsive` on, a `truncate` side below `md` and three lines from it.
+fn clamp_of(values: &DemoValues) -> Input<Responsive<u32>> {
+    match (
+        values.str("responsive") == "true",
+        values.str("cut").as_str(),
+    ) {
+        (true, "end" | "start") => Input::Value(responsive(0).md(3)),
+        _ => clamp(values).map_or(Input::None, |lines| Input::Value(lines.into())),
+    }
+}
+
 /// `truncate` or `line_clamp`, and the `sx` that narrows the preview to it.
 fn cut_code(values: &DemoValues) -> Vec<String> {
     let mut lines = Vec::new();
     match values.str("cut").as_str() {
         UNSET => {}
-        value @ ("end" | "start") => lines.push(format!("truncate: {value:?}")),
+        value @ ("end" | "start") => {
+            lines.push(format!("truncate: {value:?}"));
+            if values.str("responsive") == "true" {
+                lines.push("line_clamp: responsive(0).md(3)".to_string());
+            }
+        }
         lines_count => lines.push(format!("line_clamp: {lines_count}")),
     }
     if is_cut(values) {
@@ -83,7 +99,7 @@ pub fn TextPage() -> Element {
                 prop("truncate", "Truncate")
                     .doc("Cuts the text on one line with an ellipsis at its `end` or `start`. The element becomes a block, so a `span` truncates too. Set a `title` if the cut text matters; the full text stays in the accessible name. `line_clamp` wins when both are set."),
                 prop("line_clamp", "Responsive<u32>")
-                    .doc("Cuts the text after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the text is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(3).md(0)`, where `0` lifts the clamp in that range."),
+                    .doc("Cuts the text after this many lines with an ellipsis. Over `truncate`; `0` is off. On Blitz there is no line clamp: the text is cut at that many lines, without the ellipsis. Or one per breakpoint, `line_clamp: responsive(3).md(0)`, where `0` lifts the clamp in that range, or cuts one line with `truncate` when one is set."),
                 prop("children", "Element").default("required").doc("The text."),
             ])],
             accessibility: a11y()
@@ -159,7 +175,7 @@ pub fn TextPage() -> Element {
                             side @ ("end" | "start") => Input::from(side),
                             _ => Input::None,
                         },
-                        line_clamp: clamp(&values),
+                        line_clamp: clamp_of(&values),
                         sx: is_cut(&values).then(|| sx().max_width(CUT_WIDTH)),
                         color: match values.str("color").as_str() {
                             UNSET => Input::None,

@@ -47,10 +47,10 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `orientation` | `Responsive<Orientation>` | `horizontal` | `"vertical"` stacks the buttons, each as wide as the widest. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`: the layout switches with the window from the first paint. |
-| `variant` | `Variant` | - | Default `variant` of the buttons inside; a button's own prop wins, as for `color`, `size`, `radius`, `disabled` and `focusable_when_disabled`. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. |
+| `variant` | `Responsive<Variant>` | - | Default `variant` of the buttons inside; a button's own prop wins, as for `color`, `size`, `radius`, `disabled` and `focusable_when_disabled`. Between two buttons without a visible border of their own (every variant but `outlined`), the group draws a thin divider. Or one per breakpoint, `variant: responsive(Variant::Filled).md(Variant::Outlined)`. |
 | `color` | `ThemeAwareValue` | - | Default `color` of the buttons inside. |
-| `size` | `Size` | - | Default `size` of the buttons inside. |
-| `radius` | `ThemeAwareValue` | - | The group's outer corners, or any CSS, e.g. `radius: "0"`. The corners between two buttons are always square. |
+| `size` | `Responsive<Size>` | - | Default `size` of the buttons inside. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | - | The group's outer corners, or any CSS, e.g. `radius: "0"`. The corners between two buttons are always square. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xl)`. |
 | `disabled` | `bool` | - | Disables every button inside that does not set `disabled` itself, and takes it out of the Tab order unless `focusable_when_disabled` says otherwise. |
 | `focusable_when_disabled` | `bool` | - | Default `focusable_when_disabled` of the buttons inside: a disabled one stays a Tab stop. |
 | `value` | `HashSet<String>` | - | The `value`s of the pressed buttons, strictly controlled. Set, every `Button` and `ActionIcon` with a `value` is a toggle with `aria-pressed`, unless it sets `selected` itself. Unset, a plain group. |

@@ -4,6 +4,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{Avatar, AvatarGroup, AvatarPart, AvatarSpec, Code, Flex, Input, Text},
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
 
@@ -58,6 +59,26 @@ fn wrap_group(values: &DemoValues, source: &str) -> String {
     match source.strip_suffix('}') {
         Some(open) if source.contains('\n') => format!("{open}{people}}}"),
         _ => format!("AvatarGroup {{\n{people}}}"),
+    }
+}
+
+/// `xs` below `md`, the chosen size from it, while `responsive` is on.
+fn size_of(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Xs).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
     }
 }
 
@@ -150,15 +171,15 @@ pub fn AvatarPage() -> Element {
                     prop("spacing", "Responsive<ThemeAwareValue>")
                         .default("sm")
                         .doc("How far each circle overlaps the one before it, or any CSS, e.g. `spacing: \"0\"`. Or one per breakpoint, `spacing: responsive(Size::Xs).md(Size::Md)`."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.avatar.size.as_str())
-                        .doc("For every member and the chip."),
-                    prop("radius", "ThemeAwareValue")
+                        .doc("For every member and the chip. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.avatar.radius.as_str())
-                        .doc("For every member and the chip, or any CSS, e.g. `radius: \"0\"`."),
-                    prop("variant", "Variant")
+                        .doc("For every member and the chip, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xxl)`."),
+                    prop("variant", "Responsive<Variant>")
                         .default(theme.avatar.variant.as_str())
-                        .doc("For every member and the chip. `standard` has no edge, so it suits a single avatar: in a group its members read as loose initials."),
+                        .doc("For every member and the chip. `standard` has no edge, so it suits a single avatar: in a group its members read as loose initials. Or one per breakpoint, `variant: responsive(Variant::Outlined).md(Variant::Filled)`."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.avatar.color.as_str())
                         .doc("The tint of every member without a `color` of its own."),
@@ -243,7 +264,11 @@ pub fn AvatarPage() -> Element {
                     Control::slider("spacing", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm")
                         .hidden_when(|values| !grouped(values)),
-                    Control::sizes("size").default(theme.avatar.size.as_str()),
+                    Control::sizes("size")
+                        .default(theme.avatar.size.as_str())
+                        .code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::sizes("radius")
                         .default(theme.avatar.radius.as_str()),
                     Control::toggle(
@@ -279,7 +304,7 @@ pub fn AvatarPage() -> Element {
                                 total: values.str("total").parse::<usize>().ok(),
                                 surplus: (values.str("surplus") == "true").then_some(surplus),
                                 spacing: values.str("spacing"),
-                                size: values.str("size"),
+                                size: size_of(&values),
                                 radius: values.str("radius"),
                                 variant: values.str("variant"),
                                 color: Input::from(values.str("color")),
@@ -298,7 +323,7 @@ pub fn AvatarPage() -> Element {
                             },
                             initials: (content == "initials" || content == "broken")
                                 .then(|| "AL".to_string()),
-                            size: values.str("size"),
+                            size: size_of(&values),
                             radius: values.str("radius"),
                             variant: values.str("variant"),
                             color: Input::from(values.str("color")),

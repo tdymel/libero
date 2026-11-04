@@ -14,6 +14,7 @@ use crate::{
     hooks::use_range_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, Responsive, Size},
+    tokens::range_token,
     utils::warn,
 };
 
@@ -130,6 +131,68 @@ fn orientation_sx(orientation: Orientation) -> Sx {
     }
 }
 
+/// `:is(..)` over a group's run words, which children taking its value carry too.
+fn any_word(words: &[&'static str]) -> String {
+    let words: Vec<String> = words
+        .iter()
+        .map(|word| format!("[data-state~=\"{word}\"]"))
+        .collect();
+    // `[data-state]` first: one attribute more than the static rule each copy answers.
+    format!("[data-state]:is({})", words.join(", "))
+}
+
+/// A responsive group's outlined runs: its children carry the run word, not `outlined`, so the
+/// static seam line covers their rim; their own colour wins it back.
+fn outlined_runs_sx(words: &[&'static str]) -> Sx {
+    let rim = sx().border_color("var(--lsx-button-color, var(--lsx-action-icon-color))");
+    let child = any_word(words);
+    ["", " > :first-child"]
+        .into_iter()
+        .fold(sx(), |base, inner| {
+            base.selector(
+                format!("& > :not(:first-child){inner}{CONTROL}{child}"),
+                rim.clone(),
+            )
+        })
+        .selector(
+            format!("& > [role=\"group\"] > div > {CONTROL}{child}"),
+            rim,
+        )
+}
+
+/// A responsive group's compact runs: the static coarse row height, for children's run words.
+fn compact_runs_sx(words: &[&'static str]) -> Sx {
+    let child = any_word(words);
+    sx().media(
+        COARSE_POINTER,
+        sx().selector(
+            format!("& > {CONTROL}{child}"),
+            sx().min_height(COARSE_TARGET),
+        )
+        .selector(
+            format!("& > * > {CONTROL}{child}"),
+            sx().min_height(COARSE_TARGET),
+        ),
+    )
+}
+
+/// The run words of `value`'s runs equal to `wanted`, as its children carry them.
+fn run_words<T: Clone + PartialEq>(
+    value: &Responsive<T>,
+    token: impl Fn(&T) -> &'static str,
+    wanted: impl Fn(&T) -> bool,
+) -> Vec<&'static str> {
+    match value.is_plain() {
+        true => Vec::new(),
+        false => value
+            .runs()
+            .into_iter()
+            .filter(|(_, _, run)| wanted(run))
+            .map(|(from, until, run)| range_token(from, until, token(&run)))
+            .collect(),
+    }
+}
+
 // One `when` deep, so these outrank the controls' own radius and variant rules.
 static BUTTON_GROUP_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
@@ -163,15 +226,17 @@ base_props! {
         /// Unset, `"horizontal"`. Per breakpoint too: `responsive(Orientation::Vertical).sm(Orientation::Horizontal)`.
         #[props(default, into)]
         orientation: Input<Responsive<Orientation>>,
-        /// Default `size` of the buttons inside.
+        /// Default `size` of the buttons inside. Per breakpoint too: `responsive(Size::Xs).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// The group's outer corners, a size word or any CSS; the inner ones are always square.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Default `variant` of the buttons inside. Borderless ones get a divider between them.
+        /// Per breakpoint too: `responsive(Variant::Filled).md(Variant::Outlined)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         /// Default `color` of the buttons inside.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -271,15 +336,45 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
         );
     }
 
-    let states: Input<States> = props
+    // A responsive size or variant: the group carries its children's run words, so its copies
+    // reach them; plain ones add nothing (5667).
+    let sizes = props.size.copied_or(Size::Md.into());
+    let compact = |size: &Size| matches!(size, Size::Xs | Size::Sm);
+    let compacts = sizes.map(|size| compact(&size));
+    let compact_words = run_words(&compacts, |_| ACTION_ICON_COMPACT, |compact| *compact);
+    let variants = props.variant.copied_or(Variant::Filled.into());
+    let outlined_words = run_words(
+        &variants,
+        |variant| variant.state_name(),
+        |variant| *variant == Variant::Outlined,
+    );
+    let mut states = props
         .states
         .unwrap_or_default()
-        .responsive(&orientation, |orientation| orientation.state_name())
-        .into();
-    use_range_css(
-        &BUTTON_GROUP_SX,
-        orientation.range_copies(|orientation| orientation.state_name(), orientation_sx),
-    );
+        .responsive(&orientation, |orientation| orientation.state_name());
+    for word in compact_words.iter().chain(&outlined_words) {
+        states = states.with(word, true);
+    }
+    let states: Input<States> = states.into();
+    let mut copies =
+        orientation.range_copies(|orientation| orientation.state_name(), orientation_sx);
+    copies.extend(compacts.range_copies(
+        |compact| match compact {
+            true => ACTION_ICON_COMPACT,
+            false => "touch-other",
+        },
+        move |compact| match compact {
+            true => compact_runs_sx(&compact_words),
+            false => sx(),
+        },
+    ));
+    copies.extend(variants.range_copies(Variant::state_name, move |variant| {
+        match variant == Variant::Outlined {
+            true => outlined_runs_sx(&outlined_words),
+            false => sx(),
+        }
+    }));
+    use_range_css(&BUTTON_GROUP_SX, copies);
 
     use_box()
         .framework_sx(&BUTTON_GROUP_SX)

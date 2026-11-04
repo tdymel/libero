@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Text, Timeline, TimelinePart};
-use libero::theme::{Responsive, Size, responsive};
+use libero::theme::{Responsive, Size, TimelineAlign, responsive};
 use libero::use_theme;
 
 mod demo;
@@ -27,6 +27,34 @@ fn bullet_size_code(control: &Control, values: &DemoValues) -> Vec<String> {
         )],
         (false, bullet_size) if bullet_size == control.default => vec![],
         (false, bullet_size) => vec![format!("bullet_size: {bullet_size:?}")],
+    }
+}
+
+fn align_word(word: &str) -> TimelineAlign {
+    match word {
+        "end" => TimelineAlign::End,
+        "alternate" => TimelineAlign::Alternate,
+        _ => TimelineAlign::Start,
+    }
+}
+
+/// `start` below `md`, the chosen align from it, while `responsive` is on.
+fn align_of(values: &DemoValues) -> Responsive<TimelineAlign> {
+    let align = align_word(&values.str("align"));
+    match values.str("responsive") == "true" {
+        true => responsive(TimelineAlign::Start).md(align),
+        false => align.into(),
+    }
+}
+
+fn align_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("align")) {
+        (true, align) => vec![format!(
+            "align: responsive(TimelineAlign::Start).md(TimelineAlign::{:?})",
+            align_word(&align)
+        )],
+        (false, align) if align == control.default => vec![],
+        (false, align) => vec![format!("align: {align:?}")],
     }
 }
 
@@ -69,7 +97,7 @@ pub fn TimelinePage() -> Element {
                         .doc("The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so \"step 7 of 4\" means finished."),
                     prop("align", "Responsive<TimelineAlign>")
                         .default("start")
-                        .doc("`start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. With an event's `.opposite(..)`, every `align` draws as `start` below `sm`. Or one per breakpoint, `align: responsive(TimelineAlign::Start).md(TimelineAlign::Alternate)`. Breakpoints follow the window, not the parent. With `opposite` content, the reading order follows the base."),
+                        .doc("`start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. With an event's `.opposite(..)`, every `align` draws as `start` below `sm`. Or one per breakpoint, `align: responsive(TimelineAlign::Start).md(TimelineAlign::Alternate)`. Breakpoints follow the window, not the parent. With `opposite` content, the reading order and each body's side follow it too; a server-rendered page shows the base until it loads."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("The active accent. An event's own `.color(..)` overrides it."),
@@ -145,8 +173,11 @@ pub fn TimelinePage() -> Element {
                             "none" => vec![],
                             value => vec![format!("active: {value}")],
                         }),
+                    // `alternate`, so the responsive `start` below `md` shows at the default switches.
                     Control::toggle("align", ["start", "end", "alternate"])
-                        .labels(["Start", "End", "Alternate"]),
+                        .labels(["Start", "End", "Alternate"])
+                        .default("alternate")
+                        .code(align_code),
                     // No `UNSET` swatch: unset is `primary`, the default. Hidden with no
                     // `active`, since nothing is drawn in the accent then.
                     Control::color("color").hidden_when(|values| values.str("active") == "none"),
@@ -179,7 +210,7 @@ pub fn TimelinePage() -> Element {
                         Timeline {
                             items,
                             active,
-                            align: values.str("align"),
+                            align: align_of(&values),
                             color: values.str("color"),
                             bullet_size: bullet_size_of(&values),
                             radius: values.str("radius"),

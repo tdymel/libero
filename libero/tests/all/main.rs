@@ -123,6 +123,7 @@ mod responsive_orientation;
 mod responsive_overlay;
 mod responsive_placement;
 mod responsive_r4f;
+mod responsive_r4g;
 mod rich_text_view;
 mod rsx_wrapping;
 mod scroll_area;

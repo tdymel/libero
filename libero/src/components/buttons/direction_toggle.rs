@@ -73,8 +73,7 @@ pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
         props.variant.copied_or(
             group
                 .variant
-                .unwrap_or(theme.direction_toggle.variant)
-                .into(),
+                .unwrap_or(theme.direction_toggle.variant.into()),
         ),
     );
     let color = props

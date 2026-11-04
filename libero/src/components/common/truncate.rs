@@ -1,5 +1,7 @@
 use crate::{
-    components::common::{Input, Variables, input_from_str, inset_focus_ring_sx, variables},
+    components::common::{
+        Input, States, Variables, input_from_str, inset_focus_ring_sx, variables,
+    },
     platform::clamps_lines,
     str_enum::str_enum,
     sx::{Sx, sx},
@@ -67,6 +69,51 @@ impl Cut {
                 matches!(self, Self::Lines(_) | Self::LinesPerRange),
             ),
         ]
+    }
+
+    /// A per-breakpoint clamp with a `truncate` cuts one line where its count is `0` (5659): the
+    /// clamp and the truncate as run words. `None` otherwise, the cut's plain words.
+    pub(crate) fn runs(
+        self,
+        truncate: &Input<Truncate>,
+        line_clamp: &Input<Responsive<u32>>,
+    ) -> Option<Responsive<&'static str>> {
+        let (Self::LinesPerRange, Some(&cut), Some(clamp)) =
+            (self, truncate.as_ref(), line_clamp.as_ref())
+        else {
+            return None;
+        };
+        let lifted = clamp.base() == 0 || clamp.breakpoints().any(|(_, n)| n == 0);
+        lifted.then(|| {
+            clamp.map(|n| match n {
+                0 => cut.state_name(),
+                _ => LINE_CLAMP_STATE,
+            })
+        })
+    }
+
+    /// The cut's words on `states`: [`Cut::runs`]' run words when set.
+    pub(crate) fn with_states(
+        self,
+        states: States,
+        runs: Option<&Responsive<&'static str>>,
+    ) -> States {
+        match runs {
+            Some(runs) => states.responsive(runs, |word| word),
+            None => self
+                .states()
+                .into_iter()
+                .fold(states, |states, (state, on)| states.with(state, on)),
+        }
+    }
+
+    /// Whether the text sits in a `bdi`, which a start cut in any range needs.
+    pub(crate) fn isolates(self, runs: Option<&Responsive<&'static str>>) -> bool {
+        let start = Truncate::Start.state_name();
+        self.is_start()
+            || runs.is_some_and(|runs| {
+                runs.base() == start || runs.breakpoints().any(|(_, word)| word == start)
+            })
     }
 
     pub(crate) fn variables(self) -> Input<Variables> {
@@ -184,6 +231,23 @@ mod tests {
             Cut::of(&Input::None, &crate::theme::responsive(0).md(0).into()),
             Cut::None
         );
+    }
+
+    /// Todo 5659: a `0` range with a `truncate` cuts one line there.
+    #[test]
+    fn a_zero_range_with_a_truncate_runs_the_truncate_there() {
+        let end = Input::from(Truncate::End);
+        let clamp: Input<Responsive<u32>> = crate::theme::responsive(0).md(3).into();
+        let cut = Cut::of(&end, &clamp);
+        assert_eq!(
+            cut.runs(&end, &clamp),
+            Some(crate::theme::responsive("truncate-end").md("line-clamp"))
+        );
+        // No truncate, or no `0` range: the plain clamp words.
+        assert_eq!(cut.runs(&Input::None, &clamp), None);
+        let counts: Input<Responsive<u32>> = crate::theme::responsive(2).md(3).into();
+        assert_eq!(Cut::of(&end, &counts).runs(&end, &counts), None);
+        assert!(cut.isolates(cut.runs(&Input::from(Truncate::Start), &clamp).as_ref()));
     }
 
     #[test]

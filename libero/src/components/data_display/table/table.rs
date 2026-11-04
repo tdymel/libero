@@ -19,8 +19,8 @@ use crate::{
         overlay::MenuPart,
     },
     hooks::{
-        use_debounced_callback, use_element, use_formats, use_id, use_localization,
-        use_resize_fallback, use_theme,
+        use_debounced_callback, use_element, use_formats, use_id, use_localization, use_range_css,
+        use_resize_fallback, use_responsive, use_theme,
     },
     platform::{
         ElementApi, SCROLL_MARGIN_BOTTOM_VAR, SCROLL_MARGIN_VAR, spaces_inline_boxes,
@@ -28,8 +28,8 @@ use crate::{
     },
     sx::{StaticSx, Sx, sx},
     theme::{
-        CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, Size, TABLE_GROUP, TABLE_PAD_X, TableDefaults,
-        ios_text_floor_sx,
+        CHECKBOX_BOX_SIZE, CssVar, NamedColorCss, Responsive, Size, TABLE_GROUP, TABLE_PAD_X,
+        TableDefaults, ios_text_floor_sx,
     },
 };
 
@@ -1205,9 +1205,11 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Ctrl+Enter opens its column menu, Shift+Space selects a body cell's row.
     #[props(default)]
     cell_focus: bool,
-    /// Cell padding and font size.
+    /// Cell padding and font size. Per breakpoint too: `responsive(Size::Xs).md(Size::Md)`;
+    /// the padding follows in CSS, the row maths, toolbar, pager and filters from the base
+    /// until mount when server-rendered.
     #[props(default, into)]
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     /// The size a `TableDensityButton` picked, over `size`; set, it is controlled.
     #[props(default)]
     density: Option<Size>,
@@ -1451,10 +1453,28 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
          name.",
     );
     // A picked density wins over `size`.
-    let size = state
-        .density
-        .read()
-        .unwrap_or(props.size.copied_or(use_theme().table.size));
+    let theme_size = use_theme().table.size;
+    let picked = state.density.read();
+    let sizes = match picked {
+        Some(size) => Responsive::new(size),
+        None => props.size.copied_or(theme_size.into()),
+    };
+    // The cells follow the window in CSS; what Rust reads from the size, from mount.
+    let size = use_responsive(&sizes)();
+    use_range_css(
+        &TABLE_SX,
+        sizes.range_copies(
+            |size| size.state_name(),
+            |size| TABLE_SX.axis_block(size.state_name()),
+        ),
+    );
+    use_range_css(
+        &TABLE_CAPTION_SX,
+        sizes.range_copies(
+            |size| size.state_name(),
+            |size| TABLE_CAPTION_SX.axis_block(size.state_name()),
+        ),
+    );
     let localization = use_localization();
     let (labels, lang) = (localization.table, localization.lang);
     let user_sort = UserSort::new(state.sort, announcer, labels);
@@ -1513,7 +1533,9 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         }
     });
     let scrolls = props.scroll || bounded;
-    let size_states: Input<States> = States::new().with(size.state_name(), true).into();
+    let size_states: Input<States> = States::new()
+        .responsive(&sizes, |size| size.state_name())
+        .into();
     let caption_box = use_box()
         .framework_sx(&TABLE_CAPTION_SX)
         .states(&size_states)
@@ -2041,7 +2063,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
 
     let states: Input<States> = std::mem::take(&mut props.states)
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with("striped", props.striped)
         .with("row-click", props.onrowclick.is_some())
         .with(

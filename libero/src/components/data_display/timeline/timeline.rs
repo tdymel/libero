@@ -11,7 +11,7 @@ use crate::{
         data_display::responsive_props::and_sx,
         layout::use_box,
     },
-    hooks::{use_range_css, use_theme},
+    hooks::{use_range_css, use_responsive, use_theme},
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         Responsive, Size, SizeCss, TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_COLOR,
@@ -286,7 +286,8 @@ base_props! {
         active: Option<usize>,
         /// Which side of the rail content sits on; `"alternate"` fills its parent.
         /// Per breakpoint too: `responsive(TimelineAlign::Start).md(TimelineAlign::Alternate)`;
-        /// with `opposite` content, the reading order follows the base.
+        /// with `opposite` content, the reading order follows it too, from the base until
+        /// mount when server-rendered.
         #[props(default, into)]
         align: Input<Responsive<TimelineAlign>>,
         /// The active accent. Per-event colours override it.
@@ -330,8 +331,14 @@ base_props! {
 pub fn Timeline(props: TimelineProps) -> Element {
     let theme = use_theme();
     let aligns = props.align.copied_or(theme.timeline.align.into());
-    // Item order and `content-end` are Rust's: they follow the base.
-    let align = aligns.base();
+    // One event with an opposite centres the rail of every event.
+    let opposed = props.items.iter().any(|item| item.opposite.is_some());
+    // Item order and `content-end` are Rust's: beside an opposite they follow the window,
+    // from the base on the server; otherwise nothing reads them, so nothing watches.
+    let align = use_responsive(&match opposed {
+        true => aligns,
+        false => aligns.base().into(),
+    })();
     let bullet_sizes = props
         .bullet_size
         .copied_or(theme.timeline.bullet_size.into());
@@ -344,9 +351,6 @@ pub fn Timeline(props: TimelineProps) -> Element {
     let radius_steps = radius.steps;
     let gap_steps = gap.steps;
     let sx = with_own(and_sx(radius.sx.clone(), gap.sx.clone()), &props.sx);
-
-    // One event with an opposite centres the rail of every event.
-    let opposed = props.items.iter().any(|item| item.opposite.is_some());
 
     let states: Input<States> = props
         .states
@@ -493,6 +497,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
 
             // Reading order follows the drawn one: a `content-end` opposite sits first (5452).
             // Below `sm` every opposite is drawn first; the others keep body first there (accepted).
+            // A responsive align reorders after mount when server-rendered (5673).
             let children = match opposed && content_end {
                 true => vec![bullet, opposite, body],
                 false => vec![bullet, body, opposite],

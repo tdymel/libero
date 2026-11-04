@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::avatar::{avatar_sx, avatar_variables};
+use super::avatar::{avatar_sx, avatar_variables, use_avatar_axes};
 use super::spec::AvatarSpec;
 use crate::{
     components::{
@@ -14,7 +14,7 @@ use crate::{
     },
     hooks::{use_id, use_localization, use_theme},
     localization::fill,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, Responsive, Size, SizeCss},
 };
 
@@ -75,15 +75,18 @@ base_props! {
         /// `spacing: responsive(Size::Xs).md(Size::Md)`.
         #[props(default, into)]
         spacing: Input<Responsive<ThemeAwareValue>>,
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// A step on `Avatar`'s radius scale, or any CSS, for every member and the chip.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xxl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// For every member and the chip. `Standard` has no edge, so it suits a single
         /// avatar: in a group its members read as loose initials.
+        /// Per breakpoint too: `responsive(Variant::Outlined).md(Variant::Filled)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         /// The tint every member without one of its own takes.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -115,8 +118,8 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
         theme.avatar_group.spacing,
     );
     let spacing_sx = var_sx(&props.spacing, AVATAR_GROUP_SPACING, Some(SizeCss::SPACING));
-    let size = props.size.copied_or(theme.avatar.size);
-    let variant = props.variant.copied_or(theme.avatar.variant);
+    let sizes = props.size.copied_or(theme.avatar.size.into());
+    let variants = props.variant.copied_or(theme.avatar.variant.into());
     let color = props
         .color
         .as_ref()
@@ -143,18 +146,35 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
         )
         .into();
 
+    // The chip draws with the members' axes; its copies register only while it shows.
+    let chip_axes = use_avatar_axes(
+        &AVATAR_CHIP_SX,
+        match hidden > 0 {
+            true => sizes,
+            false => sizes.base().into(),
+        },
+        match hidden > 0 {
+            true => variants,
+            false => variants.base().into(),
+        },
+        props.radius.as_ref().filter(|_| hidden > 0),
+        theme.avatar.radius,
+        States::default().with("grouped", true),
+    );
     // Through `variables`, so a var the chip stops setting is reverted
     // ([[codebase/css-vars]]). The hook runs unconditionally.
     let chip_variables: Input<Variables> = match hidden > 0 {
         // The bottom of the stack, under every member.
-        true => avatar_variables(Some(&color), variant, props.radius.as_ref())
+        true => avatar_variables(Some(&color), chip_axes.variant, chip_axes.plain_radius)
             .with(AVATAR_GROUP_INDEX, "1".to_string())
             .into(),
         false => Input::None,
     };
+    let chip_sx: Input<Sx> = chip_axes.radius_sx.into();
     let tip_id = use_id();
     let chip_style = use_box()
         .framework_sx(&AVATAR_CHIP_SX)
+        .sx(&chip_sx)
         .focus_ring(false)
         .variables(&chip_variables)
         .prepare();
@@ -176,10 +196,9 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
                     name: person.name.clone(),
                     src: person.src.clone(),
                     initials: person.initials.clone(),
-                    size,
+                    size: sizes,
                     radius: props.radius.clone(),
-                    // `input_from_str!` covers strings, not the enum itself.
-                    variant: Input::Value(Responsive::new(variant)),
+                    variant: variants,
                     color: match person.color.clone() {
                         Some(color) => Input::Value(color),
                         None => props.color.clone(),
@@ -216,13 +235,9 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             None => rsx! { "{count}" },
         };
 
-        let chip_states = States::default()
-            .with("grouped", true)
-            .with(size.state_name(), true)
-            .with(variant.state_name(), true);
         let chip = chip_style
             .clone()
-            .attr("data-state", chip_states.data_state())
+            .attr("data-state", chip_axes.states.data_state())
             .attr("role", "img")
             .attr("aria-label", more)
             // Focusable, so the tooltip is reachable without a pointer.

@@ -262,7 +262,7 @@ pub fn TeamTable(values: DemoValues) -> Element {
             Table {
                 key: "{remount}",
                 caption: "Team members",
-                size: values.str("size"),
+                size: super::size_of(&values),
                 striped: on("striped"),
                 scroll: scrolls,
                 sx: match scrolls {

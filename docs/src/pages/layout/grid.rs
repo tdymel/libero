@@ -4,8 +4,8 @@ use libero::{
     components::{
         Box, Code, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag, StaticGridTemplate, Text,
     },
-    sx::sx,
-    theme::{Responsive, responsive},
+    sx::{ThemeAwareValue, sx},
+    theme::{Responsive, Size, responsive},
 };
 
 /// The zone's children, printed verbatim - their point is that they are
@@ -179,8 +179,47 @@ fn controls() -> Vec<Control> {
         Control::switch("dense").hidden_when(wall),
         Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
             .default("md")
+            .code(
+                |_, values| match (responsive_on(values), values.str("gap").as_str()) {
+                    (true, gap) => vec![format!(
+                        "gap: responsive(ThemeAwareValue::from(Size::Xs)).md({})",
+                        gap_code(gap)
+                    )],
+                    (false, "md") => vec![],
+                    (false, gap) => vec![format!("gap: {gap:?}")],
+                },
+            )
+            .hidden_when(wall),
+        // On, so the breakpoint switch shows without another switch: resize the window.
+        Control::switch("responsive")
+            .default("true")
+            .code(|_, _| vec![])
             .hidden_when(wall),
     ]
+}
+
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
+/// The chosen gap as Rust: a size word, or `"0"`.
+fn gap_code(gap: &str) -> String {
+    match gap {
+        "0" => "\"0\".into()".to_string(),
+        size => format!("Size::{:?}.into()", Size::from(size)),
+    }
+}
+
+/// `xs` below `md`, the chosen gap from it, while `responsive` is on.
+fn gap_of(values: &DemoValues) -> Responsive<ThemeAwareValue> {
+    let gap = match values.str("gap").as_str() {
+        "0" => ThemeAwareValue::from("0"),
+        size => Size::from(size).into(),
+    };
+    match responsive_on(values) {
+        true => responsive(ThemeAwareValue::from(Size::Xs)).md(gap),
+        false => gap.into(),
+    }
 }
 
 fn wrap_layout(values: &DemoValues, source: &str) -> String {
@@ -209,7 +248,7 @@ pub fn GridPage() -> Element {
                     prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is a size container (`container-type: inline-size`), not a containing block: a `position: fixed` descendant, such as a `fixed` `Header`, stays on the viewport, and an absolutely positioned one needs `position: relative` on its `GridItem`. Omit it to use the zone on its own, without a `Grid`, and give it a width."),
                     prop("dense", "bool").default("false").doc("Fills the gaps a wider item left, so an item may move up or sideways out of source order."),
                     prop("masonry", "bool").default("false").doc("Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again. The first measure can log `ResizeObserver loop completed with undelivered notifications`: benign, the layout settles a frame later, so an error reporter can ignore it."),
-                    prop("gap", "Responsive<ThemeAwareValue>").default("md").doc("Space between items, or any CSS, e.g. `gap: \"12px\"`. Masonry packs by a `px` or `rem` gap, counting a `rem` as 16px; other CSS packs by the theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's vertical gap with it; a plain row gap keeps its size. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`; masonry packs by the base gap."),
+                    prop("gap", "Responsive<ThemeAwareValue>").default("md").doc("Space between items, or any CSS, e.g. `gap: \"12px\"`. Masonry packs by a `px` or `rem` gap, counting a `rem` as 16px; other CSS packs by the theme's gap. The column gap shrinks to 4% of the zone's width, and a masonry zone's vertical gap with it; a plain row gap keeps its size. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`; masonry packs by each breakpoint's gap, by the base one until the page loads when server-rendered."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridItem`s."),
                 ]),
@@ -299,7 +338,7 @@ pub fn GridPage() -> Element {
                             sx: sx().width("100%"),
                             masonry: values.str("masonry") == "true",
                             dense: values.str("dense") == "true",
-                            gap: values.str("gap"),
+                            gap: gap_of(&values),
                             {cards()}
                         }
                     },
