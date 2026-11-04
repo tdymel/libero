@@ -156,7 +156,10 @@ pub use handle::{FormHandle, use_form, use_form_context};
 #[cfg(any(feature = "image-cropper", feature = "file-field"))]
 pub use image_cropper::{Backdrop, CropEvent, CropOptions, CropRect, CropShape, PixelRect};
 #[cfg(feature = "image-cropper")]
-pub use image_cropper::{ImageCropper, ImageCropperControls, ImageCropperPart, ImageCropperProps};
+pub use image_cropper::{
+    ImageCropPreview, ImageCropPreviewProps, ImageCropper, ImageCropperControls, ImageCropperPart,
+    ImageCropperProps,
+};
 #[cfg(feature = "native-select")]
 pub use native_select::{NativeSelect, NativeSelectProps};
 #[cfg(feature = "number-field")]

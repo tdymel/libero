@@ -1,7 +1,7 @@
 //! The crop box's geometry, in fractions of the image so it needs no natural
 //! pixel size: WebView cannot read one.
 
-pub use crate::platform::image::Backdrop;
+pub use crate::platform::image::{Backdrop, CropShape};
 
 /// A crop, as fractions of the image's width and height from its top-left: 0-1 inside
 /// the picture, past it up to the cropper's `overhang`.
@@ -76,15 +76,6 @@ impl From<crate::components::form::ColorCode> for Backdrop {
             (alpha.clamp(0.0, 1.0) * 255.0).round() as u8,
         ])
     }
-}
-
-/// The mask over the image outside the crop. The crop itself stays a rectangle.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-pub enum CropShape {
-    #[default]
-    Rect,
-    /// An ellipse inscribed in the box: a circle with a square `aspect`.
-    Circle,
 }
 
 /// How a `FileField` with `crop` crops a picked image.
@@ -189,31 +180,92 @@ impl Grip {
 /// The room past the picture's edge a box may use, as a fraction of the picture per side.
 /// The box moves in "stage" fractions, 0-1 over the picture plus that room, and comes back
 /// in the picture's: with no room both are the same numbers.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub(super) struct Reach(f64);
+///
+/// Pan mode with an `aspect` on a picture of another shape first sets the picture, centred, on
+/// a canvas of the box's shape (as `on_square` would): the room and the stage count from that.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Reach {
+    over: f64,
+    /// The canvas's width and height over the picture's, 1 and 1 without one.
+    canvas: (f64, f64),
+}
+
+impl Default for Reach {
+    fn default() -> Self {
+        Self::new(0.0)
+    }
+}
 
 impl Reach {
     pub(super) fn new(overhang: f64) -> Self {
-        Self(match overhang.is_finite() {
-            true => overhang.clamp(0.0, 1.0),
-            false => 0.0,
-        })
+        Self {
+            over: match overhang.is_finite() {
+                true => overhang.clamp(0.0, 1.0),
+                false => 0.0,
+            },
+            canvas: (1.0, 1.0),
+        }
+    }
+
+    /// The picture on a canvas of `aspect`, width over height in px, when its own `ratio` differs.
+    pub(super) fn on_canvas(self, aspect: Option<f64>, ratio: Option<f64>) -> Self {
+        let valid = |value: &f64| value.is_finite() && *value > 0.0;
+        let (Some(aspect), Some(ratio)) = (aspect.filter(valid), ratio.filter(valid)) else {
+            return self;
+        };
+        let canvas = match ratio / aspect {
+            wide if wide > 1.0 + 1e-9 => (1.0, wide),
+            tall if tall < 1.0 - 1e-9 => (1.0 / tall, 1.0),
+            _ => (1.0, 1.0),
+        };
+        Self { canvas, ..self }
+    }
+
+    /// The canvas's width and height over the picture's; `(1, 1)` when it is the picture.
+    pub(super) fn canvas(self) -> (f64, f64) {
+        self.canvas
     }
 
     pub(super) fn get(self) -> f64 {
-        self.0
+        self.over
     }
 
-    /// The stage's size over the picture's.
+    /// The stage's size over the canvas's.
     fn span(self) -> f64 {
-        1.0 + 2.0 * self.0
+        1.0 + 2.0 * self.over
+    }
+
+    /// `min`, a fraction of the picture's side, on the stage: a side of the canvas's shorter axis.
+    fn least(self, min: f64) -> f64 {
+        min / (self.span() * self.canvas.0.min(self.canvas.1))
+    }
+
+    /// `rect` in fractions of the canvas, the picture centred on it.
+    pub(super) fn to_canvas(self, rect: CropRect) -> CropRect {
+        let (cw, ch) = self.canvas;
+        CropRect {
+            x: (rect.x + (cw - 1.0) / 2.0) / cw,
+            y: (rect.y + (ch - 1.0) / 2.0) / ch,
+            width: rect.width / cw,
+            height: rect.height / ch,
+        }
+    }
+
+    fn off_canvas(self, rect: CropRect) -> CropRect {
+        let (cw, ch) = self.canvas;
+        CropRect {
+            x: rect.x * cw - (cw - 1.0) / 2.0,
+            y: rect.y * ch - (ch - 1.0) / 2.0,
+            width: rect.width * cw,
+            height: rect.height * ch,
+        }
     }
 
     fn stage(self, rect: CropRect) -> CropRect {
-        let span = self.span();
+        let (span, rect) = (self.span(), self.to_canvas(rect));
         CropRect {
-            x: (rect.x + self.0) / span,
-            y: (rect.y + self.0) / span,
+            x: (rect.x + self.over) / span,
+            y: (rect.y + self.over) / span,
             width: rect.width / span,
             height: rect.height / span,
         }
@@ -221,16 +273,26 @@ impl Reach {
 
     fn unstage(self, rect: CropRect) -> CropRect {
         let span = self.span();
-        CropRect {
-            x: rect.x * span - self.0,
-            y: rect.y * span - self.0,
+        self.off_canvas(CropRect {
+            x: rect.x * span - self.over,
+            y: rect.y * span - self.over,
             width: rect.width * span,
             height: rect.height * span,
-        }
+        })
+    }
+
+    /// Pan mode's zoom, and the image's scale and offset in fractions of the cropper.
+    pub(super) fn image_transform(self, rect: CropRect) -> (f64, f64, f64) {
+        self.to_canvas(rect).image_transform()
+    }
+
+    /// Where pan mode holds the box, in fractions of the cropper.
+    pub(super) fn frame(self, rect: CropRect) -> CropRect {
+        self.to_canvas(rect).frame()
     }
 
     pub(super) fn scaled(self, rect: CropRect, factor: f64, min: f64) -> CropRect {
-        self.unstage(self.stage(rect).scaled(factor, min / self.span()))
+        self.unstage(self.stage(rect).scaled(factor, self.least(min)))
     }
 
     pub(super) fn resized(
@@ -243,7 +305,7 @@ impl Reach {
     ) -> CropRect {
         let span = self.span();
         let staged = self.stage(rect);
-        self.unstage(staged.resized(grip, dx / span, dy / span, ratio, min / span))
+        self.unstage(staged.resized(grip, dx / span, dy / span, ratio, self.least(min)))
     }
 
     pub(super) fn extreme(
@@ -255,7 +317,7 @@ impl Reach {
         (ratio, min): (Option<f64>, f64),
     ) -> CropRect {
         let staged = self.stage(rect);
-        self.unstage(staged.extreme(grip, greatest, pan, ratio, min / self.span()))
+        self.unstage(staged.extreme(grip, greatest, pan, ratio, self.least(min)))
     }
 
     pub(super) fn range(
@@ -265,11 +327,17 @@ impl Reach {
         pan: bool,
         locked: (Option<f64>, f64),
     ) -> (f64, f64) {
-        let value = |greatest| {
-            self.extreme(rect, grip, greatest, pan, locked)
-                .value(grip, pan)
-        };
+        let value =
+            |greatest| self.value(self.extreme(rect, grip, greatest, pan, locked), grip, pan);
         (value(false), value(true))
+    }
+
+    /// `grip`'s slider value, see [`CropRect::value`], pan mode's on the canvas.
+    pub(super) fn value(self, rect: CropRect, grip: Grip, pan: bool) -> f64 {
+        match pan {
+            true => self.to_canvas(rect).value(grip, pan),
+            false => rect.value(grip, pan),
+        }
     }
 
     /// Pan mode: `dx`, `dy` are fractions of the cropper, so they need no scaling.
@@ -285,7 +353,7 @@ impl Reach {
         to: (f64, f64),
         min: f64,
     ) -> CropRect {
-        self.unstage(self.stage(rect).zoomed(factor, from, to, min / self.span()))
+        self.unstage(self.stage(rect).zoomed(factor, from, to, self.least(min)))
     }
 }
 

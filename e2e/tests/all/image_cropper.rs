@@ -592,13 +592,16 @@ e2e::scenario!(
     native: skip("upstream: Blitz sizes the picture's grid row 217.67 px for a 200 px image under percentage padding, so the backdrop misses 1.5x")
 );
 
-/// `platform::image`: a file from bytes, a see-through probe, a square pad and a cut past the edge.
+/// `platform::image`: a file from bytes, a see-through probe, a square pad and a cut past the edge;
+/// then (5716) the size of a file and a data URL, a probe of that URL, a strip-read probe of an
+/// opaque RGBA pad, a circle cut leaving its corners see-through and a PNG written as a JPEG.
 async fn the_image_helpers_cut_and_probe_files<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#run").await?;
     eventually_text(
         d,
         "#helpers",
-        "Some(true) Some(false) 4x4 4x1",
+        "Some(true) Some(false) 4x4 4x1 | Some((2, 1)) Some(true) Some((2, 1)) Some((42, 41)) \
+         Some(false) Some(true) Some(\"image/jpeg\")",
         "the helpers",
     )
     .await
@@ -1095,6 +1098,8 @@ const MINUS: keyboard::Key = keyboard::Key {
 };
 
 /// Pan mode: the arrows and Move buttons move the picture, + and - zoom around the still box (1368, 3013).
+/// The 2:1 picture sits on a square canvas (5715): the box's crop starts at a zoom of 200%, and a
+/// step of the cropper moves the crop half as far in the picture.
 async fn the_keys_pan_and_zoom<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_text(d, "#crop", "30,10,40,80", "the starting square").await?;
     anyhow::ensure!(
@@ -1106,7 +1111,7 @@ async fn the_keys_pan_and_zoom<D: Driver>(d: &mut D, _route: &str) -> Result<()>
     eventually_text(d, "#crop", "32,14,36,73", "+").await?;
     eventually(d, "the box to speak the zoom", async |d| {
         Ok(d.attr(BOX, "aria-valuetext").await?.as_deref()
-            == Some("36% by 73%, at 32%, 14%, zoom 110%"))
+            == Some("36% by 73%, at 32%, 14%, zoom 220%"))
     })
     .await?;
     let (root, image) = (
@@ -1114,28 +1119,37 @@ async fn the_keys_pan_and_zoom<D: Driver>(d: &mut D, _route: &str) -> Result<()>
         d.rect("[data-slot=image]").await?,
     );
     anyhow::ensure!(
-        (image.width / root.width - 1.1).abs() < 0.02,
+        (image.width / root.width - 2.2).abs() < 0.04,
         "the image did not zoom: {} of {}",
         image.width,
         root.width
     );
     d.press(MINUS).await?;
     eventually_text(d, "#crop", "30,10,40,80", "-").await?;
+    // Two half steps of the picture: a single one lands on a rounding edge.
+    d.press(keyboard::ARROW_RIGHT).await?;
     d.press(keyboard::ARROW_RIGHT).await?;
     // The picture follows the arrow, as it follows a drag: the crop goes the other way.
     eventually_text(d, "#crop", "29,10,40,80", "ArrowRight").await?;
     d.drag("[data-slot=frame]", root.width / 10.0, 0.0).await?;
-    eventually_text(d, "#crop", "19,10,40,80", "a drag").await?;
+    eventually_text(d, "#crop", "24,10,40,80", "a drag").await?;
+    // Half a 5% step lands on a rounding edge too: two, each waited for.
     d.click("#cropper [aria-label='Move right']").await?;
-    eventually_text(d, "#crop", "14,10,40,80", "Move right").await?;
+    eventually(d, "Move right", async |d| {
+        Ok(d.text("#crop").await? != "24,10,40,80")
+    })
+    .await?;
+    d.click("#cropper [aria-label='Move right']").await?;
+    eventually_text(d, "#crop", "19,10,40,80", "Move right twice").await?;
     d.click("#cropper [aria-label='Move up']").await?;
-    eventually_text(d, "#crop", "14,15,40,80", "Move up").await
+    eventually_text(d, "#crop", "19,15,40,80", "Move up").await
 }
 
 e2e::scenario!(
     pan_mode_keys_move_and_zoom,
     "/image-cropper/pan",
-    the_keys_pan_and_zoom
+    the_keys_pan_and_zoom,
+    native: skip("upstream: Blitz sizes an image by its own ratio whatever its aspect-ratio, so pan mode keeps the picture's stage there (5715)")
 );
 
 /// Pan mode: the zoom bar sits under the image, clear of the still box's lower
@@ -1222,6 +1236,82 @@ e2e::scenario!(
     the_zoom_glyphs_zoom
 );
 
+/// Todo 5715: with a square box the 2:1 picture sits on a square stage, and a zoom out stops
+/// where its width fits the box, not its height; the stage is square and the frame covers it.
+async fn a_wide_picture_zooms_out_until_its_width_fits<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    eventually_text(d, "#crop", "30,10,40,80", "the starting square").await?;
+    let frame = d.rect("[data-slot=frame]").await?;
+    anyhow::ensure!(
+        (frame.width - frame.height).abs() < 1.0,
+        "the stage is not square: {frame:?}"
+    );
+    d.focus(BOX).await?;
+    for _ in 0..12 {
+        d.press(MINUS).await?;
+    }
+    eventually_text(d, "#crop", "0,-50,100,200", "the zoom out").await?;
+    let (image, crop) = (d.rect("[data-slot=image]").await?, d.rect(BOX).await?);
+    anyhow::ensure!(
+        (image.width - crop.width).abs() < 2.0 && (image.x - crop.x).abs() < 2.0,
+        "the picture {image:?} does not fill the box's width {crop:?}"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_wide_picture_zooms_out_until_its_width_fits,
+    "/image-cropper/pan",
+    a_wide_picture_zooms_out_until_its_width_fits,
+    native: skip("upstream: Blitz sizes an image by its own ratio whatever its aspect-ratio, so pan mode keeps the picture's stage there (5715)")
+);
+
+/// Todo 5715: `ImageCropPreview` shows the cropper's crop live: a key that pans the picture
+/// moves the preview's picture with it, and the preview stays its size.
+async fn the_preview_follows_the_crop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const PICTURE: &str = "#preview img";
+    eventually_text(d, "#crop", "30,10,40,80", "the starting square").await?;
+    let (preview, before) = (d.rect("#preview").await?, d.rect(PICTURE).await?);
+    anyhow::ensure!(
+        (preview.width - 100.0).abs() < 1.0 && (preview.height - 100.0).abs() < 1.0,
+        "the preview is {preview:?}"
+    );
+    // The crop is 40% of the picture's width: the picture is 2.5 previews wide.
+    anyhow::ensure!(
+        (before.width - 250.0).abs() < 1.0,
+        "the preview's picture is {before:?}"
+    );
+    d.focus(BOX).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "ArrowRight to move the crop", async |d| {
+        Ok(d.text("#crop").await? != "30,10,40,80")
+    })
+    .await?;
+    // The crop went left: the preview's picture moves right by that share of 2.5 previews.
+    let x: f64 = d
+        .text("#crop")
+        .await?
+        .split(',')
+        .next()
+        .unwrap_or("")
+        .parse()?;
+    let shift = (30.0 - x) / 40.0 * 100.0;
+    eventually(d, "the preview's picture to follow", async |d| {
+        let after = d.rect(PICTURE).await?;
+        Ok((after.x - before.x - shift).abs() < 0.6)
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_preview_follows_the_crop,
+    "/image-cropper/preview",
+    the_preview_follows_the_crop
+);
+
 /// Pan mode: the box holds still while a finger pans the image under it and
 /// two zoom it around their midpoint; the whole cropper takes touches (1368).
 #[test]
@@ -1273,11 +1363,12 @@ fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
         // In front: behind, each touch event waits about a second for a frame.
         frames::in_front(page, async {
             pointer::touch_drag(page, centre, to, 8).await?;
-            wait::for_js_true(page, &format!("{crop} === '20,20,40,80'"), "a touch pan").await?;
+            // A tenth of the square canvas is half a tenth of the picture across, at a zoom of 200%.
+            wait::for_js_true(page, &format!("{crop} === '25,20,40,80'"), "a touch pan").await?;
 
             // Twice the spread around the centre: half the crop around the point there.
             pointer::pinch(page, centre, width * 0.2, width * 0.4, 8).await?;
-            wait::for_js_true(page, &format!("{crop} === '30,40,20,40'"), "a pinch out").await
+            wait::for_js_true(page, &format!("{crop} === '35,40,20,40'"), "a pinch out").await
         })
         .await
         .unwrap();
@@ -1288,8 +1379,8 @@ fn a_touch_pans_and_pinch_zooms_the_image_under_the_box() {
             .into_value()
             .unwrap();
         assert!(
-            (after[6] / width - 2.0).abs() < 0.02,
-            "the image did not double: {after:?}"
+            (after[6] / width - 4.0).abs() < 0.04,
+            "the image did not double from 200%: {after:?}"
         );
         assert!(
             (after[7] - before[7]).abs() < 1.0 && (after[8] - before[8]).abs() < 1.0,
@@ -1363,10 +1454,10 @@ fn the_zoom_slider_zooms_with_one_pointer() {
         wait::for_js_true(
             page,
             &format!(
-                "{crop} === '30,10,40,80' && {spoken} === '100%' \
+                "{crop} === '30,10,40,80' && {spoken} === '200%' \
                  && document.querySelector('{thumb}').getAttribute('aria-label') === 'Zoom'"
             ),
-            "the slider at 100%",
+            "the slider at 200%",
         )
         .await
         .unwrap();
@@ -1374,10 +1465,10 @@ fn the_zoom_slider_zooms_with_one_pointer() {
             .await
             .unwrap();
         keyboard::press(page, keyboard::HOME).await.unwrap();
-        // The largest crop of the box's shape.
+        // The whole square canvas round the 2:1 picture (5715).
         wait::for_js_true(
             page,
-            &format!("{crop} === '25,0,50,100' && {spoken} === '80%'"),
+            &format!("{crop} === '0,-50,100,200' && {spoken} === '80%'"),
             "Home to the widest zoom",
         )
         .await
@@ -1419,7 +1510,7 @@ fn the_pan_controls_paint_over_the_zoomed_picture() {
         keyboard::press(page, keyboard::END).await.unwrap();
         wait::for_js_true(
             page,
-            &format!("document.querySelector('{thumb}').getAttribute('aria-valuetext') !== '100%'"),
+            &format!("document.querySelector('{thumb}').getAttribute('aria-valuetext') !== '200%'"),
             "End to the closest zoom",
         )
         .await

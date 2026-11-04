@@ -4,10 +4,10 @@ description: image_cropper_pan at desktop (rest)
 expression: tree
 ---
 image "A sun on blue"
-slider "Crop area" = 0 [orientation=horizontal] [valuemax=30] [valuemin=-30]
+slider "Crop area" = -50 [orientation=horizontal] [valuemax=10] [valuemin=-110]
   description "Arrow keys move the image, plus and minus zoom it. Shift moves further."
-slider "Zoom" = -0.003143551293760538 [orientation=horizontal] [valuemax=2.0768563747406006] [valuemin=-0.2231435477733612]
-  description "100%"
+slider "Zoom" = 0.6968564391136169 [orientation=horizontal] [valuemax=2.7668564319610596] [valuemin=-0.2231435477733612]
+  description "200%"
 group "Crop area controls"
   button "Move left"
   button "Move up"

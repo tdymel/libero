@@ -6,13 +6,20 @@
 //! square, unset and in pan mode (1368). `/bare` is free and pan with
 //! `controls: false` (2112). `/overhang` has a 0.25 overhang on white and a cropper
 //! with `ImageCropperControls::None` (free_ball). `/helpers` runs `platform::image`'s
-//! helpers on two 2 x 1 pictures.
+//! helpers on two 2 x 1 pictures, a data URL of one and a 42 x 41 white pad of the other.
+//! `/preview` is `/pan` with an `ImageCropPreview` of its crop (5715).
 
 use dioxus::prelude::*;
 use dioxus::html::FileData;
 use libero::{
-    components::{Button, CropRect, CropShape, Flex, ImageCropper, ImageCropperControls},
-    platform::image::{Backdrop, crop_image, file_from_bytes, has_transparency, on_square},
+    components::{
+        Button, CropRect, CropShape, Flex, ImageCropPreview, ImageCropper, ImageCropperControls,
+    },
+    platform::image::{
+        Backdrop, CutOptions, ImageType, crop_image, file_from_bytes, has_transparency,
+        image_size, on_square,
+    },
+    utils::data_url,
 };
 
 use crate::Routes;
@@ -32,6 +39,7 @@ pub const ROUTES: Routes = &[
     ("/image-cropper/bare", || rsx! { BareCropperPage {} }),
     ("/image-cropper/overhang", || rsx! { OverhangCropperPage {} }),
     ("/image-cropper/helpers", || rsx! { HelpersPage {} }),
+    ("/image-cropper/preview", || rsx! { PreviewCropperPage {} }),
 ];
 
 const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200'%3E%3Crect width='400' height='200' fill='%23339af0'/%3E%3Ccircle cx='200' cy='100' r='60' fill='%23ffd43b'/%3E%3C/svg%3E";
@@ -310,18 +318,67 @@ fn HelpersPage() -> Element {
                             return;
                         };
                         let rect = CropRect { x: -0.5, y: 0.0, width: 2.0, height: 1.0 };
+                        let white = CutOptions { backdrop: Backdrop::rgb(255, 255, 255), ..Default::default() };
+                        let url = data_url(&see).await.unwrap_or_default();
+                        // Big enough for a circle to leave the corners out.
+                        let pad = CropRect { x: -10.0, y: -20.0, width: 21.0, height: 41.0 };
+                        let big = crop_image(&flat, pad, white).await;
+                        let circle = CutOptions { shape: CropShape::Circle, output: ImageType::Png, ..Default::default() };
+                        let round = match &big {
+                            Some(big) => crop_image(big, CropRect::FULL, circle).await,
+                            None => None,
+                        };
+                        let jpeg = CutOptions { output: ImageType::Jpeg, ..Default::default() };
+                        let jpeg = crop_image(&see, CropRect::FULL, jpeg).await;
                         out.set(format!(
-                            "{:?} {:?} {} {}",
+                            "{:?} {:?} {} {} | {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
                             has_transparency(&see).await,
                             has_transparency(&flat).await,
-                            size(on_square(&flat, 0.5, Backdrop::default()).await).await,
-                            size(crop_image(&flat, rect, None, Backdrop::rgb(255, 255, 255)).await).await,
+                            size(on_square(&flat, 0.5, CutOptions::default()).await).await,
+                            size(crop_image(&flat, rect, white).await).await,
+                            image_size(&flat).await,
+                            has_transparency(&url).await,
+                            image_size(&url).await,
+                            image_size(big.as_ref().unwrap_or(&flat)).await,
+                            has_transparency(big.as_ref().unwrap_or(&see)).await,
+                            has_transparency(round.as_ref().unwrap_or(&flat)).await,
+                            jpeg.and_then(|file| file.content_type()),
                         ));
                     });
                 },
                 "Run"
             }
             p { id: "helpers", "{out}" }
+        }
+    }
+}
+
+#[component]
+fn PreviewCropperPage() -> Element {
+    let mut crop = use_signal(|| None::<CropRect>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", padding: "md",
+            ImageCropper {
+                id: "cropper",
+                src: PICTURE,
+                alt: "A sun on blue",
+                aspect: 1.0,
+                pan: true,
+                value: crop(),
+                onchange: move |next| crop.set(Some(next)),
+            }
+            if let Some(rect) = crop() {
+                ImageCropPreview {
+                    id: "preview",
+                    src: PICTURE,
+                    alt: "The crop",
+                    value: rect,
+                    shape: CropShape::Circle,
+                    size: 100.0,
+                }
+                p { id: "crop", "{reading(rect)}" }
+            }
         }
     }
 }

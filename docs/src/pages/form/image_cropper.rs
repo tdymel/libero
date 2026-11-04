@@ -3,11 +3,18 @@ use crate::samples::SAMPLE_IMAGE;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Backdrop, Box, Code, CropRect, CropShape, Flex, ImageCropper, ImageCropperControls,
-        ImageCropperPart, Text,
+        Backdrop, Box, Code, CropRect, CropShape, Flex, ImageCropPreview, ImageCropper,
+        ImageCropperControls, ImageCropperPart, Text,
+    },
+    platform::image::{
+        CutOptions, ImageType, crop_image, file_from_bytes, has_transparency, image_size,
     },
     sx::sx,
+    utils::data_url,
 };
+
+/// The sample's bytes, so the demo can cut it as a picked file.
+const SAMPLE_SVG: &[u8] = include_bytes!("../../../assets/sample.svg");
 
 /// `SAMPLE_IMAGE` is 16:9.
 const SAMPLE_RATIO: f64 = 16.0 / 9.0;
@@ -64,7 +71,7 @@ pub fn ImageCropperPage() -> Element {
                         .doc("The smallest side, a fraction of the image's."),
                     prop("pan", "bool")
                         .default("false")
-                        .doc("Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch, the wheel or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image."),
+                        .doc("Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch, the wheel or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image. With an `aspect` on a picture of another shape the stage takes the box's shape, the picture centred on it as on a square, and `overhang` counts from that stage, so a wide picture zooms out until its width fits the box."),
                     prop("controls", "ImageCropperControls")
                         .default("Shown")
                         .doc("The buttons under the image, and with `pan` the zoom bar. `HiddenUntilFocus` (what `false` converts to) hides them from sight only: they show again while focus is inside them, so a keyboard and a screen reader keep them. `None` removes them; the box's keys stay."),
@@ -92,6 +99,15 @@ pub fn ImageCropperPage() -> Element {
                     (ImageCropperPart::Zoom, "With `pan`: the bar under the image holding the zoom slider."),
                     (ImageCropperPart::Controls, "The buttons under the image that move the box and, without `pan`, make it smaller or larger."),
                 ]),
+                props("ImageCropPreview", vec![
+                    prop("src", "String").default("required").doc("The picture the cropper shows, as its `src`."),
+                    prop("alt", "String").default("required").doc("Describes the crop."),
+                    prop("value", "CropRect").default("required").doc("The crop, as the cropper's `value`; live when both read one signal. Past the picture's edge shows `backdrop`."),
+                    prop("shape", "CropShape").default("Rect").doc("`Circle` dims the corners past the circle, so what sticks out of an avatar shows."),
+                    prop("aspect", "f64").default("1.0").doc("The crop's width over its height in pixels, as the cropper's `aspect`."),
+                    prop("size", "f64").default("96.0").doc("The longer side in pixels."),
+                    prop("backdrop", "Backdrop").default("Checkerboard").doc("What shows past the picture's edge."),
+                ]),
                 props("CropRect", vec![
                     prop("x, y", "f64").doc("The top left corner, a fraction of the image's width and height."),
                     prop("width, height", "f64").doc("The size, a fraction of the image's. `CropRect::FULL` is the whole image."),
@@ -117,12 +133,26 @@ pub fn ImageCropperPage() -> Element {
                 props("libero::platform::image", vec![
                     prop("file_from_bytes(name, content_type, bytes)", "Option<FileData>")
                         .doc("The bytes as a file a form can post. `None` where no page holds files: a server render, Blitz."),
-                    prop("crop_image(file, rect, max_size, backdrop).await", "Option<FileData>")
-                        .doc("The file cut to a `CropRect`, past the picture's edge too, filled by `backdrop`; the longer side scaled down to `max_size`. A PNG, JPEG or WebP keeps its type, anything else comes back a PNG. `None` where no page can cut it: a server render, so call it from an event."),
-                    prop("on_square(file, margin, backdrop).await", "Option<FileData>")
-                        .doc("The picture centred on a square canvas, `margin` of its longer side free on every side, the rest `backdrop`."),
-                    prop("has_transparency(file).await", "Option<bool>")
-                        .doc("Whether any pixel is not fully opaque; `None` when the picture would not decode."),
+                    prop("crop_image(file, rect, options).await", "Option<FileData>")
+                        .doc("The file cut to a `CropRect`, past the picture's edge too, as `CutOptions` say. `None` where no page can cut it (a server render, so call it from an event) or the picture would not decode."),
+                    prop("on_square(file, margin, options).await", "Option<FileData>")
+                        .doc("The picture centred on a square canvas, `margin` of its longer side free on every side, cut as `crop_image` cuts."),
+                    prop("has_transparency(source).await", "Option<bool>")
+                        .doc("Whether any pixel is not fully opaque, of a `&FileData` or a URL (`ImageSource`). A JPEG, or a PNG or lossy WebP without alpha, answers from its header; otherwise it reads the pixels and stops at the first see-through one. `None` when the URL would not load or the picture would not decode."),
+                    prop("image_size(source).await", "Option<(u32, u32)>")
+                        .doc("The width and height in pixels of a `&FileData` or a URL, turned as its EXIF says."),
+                ])
+                .without_base_props(),
+                props("CutOptions", vec![
+                    prop("max_size", "Option<u32>").doc("Scales the cut down so its longer side is at most this many pixels."),
+                    prop("backdrop", "Backdrop").default("Checkerboard").doc("What fills past the picture's edge and, with a `Circle`, past the circle. A checkerboard leaves it transparent; a JPEG gets white."),
+                    prop("shape", "CropShape").default("Rect").doc("`Circle` fills everything outside the ellipse inscribed in the cut with `backdrop`: a round avatar."),
+                    prop("output", "ImageType").default("Keep").doc("The type written: `Keep` keeps a PNG, JPEG or WebP's and makes anything else a PNG; `Png`, `Jpeg` or `Webp` picks one, so a JPEG cut past its edge can stay see-through as a PNG."),
+                ])
+                .without_base_props(),
+                props("ImageSource", vec![
+                    prop("&FileData", "ImageSource::File").doc("A picked or built file."),
+                    prop("&str, &String", "ImageSource::Url").doc("Loaded with the page's `fetch` on the web and in a WebView, so a cross-origin URL needs CORS; Blitz decodes `data:` itself and loads `http(s)` through its network provider. `javascript:`, `file:` and the like load nothing."),
                 ])
                 .without_base_props(),
             ],
@@ -155,6 +185,8 @@ pub fn ImageCropperPage() -> Element {
                     "Under Blitz a `FileField` with `crop` passes an AVIF through uncropped, with no dialog.",
                     "Under Blitz a cut WebP is lossless, so it can be larger than the browser's lossy one.",
                     "The overhang is room round the picture, so it takes layout space the picture's own size does not: a picture fills the container less by that much.",
+                    "Under Blitz the `platform::image` helpers read PNG, JPEG, WebP and BMP only: an SVG gives `None`.",
+                    "Under Blitz an image takes no `aspect-ratio`, so `pan` with an `aspect` keeps the picture's own stage there.",
                 ]),
             lead: rsx! {
                 Text {
@@ -231,6 +263,11 @@ pub fn ImageCropperPage() -> Element {
                         }),
                     Control::switch("pan"),
                     Control::switch("disabled"),
+                    // Only the cut under the cropper: no prop of its own.
+                    Control::toggle("cut", ["png", "jpeg"])
+                        .labels(["PNG", "JPEG"])
+                        .default("png")
+                        .code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     ImageCropperDemo { values }
@@ -253,19 +290,51 @@ fn ImageCropperDemo(values: DemoValues) -> Element {
         _ => starting(aspect),
     };
     let pixels = rect.to_pixels(1600, 900);
+    let shape = match values.str("shape").as_str() {
+        "circle" => CropShape::Circle,
+        _ => CropShape::Rect,
+    };
+    let backdrop = match values.str("backdrop").as_str() {
+        "white" => Backdrop::rgb(255, 255, 255),
+        "dark" => Backdrop::rgb(34, 36, 40),
+        _ => Backdrop::Checkerboard,
+    };
+    let options = CutOptions {
+        max_size: Some(96),
+        backdrop,
+        shape,
+        output: match values.str("cut").as_str() {
+            "jpeg" => ImageType::Jpeg,
+            _ => ImageType::Png,
+        },
+    };
+    // `crop_image` on the box as it moves, then `image_size` and `has_transparency` on the cut.
+    let cut = use_resource(use_reactive!(|(rect, options)| async move {
+        let file = file_from_bytes("sample.svg", "image/svg+xml", SAMPLE_SVG.to_vec())?;
+        let cut = crop_image(&file, rect, options).await?;
+        let (width, height) = image_size(&cut).await?;
+        let clear = match has_transparency(&cut).await? {
+            true => "see-through",
+            false => "opaque",
+        };
+        let kind = cut.content_type().unwrap_or_default();
+        Some((
+            data_url(&cut).await?,
+            format!("{width} x {height} px {kind}, {clear}"),
+        ))
+    }));
 
     rsx! {
         Flex { direction: "column", gap: "sm",
+            // The live preview beside the cropper, under it on a narrow screen.
+            Flex { direction: "row", gap: "md", align: "flex-start", wrap: "wrap",
             // Holds the 16:9 picture and the 38px controls row until it loads, so the page below does not jump.
-            Box { sx: sx().min_height("calc(min(360px, (100vw - 50px) * 9 / 16) + 38px)"),
+            Box { sx: sx().flex("1").min_width("0").min_height("calc(min(360px, (100vw - 50px) * 9 / 16) + 38px)"),
             ImageCropper {
                 src: SAMPLE_IMAGE,
                 alt: "A sample landscape",
                 aspect,
-                shape: match values.str("shape").as_str() {
-                    "circle" => CropShape::Circle,
-                    _ => CropShape::Rect,
-                },
+                shape,
                 pan: values.str("pan") == "true",
                 controls: match values.str("controls").as_str() {
                     "hidden" => ImageCropperControls::HiddenUntilFocus,
@@ -277,19 +346,32 @@ fn ImageCropperDemo(values: DemoValues) -> Element {
                     "50" => 0.5,
                     _ => 0.0,
                 },
-                backdrop: match values.str("backdrop").as_str() {
-                    "white" => Backdrop::rgb(255, 255, 255),
-                    "dark" => Backdrop::rgb(34, 36, 40),
-                    _ => Backdrop::Checkerboard,
-                },
+                backdrop,
                 disabled: values.str("disabled") == "true",
                 value: rect,
                 onchange: move |next: CropRect| crop.set(Some((key.clone(), next))),
             }
             }
+            ImageCropPreview {
+                src: SAMPLE_IMAGE,
+                alt: "The crop",
+                value: rect,
+                shape,
+                // Free: the box's own shape in pixels.
+                aspect: aspect.unwrap_or(rect.width * SAMPLE_RATIO / rect.height),
+                backdrop,
+            }
+            }
             Text { size: "sm",
                 bdi { dir: "ltr",
                     "{pixels.width} x {pixels.height} px at {pixels.x}, {pixels.y} of 1600 x 900"
+                }
+            }
+            // Its height held, so the page does not jump when the first cut lands.
+            Flex { direction: "row", gap: "sm", align: "center", sx: sx().min_height("96px"),
+                if let Some(Some((src, about))) = cut() {
+                    img { src, alt: "The cut", style: "max-width: 96px; max-height: 96px" }
+                    Text { size: "sm", "Cut: {about}" }
                 }
             }
         }

@@ -131,7 +131,7 @@ fn CropDialog(
             let cut = platform::Cut {
                 max: options.max_size,
                 fill: options.backdrop.fill(),
-                square: None,
+                ..Default::default()
             };
             let cropped = match platform::image_crop() {
                 Some(cropper) => cropper.crop(file, rect.into(), cut).await,

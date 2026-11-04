@@ -1,10 +1,10 @@
-use dioxus::html::FileData;
+use dioxus::html::{FileData, bytes::Bytes};
 use serde_json::json;
 
 use super::{Slot, decode_base64, eval_with, runs_scripts};
 use crate::platform::file_dialog::{FileDialogApi, Picked, held_file};
 use crate::platform::image_crop::{
-    Cropped, Cut, Fractions, IMAGE_SCRIPT, ImageCropApi, Probed, cropped_name,
+    Cropped, Cut, Fractions, IMAGE_SCRIPT, ImageCropApi, Loaded, Measured, Probed, cropped_name,
 };
 use crate::utils::encode_base64;
 
@@ -113,25 +113,59 @@ impl ImageCropApi for WebViewImageCrop {
         })
     }
 
-    fn has_transparency(&self, file: FileData) -> Probed {
+    fn has_transparency(&self, bytes: Bytes, kind: String) -> Probed {
+        Box::pin(async move { run_on_bytes("transparent", &bytes, &kind).await })
+    }
+
+    fn size(&self, bytes: Bytes, kind: String) -> Measured {
+        Box::pin(async move { run_on_bytes("measure", &bytes, &kind).await })
+    }
+
+    /// The page's `fetch`: a cross-origin URL needs CORS. Back as base64, the IPC carries JSON only.
+    fn fetch(&self, url: String) -> Loaded {
         Box::pin(async move {
-            let bytes = file.read_bytes().await.ok()?;
-            let from = file.content_type().unwrap_or_default();
             let slot = Slot::new();
             let mut script = eval_with(
-                json!([encode_base64(&bytes), from]),
+                json!(url),
                 &format!(
                     "{IMAGE_SCRIPT}
-                    const [encoded, type] = data;
-                    const bytes = Uint8Array.from(atob(encoded), (ch) => ch.charCodeAt(0));
-                    dioxus.send(await transparent(bytes, type));
+                    const [type, out] = await load(data);
+                    let binary = '';
+                    for (let at = 0; at < out.length; at += 0x8000) {{
+                        binary += String.fromCharCode(...out.subarray(at, at + 0x8000));
+                    }}
+                    dioxus.send([type, btoa(binary)]);
                     {}",
                     slot.park("")
                 ),
             );
-            let answer = script.recv::<bool>().await.ok();
+            let answer = script.recv::<(String, String)>().await.ok();
             drop(slot);
-            answer
+            let (kind, encoded) = answer?;
+            Some((decode_base64(&encoded)?.into(), kind))
         })
     }
+}
+
+/// `IMAGE_SCRIPT`'s `function(bytes, type)` on the bytes sent as base64, its answer back.
+async fn run_on_bytes<T: serde::de::DeserializeOwned>(
+    function: &str,
+    bytes: &[u8],
+    kind: &str,
+) -> Option<T> {
+    let slot = Slot::new();
+    let mut script = eval_with(
+        json!([encode_base64(bytes), kind]),
+        &format!(
+            "{IMAGE_SCRIPT}
+            const [encoded, type] = data;
+            const bytes = Uint8Array.from(atob(encoded), (ch) => ch.charCodeAt(0));
+            dioxus.send(await {function}(bytes, type));
+            {}",
+            slot.park("")
+        ),
+    );
+    let answer = script.recv::<T>().await.ok();
+    drop(slot);
+    answer
 }

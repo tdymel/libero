@@ -49,6 +49,8 @@ const ROOM_Y: CssVar = CssVar::new("--lsx-image-cropper-room-y");
 const ROOM_END: CssVar = CssVar::new("--lsx-image-cropper-room-end");
 const ROOM_BELOW: CssVar = CssVar::new("--lsx-image-cropper-room-below");
 const BACKDROP: CssVar = CssVar::new("--lsx-image-cropper-backdrop");
+/// Pan mode on a canvas of the box's shape: the box's `aspect`.
+const FIT_ASPECT: CssVar = CssVar::new("--lsx-image-cropper-fit-aspect");
 /// What shows through a translucent colour, as the colour swatch draws it.
 const CHECKERBOARD: &str = "repeating-conic-gradient(#e9ecef 0% 25%, #ffffff 0% 50%) 50% / 8px 8px";
 
@@ -199,7 +201,7 @@ pub(super) fn spoken_percent(formats: &Formats, value: f64) -> String {
 pub(super) fn value_text(
     words: &ImageCropperLabels,
     formats: &Formats,
-    pan: bool,
+    (pan, reach): (bool, Reach),
     rect: CropRect,
 ) -> String {
     let percent = |fraction: f64| spoken_percent(formats, fraction * 100.0);
@@ -209,7 +211,7 @@ pub(super) fn value_text(
         percent(rect.x),
         percent(rect.y),
     );
-    let zoom = percent(rect.image_transform().0);
+    let zoom = percent(reach.image_transform(rect).0);
     let holes: [(&str, &dyn std::fmt::Display); 5] = [
         ("width", &width),
         ("height", &height),
@@ -228,7 +230,7 @@ pub(super) fn value_text(
 pub(super) fn press_message(
     words: &ImageCropperLabels,
     formats: &Formats,
-    pan: bool,
+    pan: (bool, Reach),
     before: CropRect,
     after: CropRect,
 ) -> Option<String> {
@@ -241,6 +243,17 @@ pub(super) fn slider_zoom(value: f64, exact: f64) -> f64 {
     match (value - exact.ln()).abs() <= ZOOM_SLIDER_STEP / 2.0 {
         true => exact,
         false => value.exp(),
+    }
+}
+
+/// The CSS background `backdrop` paints.
+pub(super) fn backdrop_fill(backdrop: Backdrop) -> String {
+    match backdrop {
+        Backdrop::Checkerboard => CHECKERBOARD.to_string(),
+        Backdrop::Color([r, g, b, a]) => {
+            let color = format!("rgba({r}, {g}, {b}, {})", f64::from(a) / 255.0);
+            format!("linear-gradient({color}, {color})")
+        }
     }
 }
 
@@ -518,6 +531,16 @@ static IMAGE_CROPPER_SX: StaticSx = StaticSx::new(|| {
                         .background(PAPER_BACKGROUND.value()),
                 ),
         )
+        // Pan with an `aspect` on a picture of another shape: the image is a canvas of the box's
+        // shape, the picture contained in it, and moves as the picture did.
+        .when(
+            "fit",
+            sx().selector(
+                "& > [data-slot='image']",
+                sx().with("aspect-ratio", FIT_ASPECT.value())
+                    .with("object-fit", "contain"),
+            ),
+        )
         // `controls: false`: out of sight, back while focus is inside, so a keyboard keeps them.
         .when(
             "hidden-controls",
@@ -667,7 +690,11 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let touched = use_local_state(|| false);
 
     let pan = props.pan;
-    let reach = Reach::new(props.overhang);
+    // Blitz sizes an image by its own ratio whatever its `aspect-ratio`: pan keeps the picture's stage.
+    let reach = match pan && !cfg!(feature = "native") {
+        true => Reach::new(props.overhang).on_canvas(props.aspect, image_ratio()),
+        false => Reach::new(props.overhang),
+    };
     let interactive = !props.disabled && props.onchange.is_some();
     if props.value.is_some() && props.onchange.is_none() && !props.disabled {
         warn("ImageCropper: `value` without `onchange` can never change.");
@@ -700,9 +727,13 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     // Read when a measure resolves: one started before an `aspect` change can land after it (2872).
     let latest_aspect = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(aspect)));
     latest_aspect.set(aspect);
+    // On pan mode's canvas the image has the box's shape: the picture's was read before it.
+    let canvas_shown = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(false)));
+    let on_canvas = canvas_shown.clone();
     let measure = use_callback(move |()| {
         let size = image.dimensions();
         let latest_aspect = latest_aspect.clone();
+        let kept = on_canvas.get().then(|| *image_ratio.peek()).flatten();
         spawn(async move {
             let Ok(size) = size.await else {
                 return;
@@ -710,7 +741,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             if size.width <= 0.0 || size.height <= 0.0 {
                 return;
             }
-            let measured = size.width / size.height;
+            let measured = kept.unwrap_or(size.width / size.height);
             if *image_ratio.peek() != Some(measured) {
                 image_ratio.set(Some(measured));
             }
@@ -733,9 +764,14 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     let own_src = media_url(&props.src, "ImageCropper `src`").unwrap_or_default();
     // A new picture or aspect starts over: a `src` still loading is fitted again on load.
     let mounted = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(false)));
+    let left_canvas = canvas_shown.clone();
     use_effect(use_reactive((&own_src, &aspect), move |_| {
         if mounted.replace(true) {
             held.set(None);
+            // Off the canvas first, so the new picture's own shape is read.
+            if left_canvas.get() {
+                image_ratio.set(None);
+            }
             when_laid_out(move || measure.call(()));
         }
     }));
@@ -832,7 +868,10 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                     event.cancel.call(());
                     return;
                 }
-                image_ratio.set(Some(size.width / size.height));
+                // Pan mode's stage can be a canvas round the picture: `measure` reads the picture.
+                if !pan {
+                    image_ratio.set(Some(size.width / size.height));
+                }
                 start.set((shown, size.width, size.height));
                 if let Some(moved) = early.get() {
                     move_to.call(moved);
@@ -1057,7 +1096,9 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         emit.call(rect);
         // An effect, not a task: a task can run before this field's own rerender (4383).
         dioxus::core::queue_effect(move || {
-            if let Some(message) = press_message(&words, formats, pan, shown, *latest.peek()) {
+            if let Some(message) =
+                press_message(&words, formats, (pan, reach), shown, *latest.peek())
+            {
                 announcer.say(message);
             }
         });
@@ -1121,7 +1162,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                 size: "sm",
                 aria_label: label,
                 disabled: !interactive,
-                "aria-disabled": (interactive && press_message(&words, formats, pan, shown, rect).is_none())
+                "aria-disabled": (interactive && press_message(&words, formats, (pan, reach), shown, rect).is_none())
                     .then_some("true"),
                 onclick: move |_| pressed(rect),
                 Glyph { slot, icon }
@@ -1131,7 +1172,8 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     // Pan mode's zoom glyphs step as + and - do (5575): pointer-only, hidden and no tab stop,
     // as the slider gives keys and screen readers the same steps. A press keeps focus where it is.
     let zoom_step = move |slot: IconSlot, icon: SvgData, rect: CropRect| {
-        let limit = interactive && press_message(&words, formats, pan, shown, rect).is_none();
+        let limit =
+            interactive && press_message(&words, formats, (pan, reach), shown, rect).is_none();
         rsx! {
             span {
                 "data-zoom-step": "",
@@ -1149,12 +1191,12 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     };
 
     let percent = |fraction: f64| (fraction * 100.0).round();
-    let (scale, image_x, image_y) = shown.image_transform();
-    let valuetext = value_text(&words, formats, pan, shown);
+    let (scale, image_x, image_y) = reach.image_transform(shown);
+    let valuetext = value_text(&words, formats, (pan, reach), shown);
     // The zoom at the largest and the smallest crop of this shape.
     let zoom_range = (
-        reach.scaled(shown, f64::MAX, min).image_transform().0,
-        reach.scaled(shown, 0.0, min).image_transform().0,
+        reach.image_transform(reach.scaled(shown, f64::MAX, min)).0,
+        reach.image_transform(reach.scaled(shown, 0.0, min)).0,
     );
     // The box's exact zoom while the slider shows it snapped to `step`, so both say one number.
     let mut exact_zoom = use_hook(|| CopyValue::new(scale));
@@ -1166,7 +1208,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
     });
     let keys = if pan { words.pan_keys } else { words.keys };
     let tabindex = if interactive { "0" } else { "-1" };
-    let placed_at = if pan { shown.frame() } else { shown };
+    let placed_at = if pan { reach.frame(shown) } else { shown };
     let mut crop_variables = variables()
         .with(CROP_X, placed_at.x.to_string())
         .with(CROP_Y, placed_at.y.to_string())
@@ -1179,7 +1221,13 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             .with(IMAGE_Y, image_y.to_string());
     }
     let over = reach.get();
-    let backdrop_shown = over > 0.0 || backdrop != Backdrop::Checkerboard;
+    let fit = reach.canvas() != (1.0, 1.0);
+    canvas_shown.set(fit);
+    if let Some(aspect) = props.aspect.filter(|_| fit) {
+        crop_variables = crop_variables.with(FIT_ASPECT, aspect.to_string());
+    }
+    // A canvas round the picture shows the backdrop where the picture is not.
+    let backdrop_shown = over > 0.0 || backdrop != Backdrop::Checkerboard || fit;
     if backdrop_shown {
         let span = 1.0 + 2.0 * over;
         let ratio = image_ratio().unwrap_or(1.0);
@@ -1196,13 +1244,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
             true => (0.0, below),
             false => (room_y, 0.0),
         };
-        let fill = match backdrop {
-            Backdrop::Checkerboard => CHECKERBOARD.to_string(),
-            Backdrop::Color([r, g, b, a]) => {
-                let color = format!("rgba({r}, {g}, {b}, {})", f64::from(a) / 255.0);
-                format!("linear-gradient({color}, {color})")
-            }
-        };
+        let fill = backdrop_fill(backdrop);
         crop_variables = crop_variables
             .with(OVER, over.to_string())
             .with(SPAN, span.to_string())
@@ -1222,6 +1264,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
         .with("disabled", props.disabled)
         .with("loading", image_ratio().is_none() && !failed())
         .with("pan", pan)
+        .with("fit", fit)
         .with(
             "hidden-controls",
             controls == ImageCropperControls::HiddenUntilFocus,
@@ -1330,7 +1373,7 @@ pub fn ImageCropper(props: ImageCropperProps) -> Element {
                         "aria-describedby": keys_id(),
                         "aria-valuemin": percent(box_least),
                         "aria-valuemax": percent(box_greatest),
-                        "aria-valuenow": percent(shown.value(Grip::Move, pan)),
+                        "aria-valuenow": percent(reach.value(shown, Grip::Move, pan)),
                         "aria-valuetext": valuetext.clone(),
                         "aria-disabled": (!interactive).then_some("true"),
                         onmounted: box_element.mount(),

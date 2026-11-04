@@ -256,18 +256,29 @@ fn a_button_press_says_the_new_box_and_a_no_op_says_nothing() {
         press_message(
             &words,
             &Formats::AMERICAN,
-            false,
+            (false, Reach::default()),
             crop,
             crop.moved(-0.05, 0.0)
         ),
         None
     );
     let moved = crop.moved(0.05, 0.0);
-    let said = press_message(&words, &Formats::AMERICAN, false, crop, moved);
+    let said = press_message(
+        &words,
+        &Formats::AMERICAN,
+        (false, Reach::default()),
+        crop,
+        moved,
+    );
     assert_eq!(said.as_deref(), Some("40% by 50%, at 5%, 10%"));
     assert_eq!(
         said,
-        Some(value_text(&words, &Formats::AMERICAN, false, moved))
+        Some(value_text(
+            &words,
+            &Formats::AMERICAN,
+            (false, Reach::default()),
+            moved
+        ))
     );
     // Five 5% steps up leave a rounding error the sixth, at the edge, takes away.
     let top = (0..5).fold(rect(0.3, 0.25, 0.5, 0.5), |at, _| at.moved(0.0, -0.05));
@@ -275,7 +286,7 @@ fn a_button_press_says_the_new_box_and_a_no_op_says_nothing() {
         press_message(
             &words,
             &Formats::AMERICAN,
-            false,
+            (false, Reach::default()),
             top,
             top.moved(0.0, -0.05)
         ),
@@ -283,7 +294,14 @@ fn a_button_press_says_the_new_box_and_a_no_op_says_nothing() {
     );
     // Pan mode says the zoom too.
     let zoomed = crop.zoomed(2.0, (0.5, 0.5), (0.5, 0.5), 0.05);
-    let said = press_message(&words, &Formats::AMERICAN, true, crop, zoomed).unwrap();
+    let said = press_message(
+        &words,
+        &Formats::AMERICAN,
+        (true, Reach::default()),
+        crop,
+        zoomed,
+    )
+    .unwrap();
     assert!(said.contains("zoom"), "{said}");
 }
 
@@ -291,7 +309,12 @@ fn a_button_press_says_the_new_box_and_a_no_op_says_nothing() {
 #[test]
 fn the_box_text_follows_the_formats_percent() {
     let crop = rect(0.05, 0.1, 0.4, 0.5);
-    let german = value_text(&ImageCropperLabels::GERMAN, &Formats::GERMAN, false, crop);
+    let german = value_text(
+        &ImageCropperLabels::GERMAN,
+        &Formats::GERMAN,
+        (false, Reach::default()),
+        crop,
+    );
     assert_eq!(german, "40\u{a0}% mal 50\u{a0}%, bei 5\u{a0}%, 10\u{a0}%");
 }
 
@@ -495,4 +518,79 @@ fn a_backdrop_is_drawn_only_with_an_overhang_or_a_colour() {
         flat.contains(slot) && flat.contains("rgba(255, 0, 0, 1)"),
         "{flat}"
     );
+}
+
+/// Todo 5715: pan mode with a square box sets a 2:1 picture on a square canvas, so a zoom out
+/// stops where the picture's width fits the box, not its height.
+#[test]
+fn a_wide_picture_in_pan_mode_zooms_out_until_its_width_fits_a_square() {
+    let reach = Reach::new(0.0).on_canvas(Some(1.0), Some(2.0));
+    assert_eq!(reach.canvas(), (1.0, 2.0));
+    let crop = CropRect::starting(Some(0.5));
+    let out = reach.zoomed(crop, 0.01, (0.5, 0.5), (0.5, 0.5), 0.05);
+    assert_close(out, rect(0.0, -0.5, 1.0, 2.0));
+    // The whole canvas under the frame: 80% of the stage, so the zoom is 80%.
+    assert!((reach.image_transform(out).0 - 0.8).abs() < 1e-9);
+    assert_close(reach.frame(out), rect(0.1, 0.1, 0.8, 0.8));
+    // A tall picture gets room at its sides; a square one, or no aspect, keeps the plain stage.
+    assert_eq!(
+        Reach::new(0.0).on_canvas(Some(1.0), Some(0.5)).canvas(),
+        (2.0, 1.0)
+    );
+    assert_eq!(
+        Reach::new(0.0).on_canvas(Some(1.0), Some(1.0)),
+        Reach::new(0.0)
+    );
+    assert_eq!(Reach::new(0.0).on_canvas(None, Some(2.0)), Reach::new(0.0));
+}
+
+/// Todo 5715: the overhang counts from the canvas in pan mode, the same room each way.
+#[test]
+fn a_canvas_overhang_is_a_share_of_the_canvas() {
+    let reach = Reach::new(0.25).on_canvas(Some(1.0), Some(2.0));
+    let out = reach.zoomed(
+        CropRect::starting(Some(0.5)),
+        0.01,
+        (0.5, 0.5),
+        (0.5, 0.5),
+        0.05,
+    );
+    assert_close(out, rect(-0.25, -1.0, 1.5, 3.0));
+}
+
+#[test]
+fn the_preview_places_the_picture_so_the_crop_fills_it() {
+    use dioxus::prelude::*;
+    #[allow(non_snake_case)]
+    fn Host() -> Element {
+        rsx! {
+            crate::LiberoProvider {
+            super::ImageCropPreview {
+                src: "/a.png",
+                alt: "A",
+                value: rect(0.25, 0.5, 0.5, 0.25),
+                aspect: 2.0,
+                size: 80.0,
+                shape: super::super::CropShape::Circle,
+                backdrop: Backdrop::rgb(255, 255, 255),
+            }
+            }
+        }
+    }
+    let mut dom = VirtualDom::new(Host);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+    for part in [
+        "--lsx-image-crop-preview-width:80px",
+        "--lsx-image-crop-preview-height:40px",
+        "--lsx-image-crop-preview-left:-50%",
+        "--lsx-image-crop-preview-top:-200%",
+        "--lsx-image-crop-preview-scale-x:200%",
+        "--lsx-image-crop-preview-scale-y:400%",
+        "rgba(255, 255, 255, 1)",
+        "data-slot=\"ring\"",
+        "alt=\"A\"",
+    ] {
+        assert!(html.contains(part), "{part} missing from {html}");
+    }
 }

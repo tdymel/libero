@@ -50,7 +50,7 @@ fn Demo() -> Element {
 | `aspect` | `f64` | - | Locks width over height, in image pixels: `1.0` is square, `16.0 / 9.0` wide. Unset is free. |
 | `shape` | `CropShape` | `Rect` | `Circle` masks outside an ellipse, for an avatar. The rect is the same either way. |
 | `min_size` | `f64` | `0.05` | The smallest side, a fraction of the image's. |
-| `pan` | `bool` | `false` | Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch, the wheel or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image. |
+| `pan` | `bool` | `false` | Holds the box still, centred, and moves the image under it, as a phone's profile picture cropper does: a drag pans the image, a pinch, the wheel or the + and - keys zoom it. No resize handles; `value` stays the crop in fractions of the image. With an `aspect` on a picture of another shape the stage takes the box's shape, the picture centred on it as on a square, and `overhang` counts from that stage, so a wide picture zooms out until its width fits the box. |
 | `controls` | `ImageCropperControls` | `Shown` | The buttons under the image, and with `pan` the zoom bar. `HiddenUntilFocus` (what `false` converts to) hides them from sight only: they show again while focus is inside them, so a keyboard and a screen reader keep them. `None` removes them; the box's keys stay. |
 | `overhang` | `f64` | `0.0` | How far the box may reach past each side of the picture, a fraction of its size, 0 to 1: room to centre a logo or zoom out on a square. The cropper reserves that room round the picture and draws `backdrop` in it; `value` leaves 0 to 1 by as much. |
 | `backdrop` | `Backdrop` | `Checkerboard` | What shows past the picture's edge, and behind its see-through pixels: a `Checkerboard` or a flat `Color` (`Backdrop::rgb(255, 255, 255)`). A flat colour is also what the cut paints there; a checkerboard leaves it transparent. |
@@ -60,6 +60,18 @@ fn Demo() -> Element {
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
+
+### `ImageCropPreview`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `src` | `String` | required | The picture the cropper shows, as its `src`. |
+| `alt` | `String` | required | Describes the crop. |
+| `value` | `CropRect` | required | The crop, as the cropper's `value`; live when both read one signal. Past the picture's edge shows `backdrop`. |
+| `shape` | `CropShape` | `Rect` | `Circle` dims the corners past the circle, so what sticks out of an avatar shows. |
+| `aspect` | `f64` | `1.0` | The crop's width over its height in pixels, as the cropper's `aspect`. |
+| `size` | `f64` | `96.0` | The longer side in pixels. |
+| `backdrop` | `Backdrop` | `Checkerboard` | What shows past the picture's edge. |
 
 ### `CropRect`
 
@@ -92,9 +104,26 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 | Prop | Type | Description |
 |---|---|---|
 | `file_from_bytes(name, content_type, bytes)` | `Option<FileData>` | The bytes as a file a form can post. `None` where no page holds files: a server render, Blitz. |
-| `crop_image(file, rect, max_size, backdrop).await` | `Option<FileData>` | The file cut to a `CropRect`, past the picture's edge too, filled by `backdrop`; the longer side scaled down to `max_size`. A PNG, JPEG or WebP keeps its type, anything else comes back a PNG. `None` where no page can cut it: a server render, so call it from an event. |
-| `on_square(file, margin, backdrop).await` | `Option<FileData>` | The picture centred on a square canvas, `margin` of its longer side free on every side, the rest `backdrop`. |
-| `has_transparency(file).await` | `Option<bool>` | Whether any pixel is not fully opaque; `None` when the picture would not decode. |
+| `crop_image(file, rect, options).await` | `Option<FileData>` | The file cut to a `CropRect`, past the picture's edge too, as `CutOptions` say. `None` where no page can cut it (a server render, so call it from an event) or the picture would not decode. |
+| `on_square(file, margin, options).await` | `Option<FileData>` | The picture centred on a square canvas, `margin` of its longer side free on every side, cut as `crop_image` cuts. |
+| `has_transparency(source).await` | `Option<bool>` | Whether any pixel is not fully opaque, of a `&FileData` or a URL (`ImageSource`). A JPEG, or a PNG or lossy WebP without alpha, answers from its header; otherwise it reads the pixels and stops at the first see-through one. `None` when the URL would not load or the picture would not decode. |
+| `image_size(source).await` | `Option<(u32, u32)>` | The width and height in pixels of a `&FileData` or a URL, turned as its EXIF says. |
+
+### `CutOptions`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `max_size` | `Option<u32>` | - | Scales the cut down so its longer side is at most this many pixels. |
+| `backdrop` | `Backdrop` | `Checkerboard` | What fills past the picture's edge and, with a `Circle`, past the circle. A checkerboard leaves it transparent; a JPEG gets white. |
+| `shape` | `CropShape` | `Rect` | `Circle` fills everything outside the ellipse inscribed in the cut with `backdrop`: a round avatar. |
+| `output` | `ImageType` | `Keep` | The type written: `Keep` keeps a PNG, JPEG or WebP's and makes anything else a PNG; `Png`, `Jpeg` or `Webp` picks one, so a JPEG cut past its edge can stay see-through as a PNG. |
+
+### `ImageSource`
+
+| From | Variant | Description |
+|---|---|---|
+| `&FileData` | `ImageSource::File` | A picked or built file. |
+| `&str, &String` | `ImageSource::Url` | Loaded with the page's `fetch` on the web and in a WebView, so a cross-origin URL needs CORS; Blitz decodes `data:` itself and loads `http(s)` through its network provider. `javascript:`, `file:` and the like load nothing. |
 
 ## Style API
 
@@ -182,6 +211,10 @@ reader hears where it sits, such as "50% by 50%, at 25%, 25%".
   lossy one.
 - The overhang is room round the picture, so it takes layout space the picture's
   own size does not: a picture fills the container less by that much.
+- Under Blitz the `platform::image` helpers read PNG, JPEG, WebP and BMP only:
+  an SVG gives `None`.
+- Under Blitz an image takes no `aspect-ratio`, so `pan` with an `aspect` keeps
+  the picture's own stage there.
 
 ## Localization
 
