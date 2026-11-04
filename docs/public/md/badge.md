@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | `size` | `Responsive<Size>` | `md` | Height, horizontal padding and font size, on a scale smaller than a chip's. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`. |
 | `hidden_from` | `Size` | - | Hidden from this breakpoint's width up, as `hidden_from: "md"`. |
 | `visible_from` | `Size` | - | Hidden below this breakpoint's width, as `visible_from: "md"`. |
-| `radius` | `ThemeAwareValue` | `xxl` | A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is a pill at every height. |
+| `radius` | `Responsive<ThemeAwareValue>` | `xxl` | A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: "0"`. The default `xxl` is a pill at every height. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xxl)`. Breakpoints follow the window, not the parent. |
 | `circle` | `bool` | `false` | Drops the horizontal padding and makes the width at least the height, for a count of one or two characters. |
 | `trailing_icon` | `Element` | - | Drawn after the label, one spacing step away, as a check after "Verified". It never shrinks, and a long label's ellipsis stops before it. |
 | `children` | `Element` | required | The label. |

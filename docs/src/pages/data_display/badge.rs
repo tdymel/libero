@@ -5,9 +5,30 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{Badge, Code, Input, Pictogram, Text},
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
 use pictogram_icons_lucide as lucide;
+
+/// `xs` below `md`, the chosen radius from it, while `responsive` is on.
+fn radius_of(values: &DemoValues) -> Responsive<Size> {
+    let radius = Size::from(values.str("radius").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Xs).md(radius),
+        false => radius.into(),
+    }
+}
+
+fn radius_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("radius")) {
+        (true, radius) => vec![format!(
+            "radius: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(radius.as_str())
+        )],
+        (false, radius) if radius == control.default => vec![],
+        (false, radius) => vec![format!("radius: {radius:?}")],
+    }
+}
 
 const TRAILING_ICON: &str = "trailing_icon: rsx! { Pictogram { icon: lucide::check::outlined, width: \"1em\", height: \"1em\" } }";
 
@@ -42,9 +63,9 @@ pub fn BadgePage() -> Element {
                     .doc("Hidden from this breakpoint's width up, as `hidden_from: \"md\"`."),
                 prop("visible_from", "Size")
                     .doc("Hidden below this breakpoint's width, as `visible_from: \"md\"`."),
-                prop("radius", "ThemeAwareValue")
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.badge.radius.as_str())
-                    .doc("A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is a pill at every height."),
+                    .doc("A step on the badge's own radius scale, `2px` to `12px`, or any CSS, e.g. `radius: \"0\"`. The default `xxl` is a pill at every height. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xxl)`. Breakpoints follow the window, not the parent."),
                 prop("circle", "bool")
                     .default("false")
                     .doc("Drops the horizontal padding and makes the width at least the height, for a count of one or two characters."),
@@ -97,7 +118,9 @@ pub fn BadgePage() -> Element {
                     // `standard` draws no box, so there is no corner to round.
                     Control::sizes("radius")
                         .default(theme.badge.radius.as_str())
-                        .hidden_when(|values| values.str("variant") == "standard"),
+                        .hidden_when(|values| values.str("variant") == "standard").code(radius_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::switch("circle"),
                     Control::switch("trailing_icon").code(|_, values| match values.str("trailing_icon").as_str() {
                         "true" => vec![TRAILING_ICON.to_string()],
@@ -115,7 +138,7 @@ pub fn BadgePage() -> Element {
                             color => Input::from(color),
                         },
                         size: values.str("size"),
-                        radius: values.str("radius"),
+                        radius: radius_of(&values),
                         circle: values.str("circle") == "true",
                         trailing_icon: (values.str("trailing_icon") == "true").then(|| rsx! {
                             Pictogram { icon: lucide::check::outlined, width: "1em", height: "1em" }

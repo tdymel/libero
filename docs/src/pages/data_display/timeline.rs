@@ -1,10 +1,34 @@
 use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Text, Timeline, TimelinePart};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
 
 mod demo;
 use demo::demo_items;
+
+/// `sm` below `md`, the chosen bullet_size from it, while `responsive` is on.
+fn bullet_size_of(values: &DemoValues) -> Responsive<Size> {
+    let bullet_size = Size::from(values.str("bullet_size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Sm).md(bullet_size),
+        false => bullet_size.into(),
+    }
+}
+
+fn bullet_size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (
+        values.str("responsive") == "true",
+        values.str("bullet_size"),
+    ) {
+        (true, bullet_size) => vec![format!(
+            "bullet_size: responsive(Size::Sm).md(Size::{:?})",
+            Size::from(bullet_size.as_str())
+        )],
+        (false, bullet_size) if bullet_size == control.default => vec![],
+        (false, bullet_size) => vec![format!("bullet_size: {bullet_size:?}")],
+    }
+}
 
 fn switches(values: &DemoValues) -> (bool, bool, bool) {
     (
@@ -43,21 +67,21 @@ pub fn TimelinePage() -> Element {
                     prop("active", "Option<usize>")
                         .default("None")
                         .doc("The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so \"step 7 of 4\" means finished."),
-                    prop("align", "TimelineAlign")
+                    prop("align", "Responsive<TimelineAlign>")
                         .default("start")
-                        .doc("`start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. With an event's `.opposite(..)`, every `align` draws as `start` below `sm`."),
+                        .doc("`start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. With an event's `.opposite(..)`, every `align` draws as `start` below `sm`. Or one per breakpoint, `align: responsive(TimelineAlign::Start).md(TimelineAlign::Alternate)`. Breakpoints follow the window, not the parent. With `opposite` content, the reading order follows the base."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("The active accent. An event's own `.color(..)` overrides it."),
-                    prop("bullet_size", "Size")
+                    prop("bullet_size", "Responsive<Size>")
                         .default("md")
-                        .doc("Bullet diameter."),
-                    prop("radius", "ThemeAwareValue")
+                        .doc("Bullet diameter. Or one per breakpoint, `bullet_size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.timeline.radius.as_str())
-                        .doc("Bullet corner radius, or any CSS, e.g. `radius: \"0\"`. `xl` is a dot."),
-                    prop("gap", "ThemeAwareValue")
+                        .doc("Bullet corner radius, or any CSS, e.g. `radius: \"0\"`. `xl` is a dot. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent."),
+                    prop("gap", "Responsive<ThemeAwareValue>")
                         .default("xl")
-                        .doc("Space between events, which is also each connector's length, or any CSS, e.g. `gap: \"0\"`."),
+                        .doc("Space between events, which is also each connector's length, or any CSS, e.g. `gap: \"0\"`. Or one per breakpoint, `gap: responsive(Size::Sm).md(Size::Xl)`. Breakpoints follow the window, not the parent."),
                     prop("parts", "Parts<TimelinePart>")
                         .doc("Styles for the inner parts in the Style API tab, under `sx`."),
                 ])
@@ -127,7 +151,9 @@ pub fn TimelinePage() -> Element {
                     // `active`, since nothing is drawn in the accent then.
                     Control::color("color").hidden_when(|values| values.str("active") == "none"),
                     Control::sizes("bullet_size")
-                        .default("md"),
+                        .default("md").code(bullet_size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::sizes("radius")
                         .default(theme.timeline.radius.as_str()),
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default("xl"),
@@ -155,7 +181,7 @@ pub fn TimelinePage() -> Element {
                             active,
                             align: values.str("align"),
                             color: values.str("color"),
-                            bullet_size: values.str("bullet_size"),
+                            bullet_size: bullet_size_of(&values),
                             radius: values.str("radius"),
                             gap: values.str("gap"),
                         }

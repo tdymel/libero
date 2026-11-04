@@ -23,15 +23,16 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Orientation, Part, States, Variables, base_props, input_from_str,
-            parts_enum, variables,
+            parts_enum, variables, with_own,
         },
+        data_display::responsive_props::{and_sx, plain_var, var_sx},
         layout::{Box, use_box, use_scroll_area},
     },
     hooks::{use_element, use_focus_within, use_id, use_localization, use_theme},
     localization::fill,
     platform::page_task,
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CAROUSEL_GAP, CAROUSEL_PER_VIEW, CssVar, SizeCss},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{CAROUSEL_GAP, CAROUSEL_PER_VIEW, CssVar, Responsive, SizeCss},
     utils::warn,
 };
 
@@ -104,19 +105,27 @@ const CAROUSEL_HEIGHT: CssVar = CssVar::new("--lsx-carousel-height");
 
 fn carousel_variables(
     per_view: f64,
-    gap: Option<&ThemeAwareValue>,
-    height: Option<&ThemeAwareValue>,
+    gap: &Input<Responsive<ThemeAwareValue>>,
+    height: &Input<Responsive<ThemeAwareValue>>,
 ) -> Variables {
     variables()
         .with(CAROUSEL_PER_VIEW.override_var(), Some(per_view.to_string()))
         .with(
             CAROUSEL_GAP.override_var(),
-            gap.and_then(|gap| gap.resolve(Some(SizeCss::SPACING))),
+            plain_var(gap, Some(SizeCss::SPACING)),
         )
-        .with(
-            CAROUSEL_HEIGHT,
-            height.and_then(|height| height.resolve(Some(SizeCss::SPACING))),
-        )
+        .with(CAROUSEL_HEIGHT, plain_var(height, Some(SizeCss::SPACING)))
+}
+
+/// The per-breakpoint `gap` and `height`, in the user layer under the caller's `sx`.
+fn carousel_sx(props: &CarouselProps) -> Input<Sx> {
+    let gap = var_sx(
+        &props.gap,
+        CAROUSEL_GAP.override_var(),
+        Some(SizeCss::SPACING),
+    );
+    let height = var_sx(&props.height, CAROUSEL_HEIGHT, Some(SizeCss::SPACING));
+    with_own(and_sx(gap, height), &props.sx)
 }
 
 parts_enum! {
@@ -159,16 +168,18 @@ base_props! {
         #[props(default, into)]
         per_view: Input<f64>,
         /// Space between slides: a size word or any CSS, as `gap: "0"`.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
         align: Input<CarouselAlign>,
         /// `"horizontal"` by default, unlike `Orientation`'s own default.
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Required for a vertical carousel.
+        /// Required for a vertical carousel. Per breakpoint too:
+        /// `responsive(ThemeAwareValue::from("240px")).md("400px".into())`.
         #[props(default, into)]
-        height: Input<ThemeAwareValue>,
+        height: Input<Responsive<ThemeAwareValue>>,
         /// Previous and Next; hidden while every slide fits.
         #[props(default)]
         controls: Option<bool>,
@@ -312,7 +323,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
         .with(orientation.state_name(), true)
         .into();
     let variables: Input<Variables> =
-        carousel_variables(per_view, props.gap.as_ref(), props.height.as_ref()).into();
+        carousel_variables(per_view, &props.gap, &props.height).into();
+    let sx = carousel_sx(&props);
 
     // A focusout is decided a task later: a focusin in between is a move within the
     // root, no new entry (2393, WebView 2664), on every platform that reports the pair.
@@ -339,7 +351,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let root = use_box()
         .framework_sx(&CAROUSEL_ROOT_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .parts(&props.parts)
         .states(&root_states)
         .variables(&variables)

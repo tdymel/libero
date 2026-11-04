@@ -4,7 +4,28 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, Text};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
+
+/// `sm` below `md`, the chosen size from it, while `responsive` is on.
+fn size_of(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Sm).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Sm).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 /// The glyph the box draws; no control varies it.
 const GLYPH: &str = "svg: pictogram_icons_lucide::check::outlined";
@@ -24,20 +45,20 @@ pub fn IconPage() -> Element {
             properties: vec![
                 props("Icon", vec![
                     prop("component", "HtmlTag").default("span").doc("Element to render as."),
-                    prop("variant", "Variant")
+                    prop("variant", "Responsive<Variant>")
                         .default(theme.icon.variant.as_str())
-                        .doc("The look, shared with `Button`. An icon is not interactive, so it has no hover state. With `standard`, which draws no container, the svg fills the box; every other variant insets it to 60%, and `--lsx-icon-glyph` in `sx` picks another share."),
+                        .doc("The look, shared with `Button`. An icon is not interactive, so it has no hover state. With `standard`, which draws no container, the svg fills the box; every other variant insets it to 60%, and `--lsx-icon-glyph` in `sx` picks another share. Or one per breakpoint, `variant: responsive(Variant::Standard).md(Variant::Filled)`. Breakpoints follow the window, not the parent."),
                     prop("gradient", "Gradient")
                         .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop."),
-                    prop("size", "ThemeAwareValue")
+                    prop("size", "Responsive<ThemeAwareValue>")
                         .default(theme.icon.size.as_str())
-                        .doc("Width and height."),
-                    prop("radius", "ThemeAwareValue")
+                        .doc("Width and height. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.icon.radius.as_str())
-                        .doc("Corner radius."),
+                        .doc("Corner radius. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent."),
                     prop("src", "String")
                         .doc("An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored. A `javascript:` or `vbscript:` URL draws nothing and warns in debug builds."),
                     prop("svg", "SvgData")
@@ -87,7 +108,9 @@ pub fn IconPage() -> Element {
                     Control::color("color"),
                     gradient_to,
                     gradient_deg,
-                    Control::sizes("size").default(theme.icon.size.as_str()),
+                    Control::sizes("size").default(theme.icon.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `standard` draws no box, so there is no corner to round.
                     Control::sizes("radius")
                         .default(theme.icon.radius.as_str())
@@ -106,7 +129,7 @@ pub fn IconPage() -> Element {
                             "primary" => Input::None,
                             color => Input::from(color),
                         },
-                        size: values.str("size"),
+                        size: size_of(&values),
                         radius: values.str("radius"),
                         svg: pictogram_icons_lucide::check::outlined,
                         aria_label: (values.str("aria_label") == "true").then_some(NAME),

@@ -2,8 +2,42 @@ use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop
 use dioxus::prelude::*;
 use libero::{
     components::{Carousel, CarouselPart, Input, Text},
+    sx::ThemeAwareValue,
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
+
+/// A gap step as a value: `"0"` is CSS, the rest are sizes.
+fn gap_value(gap: &str) -> ThemeAwareValue {
+    match gap {
+        "0" => "0".into(),
+        size => Size::from(size).into(),
+    }
+}
+
+/// `xs` below `md`, the chosen gap from it, while `responsive` is on.
+fn gap_of(values: &DemoValues) -> Input<Responsive<ThemeAwareValue>> {
+    let gap = gap_value(&values.str("gap"));
+    match values.str("responsive") == "true" {
+        true => responsive(ThemeAwareValue::from(Size::Xs)).md(gap).into(),
+        false => gap.into(),
+    }
+}
+
+fn gap_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    let gap = values.str("gap");
+    let value = match gap.as_str() {
+        "0" => r#""0".into()"#.to_string(),
+        size => format!("Size::{:?}.into()", Size::from(size)),
+    };
+    match values.str("responsive") == "true" {
+        true => vec![format!(
+            "gap: responsive(ThemeAwareValue::from(Size::Xs)).md({value})"
+        )],
+        false if gap == control.default => vec![],
+        false => vec![format!("gap: {gap:?}")],
+    }
+}
 
 mod demo;
 use demo::demo_slides;
@@ -42,16 +76,16 @@ pub fn CarouselPage() -> Element {
                     prop("per_view", "f64")
                         .default(theme.carousel.per_view.to_string())
                         .doc("Slides visible at once. A fraction lets the next one peek in. The strip runs out of scroll before the slides, so six slides three-up stop at index 3."),
-                    prop("gap", "ThemeAwareValue").default(theme.carousel.gap.as_str()).doc("Between slides, or any CSS, e.g. `gap: \"0\"`."),
+                    prop("gap", "Responsive<ThemeAwareValue>").default(theme.carousel.gap.as_str()).doc("Between slides, or any CSS, e.g. `gap: \"0\"`. Or one per breakpoint, `gap: responsive(ThemeAwareValue::from(Size::Xs)).md(Size::Lg.into())`. Breakpoints follow the window, not the parent."),
                     prop("align", "CarouselAlign")
                         .default(theme.carousel.align.as_str())
                         .doc("Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("Scroll axis."),
-                    prop("height", "ThemeAwareValue")
+                    prop("height", "Responsive<ThemeAwareValue>")
                         .default("auto")
-                        .doc("Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`."),
+                        .doc("Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. Or one per breakpoint, `height: responsive(ThemeAwareValue::from(\"240px\")).md(\"400px\".into())`."),
                     prop("controls", "bool")
                         .default(theme.carousel.controls.to_string())
                         .doc("Previous and next buttons. Hidden while every slide fits."),
@@ -135,7 +169,10 @@ pub fn CarouselPage() -> Element {
                             }
                         }),
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl"])
-                        .default(theme.carousel.gap.as_str()),
+                        .default(theme.carousel.gap.as_str())
+                        .code(gap_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle("align", ["start", "center", "end"])
                         .labels(["Start", "Center", "End"])
                         .default(theme.carousel.align.as_str()),
@@ -186,14 +223,11 @@ pub fn CarouselPage() -> Element {
                             index: index(),
                             onindexchange: move |next| index.set(next),
                             per_view: values.str("per_view").parse::<f64>().unwrap_or(1.0),
-                            gap: values.str("gap"),
+                            gap: gap_of(&values),
                             align: values.str("align"),
                             orientation: values.str("orientation"),
-                            // `Input::None`, not `""`: an empty string is a value, not "no height".
-                            height: match vertical {
-                                true => Input::Value("300px".into()),
-                                false => Input::None,
-                            },
+                            // `None`, not `""`: an empty string is a value, not "no height".
+                            height: vertical.then_some("300px"),
                             controls: values.str("controls") == "true",
                             indicators: values.str("indicators") == "true",
                             draggable: values.str("draggable") == "true",

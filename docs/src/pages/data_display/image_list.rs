@@ -17,6 +17,29 @@ use libero::{
 mod demo;
 use demo::{items, wide_span};
 
+/// `xs` below `md`, the chosen radius from it, while `responsive_radius` is on.
+fn radius_of(values: &DemoValues) -> Responsive<Size> {
+    let radius = Size::from(values.str("radius").as_str());
+    match values.str("responsive_radius") == "true" {
+        true => responsive(Size::Xs).md(radius),
+        false => radius.into(),
+    }
+}
+
+fn radius_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (
+        values.str("responsive_radius") == "true",
+        values.str("radius"),
+    ) {
+        (true, radius) => vec![format!(
+            "radius: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(radius.as_str())
+        )],
+        (false, radius) if radius == control.default => vec![],
+        (false, radius) => vec![format!("radius: {radius:?}")],
+    }
+}
+
 /// Four, not the theme's two: at two a wide cell is full width, so no row mixes
 /// widths - the case that found the stretched aspect-ratio box.
 const DEMO_COLS: &str = "4";
@@ -151,9 +174,9 @@ pub fn ImageListPage() -> Element {
                     prop("gap", "Responsive<ThemeAwareValue>")
                         .default(defaults.gap.as_str())
                         .doc("Between cells, or any CSS, e.g. `gap: \"2px\"`, per breakpoint too. Masonry packs its rows by the base gap."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(defaults.radius.as_str())
-                        .doc("Each cell's corner radius, or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Each cell's corner radius, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("ratio", "f32")
                         .default("1.0, from theme.aspect_ratio")
                         .doc("Cell aspect ratio, such as `16.0 / 9.0`. Ignored by `masonry`. Under `quilted` it is the ratio of one cell, and a bigger cell scales from it."),
@@ -241,7 +264,10 @@ pub fn ImageListPage() -> Element {
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(defaults.gap.as_str()),
                     Control::sizes("radius")
-                        .default(defaults.radius.as_str()),
+                        .default(defaults.radius.as_str())
+                        .code(radius_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive_radius").default("true").code(|_, _| vec![]),
                     // `masonry` takes the picture's own height, so `ratio` does
                     // not exist in that state - an ignored prop must not print.
                     Control::toggle("ratio", ["1", "4:3", "16:9"])
@@ -289,7 +315,7 @@ pub fn ImageListPage() -> Element {
                         cols: cols(&values, defaults.cols),
                         variant: values.str("variant"),
                         gap: values.str("gap"),
-                        radius: values.str("radius"),
+                        radius: radius_of(&values),
                         // Unset under `masonry`, which warns on a ratio it ignores.
                         ratio: match (
                             values.str("variant").as_str(),

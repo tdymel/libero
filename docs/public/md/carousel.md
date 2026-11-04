@@ -60,10 +60,10 @@ fn Demo() -> Element {
 | `index` | `Option<usize>` | `None`, uncontrolled | The current slide. Set it and the carousel follows. |
 | `onindexchange` | `EventHandler<usize>` | `None` | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
 | `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. The strip runs out of scroll before the slides, so six slides three-up stop at index 3. |
-| `gap` | `ThemeAwareValue` | `md` | Between slides, or any CSS, e.g. `gap: "0"`. |
+| `gap` | `Responsive<ThemeAwareValue>` | `md` | Between slides, or any CSS, e.g. `gap: "0"`. Or one per breakpoint, `gap: responsive(ThemeAwareValue::from(Size::Xs)).md(Size::Lg.into())`. Breakpoints follow the window, not the parent. |
 | `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
 | `orientation` | `Orientation` | `horizontal` | Scroll axis. |
-| `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. |
+| `height` | `Responsive<ThemeAwareValue>` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. Or one per breakpoint, `height: responsive(ThemeAwareValue::from("240px")).md("400px".into())`. |
 | `controls` | `bool` | `true` | Previous and next buttons. Hidden while every slide fits. |
 | `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |
 | `aria_label` | `String` | localization `label` | Names the region. Unset, it falls back to the localization's label and warns. |

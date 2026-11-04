@@ -4,16 +4,17 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, base_color, base_props, contrast_color, fill_color,
-            literal_contrast, variables,
+            literal_contrast, variables, with_own,
         },
+        data_display::responsive_props::{plain_var, var_sx},
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_range_css, use_theme},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, INDICATOR_BORDER_WIDTH, INDICATOR_BOX, INDICATOR_FONT,
         INDICATOR_PROCESSING_DURATION, INDICATOR_RADII, INDICATOR_RADIUS, IndicatorDefaults,
-        PAPER_BACKGROUND, Size, SizeCss,
+        PAPER_BACKGROUND, Responsive, Size, SizeCss,
     },
 };
 
@@ -113,14 +114,16 @@ base_props! {
         #[props(default, into)]
         max: Option<u32>,
         /// The dot's diameter, and the height of a labelled one, at least 1.4 times its font size.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// The fill. The label takes its auto-contrast twin.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// A step on the indicator's own radius scale, or any CSS, as `radius: "0"`; the default is round.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// A ring in the surface colour, so the dot reads on a picture.
         #[props(default)]
         with_border: Option<bool>,
@@ -149,7 +152,7 @@ base_props! {
 #[component]
 pub fn Indicator(props: IndicatorProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.indicator.size);
+    let sizes = props.size.copied_or(theme.indicator.size.into());
     let max = props.max.unwrap_or(theme.indicator.max);
 
     let requested = props
@@ -169,25 +172,37 @@ pub fn Indicator(props: IndicatorProps) -> Element {
         )
         .with(
             INDICATOR_RADIUS.override_var(),
-            props.radius.resolve(Some(INDICATOR_RADII)),
+            plain_var(&props.radius, Some(INDICATOR_RADII)),
         )
         .into();
+    let sx = with_own(
+        var_sx(
+            &props.radius,
+            INDICATOR_RADIUS.override_var(),
+            Some(INDICATOR_RADII),
+        ),
+        &props.sx,
+    );
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with("labelled", props.label.is_some())
         .with("with-border", props.with_border.unwrap_or(false))
         .with("processing", props.processing.unwrap_or(false))
         .into();
+    use_range_css(
+        &INDICATOR_BASE_SX,
+        sizes.range_copies(|size| size.state_name(), IndicatorDefaults::size_sx),
+    );
 
     let text = props.label.map(|count| label_text(count, max));
 
     use_box()
         .framework_sx(&INDICATOR_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .variables(&variables)
         .prepare()

@@ -28,7 +28,7 @@ impl ListDefaults {
     /// A nested `List` sits one item gap below its item's text, as its items sit apart (4991).
     const NESTED_LIST: &str = "& > li > [role='list'], & > li > [data-slot='body'] > [role='list']";
 
-    fn size_sx(size: Size) -> Sx {
+    pub(crate) fn size_sx(size: Size) -> Sx {
         sx().gap(LIST_GAP.value(size))
             .selector(
                 Self::NESTED,

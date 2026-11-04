@@ -6,8 +6,9 @@ use crate::{
             ClassList, HtmlTag, Input, PROBES_AFTER_MOUNT, Part, SVG_FIT, States, Variables,
             base_props, css_string, focus_ring_sx, input_from_str, media_url, min_hit_area_sx,
             on_failed_after_mount, parts_enum, parts_under_sx, states, svg_fit, svg_fit_sx,
-            svg_fit_variables, use_svg_probe, variables,
+            svg_fit_variables, use_svg_probe, variables, with_own,
         },
+        data_display::responsive_props::{plain_var, var_sx},
         form::use_fieldset_disabled,
         layout::use_box,
     },
@@ -16,7 +17,7 @@ use crate::{
     platform,
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, IMAGE_RADIUS, ImageDefaults, SizeCss},
+    theme::{CssVar, IMAGE_RADIUS, ImageDefaults, Responsive, SizeCss},
     utils::warn,
 };
 
@@ -38,10 +39,10 @@ str_enum! {
 
 input_from_str!(ImageLoading);
 
-fn image_variables(radius: Option<&ThemeAwareValue>) -> Variables {
+fn image_variables(radius: &Input<Responsive<ThemeAwareValue>>) -> Variables {
     variables().with(
         IMAGE_RADIUS.override_var(),
-        radius.and_then(|radius| radius.resolve(Some(SizeCss::RADIUS))),
+        plain_var(radius, Some(SizeCss::RADIUS)),
     )
 }
 
@@ -151,8 +152,9 @@ base_props! {
         #[props(default, into)]
         fit: Input<ImageFit>,
         /// A size word on the radius scale, or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// What the picture shows. `None` warns in debug builds unless `decorative`.
         /// The fallback keeps it, so word it to fit `fallback_src` too.
         #[props(default, into)]
@@ -278,11 +280,8 @@ pub fn Image(props: ImageProps) -> Element {
 
     let fit = props.fit.copied_or(use_theme().image.fit);
     let fallback_under = fallback_src.filter(|_| !platform::fires_image_errors());
-    let mut variables = svg_fit_variables(
-        image_variables(props.radius.as_ref()),
-        &src,
-        background_size(fit),
-    );
+    let mut variables =
+        svg_fit_variables(image_variables(&props.radius), &src, background_size(fit));
     if let Some(fallback) = fallback_under {
         variables = fallback_under_variables(variables, &src, fallback, fit);
     }
@@ -301,11 +300,19 @@ pub fn Image(props: ImageProps) -> Element {
     // When zoomable, `ZoomButton` takes the caller's styling instead.
     let no_class = Input::None;
     let no_sx = Input::None;
+    let own_sx = with_own(
+        var_sx(
+            &props.radius,
+            IMAGE_RADIUS.override_var(),
+            Some(SizeCss::RADIUS),
+        ),
+        &props.sx,
+    );
     let (class, user_sx, img_states) = match zoomable {
         true => (&no_class, &no_sx, states()),
         false => (
             &props.class,
-            &props.sx,
+            &own_sx,
             props.states.clone().unwrap_or_default(),
         ),
     };
@@ -364,9 +371,9 @@ pub fn Image(props: ImageProps) -> Element {
             ZoomButton {
                 item,
                 alt: alt.unwrap_or_default(),
-                variables: image_variables(props.radius.as_ref()),
+                variables: image_variables(&props.radius),
                 class: props.class,
-                sx: parts_under_sx(&props.parts, props.sx),
+                sx: parts_under_sx(&props.parts, own_sx.clone()),
                 states: props.states,
                 attributes,
                 {image}
@@ -445,7 +452,7 @@ mod tests {
 
     #[test]
     fn a_size_radius_resolves_through_the_radius_scale() {
-        let variables = image_variables(Some(&Size::Md.into()));
+        let variables = image_variables(&Size::Md.into());
 
         assert_eq!(
             variables.to_string(),
@@ -468,7 +475,7 @@ mod tests {
 
     #[test]
     fn no_radius_emits_no_variable() {
-        assert_eq!(image_variables(None).to_string(), "");
+        assert_eq!(image_variables(&Input::None).to_string(), "");
     }
 
     /// Todo 3917: `image` builds without `lightbox`, and then says why nothing zooms.

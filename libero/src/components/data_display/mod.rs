@@ -32,6 +32,8 @@ mod media_controls;
 mod pictogram;
 #[cfg(feature = "qr-code")]
 mod qr_code;
+#[allow(dead_code)]
+mod responsive_props;
 #[cfg(feature = "sortable")]
 pub(crate) mod sortable;
 #[cfg(feature = "table")]

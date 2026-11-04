@@ -6,9 +6,9 @@ use crate::{
     components::{
         common::{
             COARSE_POINTER, HtmlTag, Input, ScaleOrCss, States, Variables, Variant, base_props,
-            coarse_hit_area_sx, focus_ring_sx, variables,
+            coarse_hit_area_sx, focus_ring_sx, variables, with_own,
         },
-        data_display::Avatar,
+        data_display::{Avatar, responsive_props::var_sx},
         layout::use_box,
         overlay::Tooltip,
     },
@@ -71,9 +71,10 @@ base_props! {
         #[props(default)]
         surplus: Option<Callback<usize, Element>>,
         /// How far each circle is pulled over the one before it.
-        /// A size word or any CSS, as `spacing: "0"`.
+        /// A size word or any CSS, as `spacing: "0"`, or one per breakpoint,
+        /// `spacing: responsive(Size::Xs).md(Size::Md)`.
         #[props(default, into)]
-        spacing: Input<ThemeAwareValue>,
+        spacing: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
         size: Input<Size>,
         /// A step on `Avatar`'s radius scale, or any CSS, for every member and the chip.
@@ -109,7 +110,11 @@ base_props! {
 pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let theme = use_theme();
     let labels = &use_localization().avatar;
-    let spacing = ScaleOrCss::new(props.spacing.as_ref(), theme.avatar_group.spacing);
+    let spacing = ScaleOrCss::new(
+        props.spacing.as_ref().map(Responsive::base_ref),
+        theme.avatar_group.spacing,
+    );
+    let spacing_sx = var_sx(&props.spacing, AVATAR_GROUP_SPACING, Some(SizeCss::SPACING));
     let size = props.size.copied_or(theme.avatar.size);
     let variant = props.variant.copied_or(theme.avatar.variant);
     let color = props
@@ -129,7 +134,13 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let circles = shown + usize::from(hidden > 0);
 
     let root_variables: Input<Variables> = variables()
-        .with(AVATAR_GROUP_SPACING, spacing.resolve(SizeCss::SPACING))
+        // A per-breakpoint spacing declares every range in `sx`: an inline var would beat them.
+        .with(
+            AVATAR_GROUP_SPACING,
+            spacing_sx
+                .is_none()
+                .then(|| spacing.resolve(SizeCss::SPACING)),
+        )
         .into();
 
     // Through `variables`, so a var the chip stops setting is reverted
@@ -230,7 +241,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     use_box()
         .framework_sx(&AVATAR_GROUP_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&with_own(spacing_sx, &props.sx))
         .states(&props.states)
         .variables(&root_variables)
         .focus_ring(false)

@@ -44,11 +44,11 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `items` | `Vec<TimelineEvent>` | `vec![]` | The events, in render order. |
 | `active` | `Option<usize>` | `None` | The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so "step 7 of 4" means finished. |
-| `align` | `TimelineAlign` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. With an event's `.opposite(..)`, every `align` draws as `start` below `sm`. |
+| `align` | `Responsive<TimelineAlign>` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. With an event's `.opposite(..)`, every `align` draws as `start` below `sm`. Or one per breakpoint, `align: responsive(TimelineAlign::Start).md(TimelineAlign::Alternate)`. Breakpoints follow the window, not the parent. With `opposite` content, the reading order follows the base. |
 | `color` | `ThemeAwareValue` | `primary` | The active accent. An event's own `.color(..)` overrides it. |
-| `bullet_size` | `Size` | `md` | Bullet diameter. |
-| `radius` | `ThemeAwareValue` | `xl` | Bullet corner radius, or any CSS, e.g. `radius: "0"`. `xl` is a dot. |
-| `gap` | `ThemeAwareValue` | `xl` | Space between events, which is also each connector's length, or any CSS, e.g. `gap: "0"`. |
+| `bullet_size` | `Responsive<Size>` | `md` | Bullet diameter. Or one per breakpoint, `bullet_size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
+| `radius` | `Responsive<ThemeAwareValue>` | `xl` | Bullet corner radius, or any CSS, e.g. `radius: "0"`. `xl` is a dot. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xl)`. Breakpoints follow the window, not the parent. |
+| `gap` | `Responsive<ThemeAwareValue>` | `xl` | Space between events, which is also each connector's length, or any CSS, e.g. `gap: "0"`. Or one per breakpoint, `gap: responsive(Size::Sm).md(Size::Xl)`. Breakpoints follow the window, not the parent. |
 | `parts` | `Parts<TimelinePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 `TimelineEvent`

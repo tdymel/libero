@@ -9,8 +9,29 @@ use libero::{
         Text,
     },
     sx::sx,
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
+
+/// `sm` below `md`, the chosen size from it, while `responsive` is on.
+fn size_of(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Sm).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Sm).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("accordion.rs"));
@@ -140,9 +161,9 @@ pub fn AccordionPage() -> Element {
                         .default("T::label()")
                         .doc("Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it."),
                     prop("heading", "HtmlTag").default("h3").doc("The heading around each trigger, `h1` to `h6`."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.accordion.size.as_str())
-                        .doc("Type and padding of the triggers and panels. Panel content takes the type size only where it sets none of its own; `Text` sets its own."),
+                        .doc("Type and padding of the triggers and panels. Panel content takes the type size only where it sets none of its own; `Text` sets its own. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("collapsible", "bool")
                         .default("true")
                         .doc("`false` keeps the open section open in `One` mode: its trigger turns `aria-disabled` and only opening another closes it. `Many` mode ignores it."),
@@ -215,7 +236,9 @@ pub fn AccordionPage() -> Element {
                             vec![format!("panel: {}", panel.trim_end_matches(','))]
                         }),
                     Control::sizes("size")
-                        .default(theme.accordion.size.as_str()),
+                        .default(theme.accordion.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle("heading", ["h2", "h3", "h4"])
                         .labels(["H2", "H3", "H4"])
                         .default("h3"),
@@ -274,7 +297,7 @@ pub fn AccordionPage() -> Element {
                             Accordion {
                                 key: "{mode}-{off}-{plain}",
                                 has_panel: plain.then(|| Callback::new(|step: Step| step != Step::Review)),
-                                size: values.str("size"),
+                                size: size_of(&values),
                                 heading: values.str("heading"),
                                 collapsible: values.str("collapsible") == "true",
                                 chevron_position: values.str("chevron_position"),

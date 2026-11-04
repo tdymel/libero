@@ -9,7 +9,7 @@ use crate::{
         use_name_warning,
     },
     hooks::{use_root_id, use_theme},
-    theme::{AccordionChevronPosition, Size},
+    theme::{AccordionChevronPosition, Responsive, Size},
     utils::warn,
 };
 
@@ -108,8 +108,9 @@ base_props! {
         /// The heading around each trigger, `h1`..`h6`: match the page outline.
         #[props(default, into)]
         heading: Input<HtmlTag>,
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Default `true`. `false` keeps the open section open in `One` mode: its trigger
         /// turns `aria-disabled`, and only opening another closes it. `Many` mode ignores it.
         #[props(default)]
@@ -240,7 +241,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
             panel: props.panel,
             ontoggle: toggle,
             heading,
-            size: props.size.copied_or(theme.accordion.size),
+            size: props.size.copied_or(theme.accordion.size.into()),
             chevron_position: props
                 .chevron_position
                 .copied_or(AccordionChevronPosition::default()),

@@ -2,8 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Image, ImagePart, Input, Text},
-    sx::sx,
-    theme::Size,
+    sx::{ThemeAwareValue, sx},
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
 
@@ -15,6 +15,40 @@ const ALT: &str = "A stylised landscape";
 
 /// The fallback keeps `alt`, so a source known to fail words it for the crossed-out picture.
 const BROKEN_ALT: &str = "Picture unavailable";
+
+/// Square below `md`, the chosen step (else `lg`) from it, while `responsive` is on.
+fn radius_of(values: &DemoValues) -> Input<Responsive<ThemeAwareValue>> {
+    match (
+        values.str("responsive") == "true",
+        values.str("radius").as_str(),
+    ) {
+        (true, "none") => responsive(ThemeAwareValue::from("0"))
+            .md(Size::Lg.into())
+            .into(),
+        (true, radius) => responsive(ThemeAwareValue::from("0"))
+            .md(Size::from(radius).into())
+            .into(),
+        (false, "none") => Input::None,
+        (false, radius) => Size::from(radius).into(),
+    }
+}
+
+fn radius_code(values: &DemoValues) -> Vec<String> {
+    match (
+        values.str("responsive") == "true",
+        values.str("radius").as_str(),
+    ) {
+        (true, "none") => vec![
+            r#"radius: responsive(ThemeAwareValue::from("0")).md(Size::Lg.into())"#.to_string(),
+        ],
+        (true, radius) => vec![format!(
+            r#"radius: responsive(ThemeAwareValue::from("0")).md(Size::{:?}.into())"#,
+            Size::from(radius)
+        )],
+        (false, "none") => vec![],
+        (false, radius) => vec![format!("radius: {radius:?}")],
+    }
+}
 
 fn alt_of(values: &DemoValues) -> &'static str {
     match values.str("broken_src").as_str() {
@@ -44,9 +78,9 @@ pub fn ImagePage() -> Element {
                         .default("None")
                         .doc("A larger source for the zoom overlay. Falls back to `src`."),
                     prop("fit", "ImageFit").default(theme.image.fit.as_str()).doc("Maps onto `object-fit`."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default("0")
-                        .doc("Corner radius, a step on the radius scale, or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius, a step on the radius scale, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(ThemeAwareValue::from(\"0\")).md(Size::Lg.into())`. Breakpoints follow the window, not the parent."),
                     prop("alt", "Option<String>")
                         .default("None")
                         .doc("What the picture shows. A debug build warns when neither `alt` nor `decorative` is set."),
@@ -107,10 +141,9 @@ pub fn ImagePage() -> Element {
                     // leaves the prop unset.
                     Control::slider("radius", ["none", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("none")
-                        .code(|_, values| match values.str("radius").as_str() {
-                            "none" => vec![],
-                            radius => vec![format!("radius: {radius:?}")],
-                        }),
+                        .code(|_, values| radius_code(values)),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::switch("zoomable"),
                     // `alt` unless decorative: `decorative` wins over it, with a warning.
                     Control::switch("decorative").code(|_, values| match values.str("decorative").as_str() {
@@ -140,10 +173,7 @@ pub fn ImagePage() -> Element {
                         alt: (values.str("decorative") != "true").then(|| alt_of(&values).to_string()),
                         decorative: values.str("decorative") == "true",
                         fit: values.str("fit"),
-                        radius: match values.str("radius").as_str() {
-                            "none" => Input::None,
-                            radius => Input::from(Size::from(radius)),
-                        },
+                        radius: radius_of(&values),
                         zoomable: values.str("zoomable") == "true",
                         sx: sx().width("160px").height("160px").background("muted.1"),
                     }

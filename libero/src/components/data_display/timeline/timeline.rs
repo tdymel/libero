@@ -6,21 +6,43 @@ use crate::{
         accessibility::VisuallyHidden,
         common::{
             ABSENT, HtmlTag, Input, LogicalTextAlign, Part, Rail, RailInset, ScaleOrCss, States,
-            Variables, base_props, input_from_str, parts_enum, variables,
+            Variables, base_props, input_from_str, parts_enum, responsive_sx, variables, with_own,
         },
+        data_display::responsive_props::and_sx,
         layout::use_box,
     },
-    hooks::use_theme,
-    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
+    hooks::{use_range_css, use_theme},
+    sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        Size, SizeCss, TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_COLOR,
+        Responsive, Size, SizeCss, TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_COLOR,
         TIMELINE_CONNECTOR, TIMELINE_GAP, TIMELINE_LINE_COLOR, TIMELINE_LINE_STYLE,
         TIMELINE_LINE_WIDTH, TIMELINE_MARKER, TIMELINE_RADIUS, TIMELINE_SPACE, TimelineAlign,
-        gap_state_name,
+        TimelineDefaults, gap_state_name,
     },
 };
 
 input_from_str!(TimelineAlign);
+crate::sx::input::input_from_responsive!(str TimelineAlign);
+
+/// A per-breakpoint size-or-CSS prop's override var, in the user layer; the base step
+/// keeps its state class. `None` when plain.
+fn override_sx(value: &Input<Responsive<ThemeAwareValue>>, scale: SizeCss) -> Option<Sx> {
+    let value = value.as_ref().filter(|value| !value.is_plain())?;
+    responsive_sx(value, |sx, value| {
+        let css = value
+            .resolve(Some(scale))
+            .unwrap_or_else(|| "initial".into());
+        sx.var(scale.override_var(), css)
+    })
+}
+
+/// The scale step of every breakpoint, for the state words and range copies.
+fn steps(value: &Input<Responsive<ThemeAwareValue>>, fallback: Size) -> Responsive<Size> {
+    match value.as_ref() {
+        Some(value) => value.map(|value| ScaleOrCss::new(Some(&value), fallback).size),
+        None => fallback.into(),
+    }
+}
 
 /// Horizontal space between the marker and the text column.
 const CONTENT_SPACE: &str = "var(--lsx-spacing-md)";
@@ -283,19 +305,24 @@ base_props! {
         #[props(default)]
         active: Option<usize>,
         /// Which side of the rail content sits on; `"alternate"` fills its parent.
+        /// Per breakpoint too: `responsive(TimelineAlign::Start).md(TimelineAlign::Alternate)`;
+        /// with `opposite` content, the reading order follows the base.
         #[props(default, into)]
-        align: Input<TimelineAlign>,
+        align: Input<Responsive<TimelineAlign>>,
         /// The active accent. Per-event colours override it.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        bullet_size: Input<Size>,
+        bullet_size: Input<Responsive<Size>>,
         /// Bullet corner radius: a size word or any CSS, as `radius: "0"`. `Xl` is the dot.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Space between events and each connector: a size word or any CSS, as `gap: "0"`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xl)`.
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
+        gap: Input<Responsive<ThemeAwareValue>>,
     }
 }
 
@@ -322,10 +349,28 @@ base_props! {
 #[component]
 pub fn Timeline(props: TimelineProps) -> Element {
     let theme = use_theme();
-    let align = props.align.copied_or(theme.timeline.align);
-    let bullet_size = props.bullet_size.copied_or(theme.timeline.bullet_size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.timeline.radius);
-    let gap = ScaleOrCss::new(props.gap.as_ref(), theme.timeline.gap);
+    let aligns = props.align.copied_or(theme.timeline.align.into());
+    // Item order and `content-end` are Rust's: they follow the base.
+    let align = aligns.base();
+    let bullet_sizes = props
+        .bullet_size
+        .copied_or(theme.timeline.bullet_size.into());
+    let radius = ScaleOrCss::new(
+        props.radius.as_ref().map(Responsive::base_ref),
+        theme.timeline.radius,
+    );
+    let gap = ScaleOrCss::new(
+        props.gap.as_ref().map(Responsive::base_ref),
+        theme.timeline.gap,
+    );
+    let radius_steps = steps(&props.radius, theme.timeline.radius);
+    let gap_steps = steps(&props.gap, theme.timeline.gap);
+    let radius_sx = override_sx(&props.radius, SizeCss::RADIUS);
+    let gap_sx = override_sx(&props.gap, TIMELINE_GAP);
+    // A per-breakpoint value declares every range in `sx`: an inline var would beat them.
+    let plain_radius = radius_sx.is_none();
+    let plain_gap = gap_sx.is_none();
+    let sx = with_own(and_sx(radius_sx, gap_sx), &props.sx);
 
     // One event with an opposite centres the rail of every event.
     let opposed = props.items.iter().any(|item| item.opposite.is_some());
@@ -333,13 +378,41 @@ pub fn Timeline(props: TimelineProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(align.state_name(), true)
+        .responsive(&aligns, TimelineAlign::state_name)
         .with("opposite", opposed)
-        .with(bullet_size.state_name(), true)
-        .with(radius.size.radius_state_name(), true)
+        .responsive(&bullet_sizes, |size| size.state_name())
+        .responsive(&radius_steps, |size| size.radius_state_name())
         // The third size axis has no `per_*` helper; see `TimelineDefaults`.
-        .with(gap_state_name(gap.size), true)
+        .responsive(&gap_steps, gap_state_name)
         .into();
+    let mut copies = aligns.range_copies(TimelineAlign::state_name, |align| {
+        TIMELINE_BASE_SX.axis_block(align.state_name())
+    });
+    copies.extend(bullet_sizes.range_copies(|size| size.state_name(), TimelineDefaults::size_sx));
+    copies.extend(
+        radius_steps.range_copies(|size| size.radius_state_name(), TimelineDefaults::radius_sx),
+    );
+    copies.extend(gap_steps.range_copies(gap_state_name, |gap| {
+        TIMELINE_BASE_SX.axis_block(gap_state_name(gap))
+    }));
+    use_range_css(&TIMELINE_BASE_SX, copies);
+    // An item carries the align words only on a one-sided rail; a bullet centres beside an opposite.
+    let item_aligns = (!opposed).then_some(aligns);
+    let bullet_aligns = item_aligns.unwrap_or(TimelineAlign::Alternate.into());
+    use_range_css(
+        &TIMELINE_ITEM_SX,
+        item_aligns.as_ref().map_or_else(Vec::new, |aligns| {
+            aligns.range_copies(TimelineAlign::state_name, |align| {
+                TIMELINE_ITEM_SX.axis_block(align.state_name())
+            })
+        }),
+    );
+    use_range_css(
+        &TIMELINE_BULLET_SX,
+        bullet_aligns.range_copies(TimelineAlign::state_name, |align| {
+            TIMELINE_BULLET_SX.axis_block(align.state_name())
+        }),
+    );
 
     let root_variables: Input<Variables> = variables()
         .with(
@@ -348,9 +421,12 @@ pub fn Timeline(props: TimelineProps) -> Element {
         )
         .with(
             SizeCss::RADIUS.override_var(),
-            radius.custom_css(SizeCss::RADIUS),
+            radius.custom_css(SizeCss::RADIUS).filter(|_| plain_radius),
         )
-        .with(TIMELINE_GAP.override_var(), gap.custom_css(TIMELINE_GAP))
+        .with(
+            TIMELINE_GAP.override_var(),
+            gap.custom_css(TIMELINE_GAP).filter(|_| plain_gap),
+        )
         .into();
 
     // Prepared once, outside the loop (`use_box` is a hook), and cloned per item.
@@ -387,8 +463,11 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 TimelineAlign::End => false,
                 TimelineAlign::Alternate => index % 2 == 0,
             };
-            let item_states = States::default()
-                .with(align.state_name(), !opposed)
+            let item_states = match &item_aligns {
+                Some(aligns) => States::default().responsive(aligns, TimelineAlign::state_name),
+                None => States::default(),
+            };
+            let item_states = item_states
                 .with("opposite", opposed)
                 .with("content-end", opposed && content_end)
                 .with("active", is_active)
@@ -406,14 +485,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 );
 
             let bullet_states = States::default()
-                .with(
-                    match opposed {
-                        true => TimelineAlign::Alternate,
-                        false => align,
-                    }
-                    .state_name(),
-                    true,
-                )
+                .responsive(&bullet_aligns, TimelineAlign::state_name)
                 .with("opposite", opposed)
                 .with("active", is_active)
                 .with("with-child", item.bullet.is_some());
@@ -472,7 +544,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
     use_box()
         .framework_sx(&TIMELINE_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .parts(&props.parts)
         .states(&states)
         .variables(&root_variables)

@@ -5,8 +5,9 @@ use crate::{
         common::{
             HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
             contrast_color, fill_color, label_color, literal_contrast, variables,
-            variant_chrome_sx, variant_colors,
+            variant_chrome_sx, variant_colors, with_own,
         },
+        data_display::responsive_props::{plain_var, var_sx},
         layout::use_box,
     },
     hooks::{use_gradient_style, use_range_css, use_theme},
@@ -110,7 +111,7 @@ fn badge_variables(props: &BadgeProps, color: &ThemeAwareValue, variant: Variant
         .with(BADGE_ON_CONTAINER_VAR, colors.on_container)
         .with(
             BADGE_RADIUS.override_var(),
-            props.radius.resolve(Some(BADGE_RADII)),
+            plain_var(&props.radius, Some(BADGE_RADII)),
         )
 }
 
@@ -135,8 +136,9 @@ base_props! {
         #[props(default, into)]
         visible_from: Input<Size>,
         /// A step on the badge's own radius scale, or any CSS, as `radius: "0"`; the default is a pill.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Xxl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// A circle for a one- or two-character count; with a `trailing_icon` it stays a pill.
         #[props(default)]
         circle: Option<bool>,
@@ -211,6 +213,14 @@ pub fn Badge(props: BadgeProps) -> Element {
         variant_chrome_sx(variant, &BADGE_VARS)
     }));
     use_range_css(&BADGE_BASE_SX, copies);
+    let sx = with_own(
+        var_sx(
+            &props.radius,
+            BADGE_RADIUS.override_var(),
+            Some(BADGE_RADII),
+        ),
+        &props.sx,
+    );
 
     let label = use_box()
         .framework_sx(&BADGE_LABEL_SX)
@@ -227,7 +237,7 @@ pub fn Badge(props: BadgeProps) -> Element {
     use_box()
         .framework_sx(&BADGE_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .visibility(&props.hidden_from, &props.visible_from)
         .states(&states)
         .variables(&variables)

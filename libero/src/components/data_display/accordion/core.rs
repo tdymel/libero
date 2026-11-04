@@ -13,13 +13,13 @@ use crate::{
         layout::{Collapse, use_box},
     },
     context::IconSlot,
-    hooks::{ElementHandle, id_selector, use_element, use_icon},
+    hooks::{ElementHandle, id_selector, use_element, use_icon, use_range_css},
     platform::ElementApi,
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         ACCORDION_BORDER_COLOR, ACCORDION_CHEVRON_DURATION, ACCORDION_CHEVRON_SIZE,
         ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, AccordionChevronPosition,
-        AccordionDefaults, FOCUS_RING_HALO_SPREAD, Size,
+        AccordionDefaults, FOCUS_RING_HALO_SPREAD, Responsive, Size,
     },
 };
 
@@ -161,7 +161,7 @@ pub(crate) struct AccordionView<T: Options> {
     pub ontoggle: Callback<usize>,
     /// `h1`..`h6`, already checked.
     pub heading: HtmlTag,
-    pub size: Size,
+    pub size: Responsive<Size>,
     pub chevron_position: AccordionChevronPosition,
     pub rotate_chevron: bool,
     pub class: Input<ClassList>,
@@ -288,10 +288,14 @@ pub(crate) fn render_accordion<T: Options>(view: AccordionView<T>, root: String)
 
     let states: Input<States> = states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&size, |size| size.state_name())
         .with(chevron_position.state_name(), true)
         .with("static-chevron", !rotate_chevron)
         .into();
+    use_range_css(
+        &ACCORDION_SX,
+        size.range_copies(|size| size.state_name(), AccordionDefaults::size_sx),
+    );
 
     // A plain heading is no arrow target either.
     let skipped: Vec<bool> = sections

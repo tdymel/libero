@@ -6,8 +6,9 @@ use crate::{
         buttons::ActionIcon,
         common::{
             COARSE_POINTER, Glyph, HtmlTag, Input, Orientation, Part, ScaleOrCss, States,
-            Variables, base_props, parts_enum, variables,
+            Variables, base_props, parts_enum, variables, with_own,
         },
+        data_display::responsive_props::var_sx,
         layout::use_box,
     },
     context::IconSlot,
@@ -15,8 +16,8 @@ use crate::{
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         FOCUS_RING_HALO_SPREAD, MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE,
-        MARQUEE_FADE_SIZE, MARQUEE_GAP, MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT, Size,
-        SizeCss,
+        MARQUEE_FADE_SIZE, MARQUEE_GAP, MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT,
+        Responsive, Size, SizeCss,
     },
     utils::warn,
 };
@@ -262,8 +263,9 @@ base_props! {
         #[props(default)]
         duration: Option<u32>,
         /// Between copies: a size word or any CSS, as `gap: "0"`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Xl)`.
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         /// Copies in a row, at least 2. Raise it when a gap crosses the view; a
         /// debug build warns when the copies do not fill the box.
         #[props(default, into)]
@@ -320,7 +322,8 @@ pub fn Marquee(props: MarqueeProps) -> Element {
         .repeat
         .copied_or(defaults.repeat)
         .max(MARQUEE_MIN_REPEAT);
-    let gap = ScaleOrCss::new(props.gap.as_ref(), defaults.gap);
+    let gap = ScaleOrCss::new(props.gap.as_ref().map(Responsive::base_ref), defaults.gap);
+    let gap_sx = var_sx(&props.gap, MARQUEE_GAP, Some(SizeCss::SPACING));
     let horizontal = orientation == Orientation::Horizontal;
 
     // Debug builds only: a blank strip is a fault of the caller's `repeat` or content.
@@ -384,7 +387,11 @@ pub fn Marquee(props: MarqueeProps) -> Element {
 
     let variables: Input<Variables> = variables()
         .with(MARQUEE_REPEAT, repeat.to_string())
-        .with(MARQUEE_GAP, gap.resolve(SizeCss::SPACING))
+        // A per-breakpoint gap declares every range in `sx`: an inline var would beat them.
+        .with(
+            MARQUEE_GAP,
+            gap_sx.is_none().then(|| gap.resolve(SizeCss::SPACING)),
+        )
         .with(
             MARQUEE_DURATION.override_var(),
             props.duration.map(|duration| format!("{duration}ms")),
@@ -403,7 +410,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
     use_box()
         .framework_sx(&MARQUEE_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&with_own(gap_sx, &props.sx))
         .parts(&props.parts)
         .states(&states)
         .variables(&variables)

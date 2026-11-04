@@ -2,9 +2,42 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Button, Chip, Code, Flex, Marquee, MarqueePart, Text},
-    sx::sx,
+    sx::{ThemeAwareValue, sx},
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
+
+/// A gap step as a value: `"0"` is CSS, the rest are sizes.
+fn gap_value(gap: &str) -> ThemeAwareValue {
+    match gap {
+        "0" => "0".into(),
+        size => Size::from(size).into(),
+    }
+}
+
+/// `xs` below `md`, the chosen gap from it, while `responsive` is on.
+fn gap_of(values: &DemoValues) -> Responsive<ThemeAwareValue> {
+    let gap = gap_value(&values.str("gap"));
+    match values.str("responsive") == "true" {
+        true => responsive(ThemeAwareValue::from(Size::Xs)).md(gap),
+        false => gap.into(),
+    }
+}
+
+fn gap_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    let gap = values.str("gap");
+    let value = match gap.as_str() {
+        "0" => r#""0".into()"#.to_string(),
+        size => format!("Size::{:?}.into()", Size::from(size)),
+    };
+    match values.str("responsive") == "true" {
+        true => vec![format!(
+            "gap: responsive(ThemeAwareValue::from(Size::Xs)).md({value})"
+        )],
+        false if gap == control.default => vec![],
+        false => vec![format!("gap: {gap:?}")],
+    }
+}
 
 const CHIPS: [&str; 6] = ["Rust", "Dioxus", "WebAssembly", "Blitz", "Tokio", "Serde"];
 
@@ -104,7 +137,7 @@ fn MarqueePreview(values: DemoValues) -> Element {
                 orientation: values.str("orientation"),
                 sx: vertical(&values).then(|| sx().height(VERTICAL_HEIGHT)),
                 duration: values.str("duration").parse::<u32>().ok(),
-                gap: values.str("gap"),
+                gap: gap_of(&values),
                 repeat: values.str("repeat").parse::<u8>().ok(),
                 reverse: values.str("reverse") == "true",
                 pause_on_hover: values.str("pause_on_hover") == "true",
@@ -149,9 +182,9 @@ pub fn MarqueePage() -> Element {
                 prop("duration", "u32")
                     .default("40000")
                     .doc("Milliseconds per full cycle. The same number moves a longer strip faster."),
-                prop("gap", "ThemeAwareValue")
+                prop("gap", "Responsive<ThemeAwareValue>")
                     .default("md")
-                    .doc("Between copies, and between the last and the first, or any CSS, e.g. `gap: \"0\"`."),
+                    .doc("Between copies, and between the last and the first, or any CSS, e.g. `gap: \"0\"`. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("repeat", "u8")
                     .default("4")
                     .doc("Copies in a row. Raise it when a gap crosses the view; a debug build warns when the copies do not fill the box. Anything below 2 renders 2."),
@@ -228,7 +261,10 @@ pub fn MarqueePage() -> Element {
                         .default(defaults.duration.to_string())
                         .code(integer),
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl"])
-                        .default(defaults.gap.as_str()),
+                        .default(defaults.gap.as_str())
+                        .code(gap_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::slider("repeat", ["2", "3", "4", "5", "6"])
                         .default(defaults.repeat.to_string())
                         .code(integer),

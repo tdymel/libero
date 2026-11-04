@@ -41,7 +41,7 @@ fn Demo() -> Element {
 | `orientation` | `Orientation` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. |
 | `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
 | `duration` | `u32` | `40000` | Milliseconds per full cycle. The same number moves a longer strip faster. |
-| `gap` | `ThemeAwareValue` | `md` | Between copies, and between the last and the first, or any CSS, e.g. `gap: "0"`. |
+| `gap` | `Responsive<ThemeAwareValue>` | `md` | Between copies, and between the last and the first, or any CSS, e.g. `gap: "0"`. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `repeat` | `u8` | `4` | Copies in a row. Raise it when a gap crosses the view; a debug build warns when the copies do not fill the box. Anything below 2 renders 2. |
 | `pause_on_hover` | `bool` | `false` | Pauses under the pointer. Not enough on its own, since a keyboard or a touch screen cannot hover. |
 | `paused` | `Option<bool>` | `None` | Controlled when set, so pair it with `onpausechange`. `None` leaves the state to the built-in toggle. |

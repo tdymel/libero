@@ -8,10 +8,10 @@ use crate::{
         common::{HtmlTag, Input, States, base_props},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_content_changes, use_element, use_theme},
+    hooks::{ElementHandle, use_content_changes, use_element, use_range_css, use_theme},
     platform::ElementApi,
     sx::{StaticSx, sx},
-    theme::{ListDefaults, Size},
+    theme::{ListDefaults, Responsive, Size},
 };
 
 static LIST_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -40,9 +40,9 @@ static LIST_BASE_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct ListProps {
-        /// Item gap and nested-list indent.
+        /// Item gap and nested-list indent. Per breakpoint too: `responsive(Size::Xs).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// A numbered `ol`.
         #[props(default)]
         ordered: bool,
@@ -179,7 +179,7 @@ fn use_dom_order(context: ListContext, element: ElementHandle, ordered: bool) {
 #[component]
 pub fn List(mut props: ListProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.list.size);
+    let sizes = props.size.copied_or(theme.list.size.into());
 
     let context = use_context_provider(|| ListContext {
         icon: Signal::new(props.icon.clone()),
@@ -207,9 +207,13 @@ pub fn List(mut props: ListProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with("ordered", props.ordered)
         .into();
+    use_range_css(
+        &LIST_BASE_SX,
+        sizes.range_copies(|size| size.state_name(), ListDefaults::size_sx),
+    );
     let tag = if props.ordered {
         HtmlTag::Ol
     } else {

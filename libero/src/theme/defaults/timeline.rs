@@ -89,11 +89,11 @@ impl TimelineDefaults {
         gaps: Sizes::new(12, 16, 24, 32, 40, 48),
     };
 
-    fn size_sx(size: Size) -> Sx {
+    pub(crate) fn size_sx(size: Size) -> Sx {
         sx().var(TIMELINE_BULLET, TIMELINE_BULLET_SIZE.value(size))
     }
 
-    fn radius_sx(radius: Size) -> Sx {
+    pub(crate) fn radius_sx(radius: Size) -> Sx {
         sx().var(TIMELINE_RADIUS, SizeCss::RADIUS.overridable(radius))
     }
 

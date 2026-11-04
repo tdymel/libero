@@ -3,8 +3,29 @@ use dioxus::prelude::*;
 use libero::{
     components::{Avatar, Box, Code, Float, Indicator, Input, Text},
     sx::sx,
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
+
+/// `xs` below `md`, the chosen size from it, while `responsive` is on.
+fn size_of(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Xs).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 static AVATAR_IMAGE: Asset = asset!("/assets/avatar.svg");
 
@@ -48,15 +69,15 @@ pub fn IndicatorPage() -> Element {
                 prop("max", "Option<u32>")
                     .default(theme.indicator.max.to_string())
                     .doc("Above it, the label renders as `{max}+`, so `128` shows `99+` at the theme's cap of 99, while `99` itself renders `99`. Falls back to the theme's cap."),
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(theme.indicator.size.as_str())
-                    .doc("The dot's diameter, and the height of a labelled one, from 6px to 22px. A labelled one is never shorter than 1.4 times its font size."),
+                    .doc("The dot's diameter, and the height of a labelled one, from 6px to 22px. A labelled one is never shorter than 1.4 times its font size. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`. Breakpoints follow the window, not the parent."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.indicator.color.as_str())
                     .doc("The fill, a theme color name or a CSS color. A theme or hex color also sets a label color that reads on it; any other CSS color gets `contrast-color()`."),
-                prop("radius", "ThemeAwareValue")
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.indicator.radius.as_str())
-                    .doc("A step on the indicator's own radius scale, `1px` (`xs`) to `6px` (`xl`), or any CSS, e.g. `radius: \"0\"`. The default `xxl` is `9999px`, round at every size."),
+                    .doc("A step on the indicator's own radius scale, `1px` (`xs`) to `6px` (`xl`), or any CSS, e.g. `radius: \"0\"`. The default `xxl` is `9999px`, round at every size. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Xxl)`. Breakpoints follow the window, not the parent."),
                 prop("with_border", "bool")
                     .default("false")
                     .doc("A ring in the surface color, so the dot reads on top of a picture."),
@@ -97,7 +118,9 @@ pub fn IndicatorPage() -> Element {
                             None => vec![],
                         }),
                     Control::sizes("size")
-                        .default(theme.indicator.size.as_str()),
+                        .default(theme.indicator.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // An unset `color` is the theme's error role, so that
                     // swatch prints nothing.
                     Control::color("color").default(theme.indicator.color.as_str()),
@@ -120,7 +143,7 @@ pub fn IndicatorPage() -> Element {
                             placement: values.str("placement"),
                             Indicator {
                                 label: label(&values),
-                                size: values.str("size"),
+                                size: size_of(&values),
                                 color: match values.str("color").as_str() {
                                     "error" => Input::None,
                                     color => Input::from(color),

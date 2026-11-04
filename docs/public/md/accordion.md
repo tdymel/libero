@@ -56,7 +56,7 @@ fn Demo() -> Element {
 | `options` | `OptionSource<T>` | `T::options()` | The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. A disabled section the host opens through `open` cannot be closed from its trigger, so open only enabled ones. Groups are drawn flat. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it. |
 | `heading` | `HtmlTag` | `h3` | The heading around each trigger, `h1` to `h6`. |
-| `size` | `Size` | `md` | Type and padding of the triggers and panels. Panel content takes the type size only where it sets none of its own; `Text` sets its own. |
+| `size` | `Responsive<Size>` | `md` | Type and padding of the triggers and panels. Panel content takes the type size only where it sets none of its own; `Text` sets its own. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `collapsible` | `bool` | `true` | `false` keeps the open section open in `One` mode: its trigger turns `aria-disabled` and only opening another closes it. `Many` mode ignores it. |
 | `chevron_position` | `AccordionChevronPosition` | `end` | `end` or `start`: the chevron after or before the label. Logical, so right-to-left flips it. |
 | `rotate_chevron` | `bool` | `true` | `false` keeps the chevron pointing down when a section opens. |

@@ -5,15 +5,17 @@ use crate::{
         common::{
             HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
             contrast_color, css_string, fill_color, literal_contrast, media_url, names_itself,
-            text_color, use_name_warning, variables, variant_chrome_sx, variant_colors,
+            text_color, use_name_warning, variables, variant_chrome_sx, variant_colors, with_own,
         },
+        data_display::responsive_props::{and_sx, plain_var, var_sx},
         data_display::{Pictogram, SvgData},
         layout::use_box,
     },
-    hooks::{use_cache, use_gradient_style, use_theme},
-    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
+    hooks::{use_cache, use_gradient_style, use_range_css, use_theme},
+    sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD, SizeCss,
+        CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD,
+        Responsive, SizeCss,
     },
 };
 
@@ -62,16 +64,20 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
 
     // Chrome only: a static icon takes no hover response.
     Variant::ALL.iter().fold(base, |base, &variant| {
-        let chrome = variant_chrome_sx(variant, &ICON_VARS);
-        // A glyph inside a container keeps clear of its edges; a bare one fills the box.
-        let chrome = match variant {
-            // No border, so the bare glyph keeps the whole box.
-            Variant::Standard => chrome.border_width("0").var(ICON_GLYPH_VAR, "100%"),
-            _ => chrome.var(ICON_GLYPH_VAR, ICON_GLYPH_INSET),
-        };
-        base.when(variant.state_name(), chrome)
+        base.when(variant.state_name(), variant_sx(variant))
     })
 });
+
+/// One variant's block, also the body of its range copies.
+fn variant_sx(variant: Variant) -> Sx {
+    let chrome = variant_chrome_sx(variant, &ICON_VARS);
+    // A glyph inside a container keeps clear of its edges; a bare one fills the box.
+    match variant {
+        // No border, so the bare glyph keeps the whole box.
+        Variant::Standard => chrome.border_width("0").var(ICON_GLYPH_VAR, "100%"),
+        _ => chrome.var(ICON_GLYPH_VAR, ICON_GLYPH_INSET),
+    }
+}
 
 /// An image as a stencil filled with `currentColor`, so it takes the icon's color.
 /// The `-webkit-` twins are for Chrome < 120, e.g. Android WebView 113 (1152).
@@ -121,14 +127,17 @@ fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
         .with(ICON_ON_CONTAINER_VAR, colors.on_container)
         .with(
             ICON_SIZE.override_var(),
-            props.size.resolve(Some(ICON_SIZE)),
+            plain_var(&props.size, Some(ICON_SIZE)),
         )
         // A sized icon keeps its own box in a slot.
         .with(
             ICON_SLOT_PAD,
             props.size.as_ref().map(|_| "0px".to_string()),
         )
-        .with(ICON_RADIUS_VAR, props.radius.resolve(Some(SizeCss::RADIUS)))
+        .with(
+            ICON_RADIUS_VAR,
+            plain_var(&props.radius, Some(SizeCss::RADIUS)),
+        )
 }
 
 base_props! {
@@ -136,20 +145,21 @@ base_props! {
         /// Element to render as; `span` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
+        /// Per breakpoint too: `responsive(Variant::Standard).md(Variant::Filled)`.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         /// Second stop and angle of `variant: "gradient"`, whose first stop is `color`:
         /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
         #[props(default, into)]
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Unset, `theme.icon.size`.
+        /// Unset, `theme.icon.size`. Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
-        /// Unset, `theme.icon.radius`.
+        size: Input<Responsive<ThemeAwareValue>>,
+        /// Unset, `theme.icon.radius`. Per breakpoint too: `responsive(Size::Xs).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// An image URL drawn as the glyph, in the icon's color, instead of `children`.
         /// It is only a stencil: its own colors are ignored.
         #[props(default, into)]
@@ -181,7 +191,15 @@ base_props! {
 #[component]
 pub fn Icon(props: IconProps) -> Element {
     let component = props.component.copied_or(HtmlTag::Span);
-    let variant = props.variant.copied_or(use_theme().icon.variant);
+    let variants = props.variant.copied_or(use_theme().icon.variant.into());
+    // Only `tonal` reads the container colours: computed if any range is tonal.
+    let variant = match variants
+        .breakpoints()
+        .any(|(_, variant)| variant == Variant::Tonal)
+    {
+        true => Variant::Tonal,
+        false => variants.base(),
+    };
     // Colour resolution is most of an icon's render, and its inputs rarely change.
     let style = use_cache(
         (
@@ -195,7 +213,10 @@ pub fn Icon(props: IconProps) -> Element {
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
         props.color.as_ref(),
-        variant == Variant::Gradient,
+        variants.base() == Variant::Gradient
+            || variants
+                .breakpoints()
+                .any(|(_, variant)| variant == Variant::Gradient),
         false,
     );
     let style = match gradient {
@@ -207,8 +228,19 @@ pub fn Icon(props: IconProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(variant.state_name(), true)
+        .responsive(&variants, Variant::state_name)
         .into();
+    use_range_css(
+        &ICON_BASE_SX,
+        variants.range_copies(Variant::state_name, variant_sx),
+    );
+    let sx = with_own(
+        and_sx(
+            var_sx(&props.size, ICON_SIZE.override_var(), Some(ICON_SIZE)),
+            var_sx(&props.radius, ICON_RADIUS_VAR, Some(SizeCss::RADIUS)),
+        ),
+        &props.sx,
+    );
     let named = names_itself(&props.attributes);
     // `aria-hidden` on a focusable control leaves a Tab stop nothing announces.
     let interactive = is_interactive(component);
@@ -229,7 +261,7 @@ pub fn Icon(props: IconProps) -> Element {
     use_box()
         .framework_sx(&ICON_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .style(style)
         .prepare()

@@ -4,7 +4,28 @@ use pictogram_icons_lucide as lucide;
 
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Icon, List, ListItem, ListItemPart, ListSubheader, Text};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
+
+/// `xs` below `md`, the chosen size from it, while `responsive` is on.
+fn size_of(values: &DemoValues) -> Responsive<Size> {
+    let size = Size::from(values.str("size").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(Size::Xs).md(size),
+        false => size.into(),
+    }
+}
+
+fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match (values.str("responsive") == "true", values.str("size")) {
+        (true, size) => vec![format!(
+            "size: responsive(Size::Xs).md(Size::{:?})",
+            Size::from(size.as_str())
+        )],
+        (false, size) if size == control.default => vec![],
+        (false, size) => vec![format!("size: {size:?}")],
+    }
+}
 
 /// The page's own source: the printed parts are cut from its live demo.
 const FILE: DemoFile = DemoFile(include_str!("list.rs"));
@@ -22,9 +43,9 @@ pub fn ListPage() -> Element {
             markdown: "/md/list.md",
             properties: vec![
                 props("List", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.list.size.as_str())
-                        .doc("Item gap and nested-list indent, together. A nested ordered list keeps the fixed `2em` its numbers need."),
+                        .doc("Item gap and nested-list indent, together. A nested ordered list keeps the fixed `2em` its numbers need. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Md)`. Breakpoints follow the window, not the parent."),
                     prop("ordered", "bool")
                         .default("false")
                         .doc("An `ol` with visible numbers, for items whose order matters."),
@@ -92,7 +113,9 @@ pub fn ListPage() -> Element {
                 }),
                 controls: vec![
                     Control::sizes("size")
-                        .default(theme.list.size.as_str()),
+                        .default(theme.list.size.as_str()).code(size_code),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::switch("ordered"),
                     Control::switch("icon").code(|_, values| {
                         match values.str("icon").as_str() {
@@ -103,7 +126,7 @@ pub fn ListPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     List {
-                        size: values.str("size"),
+                        size: size_of(&values),
                         ordered: values.str("ordered") == "true",
                         icon: (values.str("icon") == "true").then(|| rsx! {
                             Icon { variant: "standard", color: "primary", size: "sm", Pictogram { icon: lucide::check::outlined } }
