@@ -21,17 +21,18 @@ use crate::{
     hooks::{
         ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET,
         Typeahead, current_localization, placement_sx, typeahead_match, use_element,
-        use_field_list_layer, use_media_query, use_popover_on, use_theme, use_typeahead,
+        use_field_list_layer, use_media_query, use_popover_on, use_responsive, use_theme,
+        use_typeahead,
     },
     platform::{ElementApi, is_tab},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{COMBOBOX_PADDING, OWN_SHADOW, Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{COMBOBOX_PADDING, OWN_SHADOW, Responsive, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
 use super::{
     ComboboxState,
     dropdown::ComboboxDropdown,
-    option::{COARSE_ROW_HEIGHT, ComboboxContext},
+    option::{COARSE_ROW_HEIGHT, ComboboxContext, use_row_ranges},
 };
 
 // A `paper_sx()` surface, through `use_box` rather than `Paper` for the popover's handle and events.
@@ -134,7 +135,7 @@ base_props! {
         #[props(default)]
         autofocus: Option<ElementHandle>,
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
         /// Disabled or read-only: the list is neither drawn nor opened by a key.
@@ -191,10 +192,11 @@ base_props! {
 #[component]
 pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.combobox.size);
+    let sizes = props.size.copied_or(theme.combobox.size.into());
     let radius = ScaleOrCss::new(props.radius.as_ref(), theme.combobox.radius);
 
-    let context = use_combobox_context(props.state.id(), size, radius.clone());
+    use_row_ranges(&sizes);
+    let context = use_combobox_context(props.state.id(), sizes, radius.clone());
     // For a row inside the trigger; the portaled dropdown gets it as a prop.
     use_context_provider(|| context);
 
@@ -281,7 +283,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with(radius.size.radius_state_name(), true)
         .with("bordered", true)
         .with("disabled", disabled)
@@ -492,7 +494,8 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
     }));
     // A windowed list pitches by the row's drawn height.
     let coarse = use_media_query(COARSE_POINTER);
-    let row_height = theme.combobox.sizes.get((props.context.size)()).row_height;
+    let size = use_responsive(&(props.context.size)());
+    let row_height = theme.combobox.sizes.get(size()).row_height;
     let row_height = match coarse() {
         true => row_height.max(COARSE_ROW_HEIGHT),
         false => row_height,
@@ -573,7 +576,11 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
 
 /// The signals every portaled row reads. Owned by the root scope and dropped by hand:
 /// a component-owned signal read from a portaled row can be dropped while still held.
-fn use_combobox_context(state_id: String, size: Size, radius: ScaleOrCss) -> ComboboxContext {
+fn use_combobox_context(
+    state_id: String,
+    size: Responsive<Size>,
+    radius: ScaleOrCss,
+) -> ComboboxContext {
     let id = use_hook(|| Signal::new_in_scope(state_id, ScopeId::ROOT));
     let mut shared_size = use_hook(|| Signal::new_in_scope(size, ScopeId::ROOT));
     if *shared_size.peek() != size {

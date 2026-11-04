@@ -9,7 +9,7 @@ use crate::{
     },
     hooks::use_localization,
     sx::{Sx, ThemeAwareValue},
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 use super::{ComboboxState, core::ComboboxCore, option::ComboboxOptionArgs};
@@ -208,7 +208,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
                     .loading_label
                     .unwrap_or_else(|| common.loading.to_string())
             }),
-            size: props.size,
+            size: Input::<Responsive<Size>>::from(props.size),
             radius: props.radius,
             disabled: props.disabled.unwrap_or(false),
             commit_on_leave: props.select_only,

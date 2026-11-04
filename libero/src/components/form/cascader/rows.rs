@@ -12,7 +12,7 @@ use crate::{
     context::IconSlot,
     localization::{CascaderLabels, fill},
     sx::{StaticSx, Sx, sx},
-    theme::{CssVar, Size},
+    theme::{CssVar, Responsive, Size},
 };
 
 use super::{
@@ -166,7 +166,7 @@ pub(super) struct CascaderRows {
     pub(super) committed: Vec<usize>,
     pub(super) commit: Rc<dyn Fn(Vec<usize>, bool)>,
     pub(super) any_level: bool,
-    pub(super) size: Size,
+    pub(super) size: Responsive<Size>,
     pub(super) radius: Size,
     pub(super) labels: CascaderLabels,
     /// The highlight is on the narrow list's parent row, not on the cursor's.

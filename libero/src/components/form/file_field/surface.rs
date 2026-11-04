@@ -504,7 +504,7 @@ fn browse_content(id: &str, placeholder: &str, empty: bool) -> Element {
 /// The frame's trailing slot: the loader, then the clear button. The loader is
 /// silent; the group's `aria-busy` says it is waiting.
 pub(super) fn trailing_slot(
-    loader: Option<Size>,
+    loader: Option<Responsive<Size>>,
     clearable: bool,
     size: Responsive<Size>,
     browse_element: ElementHandle,

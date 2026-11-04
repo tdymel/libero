@@ -353,7 +353,7 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
         opened,
         searchable,
         inert: disabled,
-        size,
+        size: size.into(),
         radius: radius.size,
         parts: &props.parts,
         class: Some(&props.class),

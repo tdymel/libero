@@ -16,7 +16,7 @@ use crate::{
         ElementHandle, TYPEAHEAD_RESET, use_element, use_localization, use_theme, use_typeahead,
     },
     sx::Sx,
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 use super::super::{
@@ -74,7 +74,7 @@ pub(in super::super) struct EngineSetup<'a> {
     pub(in super::super) searchable: bool,
     /// Disabled or read-only: the keys do nothing.
     pub(in super::super) inert: bool,
-    pub(in super::super) size: Size,
+    pub(in super::super) size: Responsive<Size>,
     pub(in super::super) radius: Size,
     pub(in super::super) parts: &'a Input<Parts<DropdownPart>>,
     /// The dropdown box's own `class`, `sx` and attributes, from `CascaderDropdown`.

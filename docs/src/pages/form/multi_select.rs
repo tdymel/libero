@@ -219,7 +219,7 @@ pub fn MultiSelectPage() -> Element {
             markdown: "/md/multi_select.md",
             properties: vec![
                 props("MultiSelect", vec![
-                    prop("size", "Responsive<Size>").default(theme.multi_select.size.as_str()).doc("Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips and the open list keep the base size."),
+                    prop("size", "Responsive<Size>").default(theme.multi_select.size.as_str()).doc("Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips and the open list follow it."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.multi_select.radius.as_str())
                         .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),

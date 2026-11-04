@@ -18,9 +18,9 @@ use crate::{
     },
     sx::{StaticSx, Sx, sx},
     theme::{
-        ACTION_ICON_GLYPH, ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, FIELD_HEIGHT,
-        FieldDefaults, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD, LOADER_SIZE, PaperDefaults,
-        Size, SizeCss,
+        ACTION_ICON_GLYPH, ACTION_ICON_SIZE, BUTTON_HEIGHT, ColorCss, ColorShade, CssVar,
+        FIELD_HEIGHT, FieldDefaults, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_PAD, LOADER_SIZE,
+        PaperDefaults, Size, SizeCss,
     },
 };
 
@@ -82,7 +82,9 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 BUTTON_HEIGHT.value(step),
                 ICON_SIZE.value(step)
             );
-            sx().selector(
+            // The pending loader's edge, read by `PENDING_LOADER_SX`.
+            sx().var(PENDING_LOADER_EDGE, ICON_SIZE.value(step))
+            .selector(
                 "& > :is([data-slot='leading'], [data-slot='trailing'])",
                 sx().var(ICON_DEFAULT_SIZE, ICON_SIZE.value(step)),
             )
@@ -382,7 +384,7 @@ impl<'a> FieldFrameBuilder<'a> {
             && states.is_some_and(|states| states.iter().any(|state| state == ("pending", true)))
             && try_consume_context::<FormScope>().is_some_and(|scope| scope.pending_loader());
         PreparedFrame {
-            pending: loading.then(|| pending_loader(states)),
+            pending: loading.then(pending_loader),
             frame,
             leading: self
                 .leading
@@ -523,28 +525,17 @@ fn PlaceholderCell(
     )
 }
 
+/// The frame's slot icon edge for its size, so the pending loader follows a responsive size.
+const PENDING_LOADER_EDGE: CssVar = CssVar::new("--lsx-field-pending-edge");
+
+static PENDING_LOADER_SX: StaticSx =
+    StaticSx::new(|| sx().var(LOADER_SIZE, PENDING_LOADER_EDGE.value()));
+
 /// The loader at a slot icon's size, so the frame keeps its height. Silent: the control is `aria-busy`.
-/// A responsive size takes its base run's (`base-md:size-sm`).
-fn pending_loader(states: Option<&States>) -> Element {
-    let base = |word: &'static str| {
-        word.strip_prefix("base-")
-            .and_then(|run| run.split_once(':'))
-            .map_or(word, |(_, token)| token)
-    };
-    let size = Size::ALL
-        .into_iter()
-        .find(|size| {
-            states.is_some_and(|states| {
-                states
-                    .iter()
-                    .any(|(state, active)| active && base(state) == size.state_name())
-            })
-        })
-        .unwrap_or(Size::Md);
-    let edge = ICON_SIZE.value(slot_icon_size(size));
+fn pending_loader() -> Element {
     rsx! {
         span { "data-pending": true,
-            Loader { sx: sx().var(LOADER_SIZE, edge) }
+            Loader { sx: &PENDING_LOADER_SX }
         }
     }
 }

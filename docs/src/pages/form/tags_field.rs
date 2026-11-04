@@ -257,7 +257,7 @@ pub fn TagsFieldPage() -> Element {
                 props("TagsField", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.tags_field.size.as_str())
-                        .doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips keep the base size."),
+                        .doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips follow it."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.tags_field.radius.as_str())
                         .doc("Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),

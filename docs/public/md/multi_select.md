@@ -52,7 +52,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Responsive<Size>` | `md` | Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips and the open list keep the base size. |
+| `size` | `Responsive<Size>` | `md` | Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips and the open list follow it. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `value` | `Vec<T>` | - | The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`. |
 | `onchange` | `EventHandler<Vec<T>>` | - | Called with the whole next selection. |

@@ -131,9 +131,9 @@ pub(super) struct FileRows {
     pub(super) readonly: bool,
     pub(super) icon_size: Input<Responsive<ThemeAwareValue>>,
     /// The field's; the chips step down from it themselves.
-    pub(super) size: Size,
+    pub(super) size: Responsive<Size>,
     /// The loader a card carries, once no surface is left to carry it.
-    pub(super) card_loader: Option<Size>,
+    pub(super) card_loader: Option<Responsive<Size>>,
     /// The field's label and description ids for the card's x, once it is the
     /// field's only tab stop.
     pub(super) card_named: Option<(Option<String>, Option<String>)>,
@@ -409,7 +409,7 @@ fn file_name(name: &str, id: Option<String>) -> Element {
 fn default_chip(
     file: &FileData,
     remove: Callback<()>,
-    size: Size,
+    size: Responsive<Size>,
     multiple: bool,
     editable: bool,
     name_id: String,
@@ -433,7 +433,7 @@ fn default_card(
     remove: Callback<()>,
     icon_size: Input<Responsive<ThemeAwareValue>>,
     editable: bool,
-    loading: Option<Size>,
+    loading: Option<Responsive<Size>>,
     id: String,
     named: Option<(Option<String>, Option<String>)>,
 ) -> Element {

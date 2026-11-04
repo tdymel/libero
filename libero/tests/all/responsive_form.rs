@@ -3,7 +3,7 @@
 
 use std::collections::BTreeSet;
 
-use crate::common::{body, render};
+use crate::common::{body, render, render_with};
 
 use dioxus::prelude::*;
 use libero::{
@@ -300,6 +300,143 @@ fn slot_buttons_follow_a_responsive_field() {
         assert!(
             button.contains("base-md:") && button.contains("md-:"),
             "{button}"
+        );
+    }
+}
+
+/// The classes a rule keyed on `run` gives a declaration holding `needle`.
+fn classes_keyed_with(html: &str, run: &str, needle: &str) -> BTreeSet<String> {
+    let key = format!(r#"[data-state~="{run}"]{{"#);
+    html.match_indices(&key)
+        .filter(|(at, _)| {
+            let rest = &html[at + key.len()..];
+            rest[..rest.find('}').unwrap_or(rest.len())].contains(needle)
+        })
+        .filter_map(|(at, _)| {
+            let head = &html[..at];
+            Some(head[head.rfind('.')? + 1..].to_string())
+        })
+        .collect()
+}
+
+/// The chips in a field sit one step down, and follow the field: the chip's sheet has its range
+/// copy, and the chips carry the run words it keys on.
+#[test]
+fn chips_in_fields_follow_a_responsive_field() {
+    use crate::common::fake_files;
+    use libero::components::{FileField, MultiSelect};
+
+    #[derive(Clone, PartialEq, Options)]
+    enum Fruit {
+        Apple,
+    }
+
+    fn multi() -> Element {
+        rsx! { LiberoProvider { MultiSelect { value: vec![Fruit::Apple], size: responsive(Size::Sm).md(Size::Lg), onchange: move |_| {} } } }
+    }
+    fn files() -> Element {
+        rsx! { LiberoProvider { FileField { multiple: true, value: fake_files(&["a.txt", "b.txt"]), size: responsive(Size::Sm).md(Size::Lg), onchange: move |_| {} } } }
+    }
+    fn tags_responsive() -> Element {
+        rsx! { LiberoProvider { TagsField { label: "Tags", value: vec!["a".to_string()], size: responsive(Size::Sm).md(Size::Lg), onchange: move |_: Vec<String>| {} } } }
+    }
+    fn tags_plain() -> Element {
+        rsx! { LiberoProvider { TagsField { label: "Tags", value: vec!["a".to_string()], size: Size::Lg, onchange: move |_: Vec<String>| {} } } }
+    }
+
+    for (name, app) in [
+        ("TagsField", tags_responsive as fn() -> Element),
+        ("MultiSelect", multi),
+        ("FileField", files),
+    ] {
+        let html = render(app);
+        let copied = classes_keyed_with(&html, "md-:size-md", "--lsx-removable-chip-line");
+        let chips = classes_carrying(&html, "md-:size-md");
+        assert!(!copied.is_empty(), "{name}: no chip sheet copy");
+        assert!(
+            copied.intersection(&chips).next().is_some(),
+            "{name}: {copied:?} {chips:?}"
+        );
+        assert!(
+            html.contains(r#"[data-state~="base-md:size-xs"]{"#),
+            "{name}"
+        );
+    }
+
+    let html = render(tags_plain);
+    assert!(!html.contains("md-:"), "a plain field adds no run word");
+    assert!(!html.contains("base-md:"), "a plain field adds no run word");
+}
+
+/// The pending loader's edge rides the frame's size var, so a responsive field gets a copy of it.
+#[test]
+fn the_pending_loader_follows_a_responsive_field() {
+    use libero::components::{FieldStatus, Fields, Form};
+
+    #[derive(Clone, PartialEq, Default, Fields)]
+    struct Draft {
+        name: String,
+    }
+
+    fn app() -> Element {
+        let draft = use_store(Draft::default);
+        rsx! {
+            LiberoProvider {
+                Form { value: draft, pending_loader: true,
+                    TextField { label: "Name", status: FieldStatus::Pending, size: responsive(Size::Sm).md(Size::Xl) }
+                }
+            }
+        }
+    }
+    let html = render(app);
+    assert!(html.contains("data-pending"), "{html}");
+    assert!(
+        !classes_keyed_with(&html, "md-:size-xl", "--lsx-field-pending-edge").is_empty(),
+        "{html}"
+    );
+}
+
+/// The open list's rows read the field's size through the combobox, so the field registers the
+/// row sheet's copy for a responsive size and a plain field registers nothing.
+#[test]
+fn dropdown_rows_follow_a_responsive_field() {
+    use libero::components::{Autocomplete, MultiSelect, OptionList, PhoneField, Select};
+
+    #[derive(Clone, PartialEq, Options)]
+    enum Fruit {
+        Apple,
+    }
+
+    fn cities() -> OptionList<String> {
+        OptionList::from(vec!["Berlin".to_string()])
+    }
+    fn select(size: libero::theme::Responsive<Size>) -> Element {
+        rsx! { LiberoProvider { Select { label: "Fruit", value: Fruit::Apple, size, onchange: move |_| {} } } }
+    }
+    fn multi(size: libero::theme::Responsive<Size>) -> Element {
+        rsx! { LiberoProvider { MultiSelect { label: "Fruit", value: vec![Fruit::Apple], size, onchange: move |_| {} } } }
+    }
+    fn auto(size: libero::theme::Responsive<Size>) -> Element {
+        rsx! { LiberoProvider { Autocomplete { label: "City", value: "Ber", options: cities(), size, oninput: move |_| {} } } }
+    }
+    fn phone(size: libero::theme::Responsive<Size>) -> Element {
+        rsx! { LiberoProvider { PhoneField { label: "Mobile", country: "US", value: "", size, oninput: move |_: String| {} } } }
+    }
+    type Page = fn(libero::theme::Responsive<Size>) -> Element;
+    let pages: [(&str, Page); 4] = [
+        ("Select", select),
+        ("MultiSelect", multi),
+        ("Autocomplete", auto),
+        ("PhoneField", phone),
+    ];
+    for (name, page) in pages {
+        let responsive = render_with(page, responsive(Size::Sm).md(Size::Lg));
+        let rows = classes_keyed_with(&responsive, "md-:size-lg", "--lsx-combobox-padding-x-lg");
+        assert!(!rows.is_empty(), "{name}: no row copy");
+        let plain = render_with(page, libero::theme::Responsive::new(Size::Lg));
+        assert!(
+            !plain.contains("base-md:"),
+            "{name}: a plain field adds a run"
         );
     }
 }

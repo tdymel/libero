@@ -122,7 +122,7 @@ pub fn AutocompletePage() -> Element {
                 props("Autocomplete", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.autocomplete.size.as_str())
-                        .doc("Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list keeps the base size."),
+                        .doc("Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list follows it."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.autocomplete.radius.as_str())
                         .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),

@@ -31,7 +31,7 @@ use crate::{
         reads_dom_synchronously,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
+    theme::{FOCUS_RING_WIDTH, Responsive, Size, ios_text_floor_sx},
 };
 
 /// The chevron sits inside the control, so clicking it opens the list. A multi-select's trigger sits in `MULTI_VALUE_SX`'s flow.
@@ -473,7 +473,6 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let theme = use_theme();
     let nothing_found = use_localization().combobox.nothing_found;
     let sizes = props.size.copied_or(theme.select.size.into());
-    let size = sizes.base();
     let radius = ScaleOrCss::new(
         props
             .radius
@@ -780,7 +779,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         control: frame.render(control),
         open,
         opened,
-        size,
+        size: sizes,
         radius: radius.value(),
         loading: props.loading,
         nothing_found: (no_rows || searchable && !query.read().is_empty())
@@ -825,7 +824,7 @@ struct Listbox {
     control: Element,
     open: SelectOpen,
     opened: bool,
-    size: Size,
+    size: Responsive<Size>,
     radius: ThemeAwareValue,
     loading: Option<String>,
     nothing_found: Option<String>,

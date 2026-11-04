@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use crate::{
+    CssLayer,
     components::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
@@ -11,10 +12,10 @@ use crate::{
         form::Chip,
     },
     context::IconSlot,
-    hooks::{current_localization, use_localization},
+    hooks::{current_localization, use_localization, use_range_css_in},
     localization::{ChipsLabels, fill},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CHIP_HEIGHT, CHIP_PADDING_X, CssVar, Size},
+    theme::{CHIP_HEIGHT, CHIP_PADDING_X, CssVar, Responsive, Size},
 };
 
 /// The first line's height: the chip's height less its 1px borders.
@@ -126,12 +127,22 @@ pub(crate) fn framed_remove_sx() -> Sx {
     sx().var(REACH_VAR, "0px")
 }
 
+/// Registers the range copies of the chips' sheet for a responsive field `size`, once per
+/// field. A hook; a plain field registers nothing.
+pub(crate) fn use_chip_ranges(size: &Responsive<Size>) {
+    let copies = size.map(Size::step_down).range_copies(
+        |size| size.state_name(),
+        |size| REMOVABLE_CHIP_SX.axis_block(size.state_name()),
+    );
+    use_range_css_in(CssLayer::UserStatic, &REMOVABLE_CHIP_SX, copies);
+}
+
 /// A list field's chip: the label and an x that drops it, one size step down.
 /// Not a component: a memoized `Callback` would keep its first index ([[codebase/dioxus-memoization-traps]]).
 pub(crate) fn removable_chip(
     label: String,
     remove: Callback<()>,
-    size: Size,
+    size: Responsive<Size>,
     disabled: bool,
 ) -> Element {
     let content = rsx! { "{label}" };
@@ -143,10 +154,10 @@ pub(crate) fn drawn_chip(
     label: String,
     content: Element,
     remove: Option<Callback<()>>,
-    size: Size,
+    size: Responsive<Size>,
     disabled: bool,
 ) -> Element {
-    let size = size.step_down();
+    let size = size.map(Size::step_down);
     let Some(remove) = remove else {
         return rsx! {
             Chip { size, sx: &REMOVABLE_CHIP_SX,
@@ -155,8 +166,9 @@ pub(crate) fn drawn_chip(
         };
     };
     // Of the chip's height, not its font: an `em` x shrinks as the field grows.
-    let icon_size: Input<ThemeAwareValue> =
-        ThemeAwareValue::String(format!("calc({} * 0.6)", CHIP_HEIGHT.value(size))).into();
+    let icon_size: Input<Responsive<ThemeAwareValue>> = size
+        .map(|size| ThemeAwareValue::String(format!("calc({} * 0.6)", CHIP_HEIGHT.value(size))))
+        .into();
     let remove_label = fill(current_localization().common.remove, &[("label", &label)]);
     rsx! {
         Chip { size, sx: &REMOVABLE_CHIP_SX,

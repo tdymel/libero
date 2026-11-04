@@ -57,7 +57,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Responsive<Size>` | `md` | Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list keeps the base size. |
+| `size` | `Responsive<Size>` | `md` | Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list follows it. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame and the list. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `value` | `String` | `""` | The text. Pair it with `oninput`. Picking a suggestion inserts its label. |
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke, and again with the label when a suggestion is picked or the field is cleared. |

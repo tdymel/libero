@@ -107,3 +107,61 @@ fn a_segmented_control_follows_the_viewport_width() {
         fixture.close().await.unwrap();
     });
 }
+
+/// The first chip's height, the pending loader's width and the first open row's height.
+const PARTS: &str = "(() => { const px = el => el ? getComputedStyle(el).height : '-'; \
+    const chip = document.querySelector('#rspf-tags [data-slot=tag] > *'); \
+    const loader = document.querySelector('#rspf-pending [data-pending] > *'); \
+    const row = document.querySelector('[role=option]'); \
+    return [px(chip), loader ? getComputedStyle(loader).width : '-', px(row)].join('|'); })()";
+
+#[test]
+fn chips_loaders_and_open_rows_follow_the_viewport_width() {
+    block_on(async {
+        let fixture = Fixture::open("/responsive-form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#rspf-tags [data-slot=tag]")
+            .await
+            .unwrap();
+        wait::for_visible(page, "#rspf-pending [data-pending]")
+            .await
+            .unwrap();
+        pointer::click(page, "#rspf-select [role=combobox]")
+            .await
+            .unwrap();
+        wait::for_visible(page, "[role=option]").await.unwrap();
+        let read = || async {
+            let text: String = page
+                .evaluate_bounded(PARTS)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            text.split('|').map(str::to_string).collect::<Vec<_>>()
+        };
+        let px = |v: &str| v.trim_end_matches("px").parse::<f64>().unwrap();
+        let wide = read().await;
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(600, 800, 1.0, false))
+            .await
+            .unwrap();
+        let every = format!(
+            "(() => {{ const was = '{}'.split('|'); return {PARTS}.split('|').every((v, i) => v !== was[i]); }})()",
+            wide.join("|")
+        );
+        let switched = wait::for_js_true(page, &every, "every part switched").await;
+        assert!(switched.is_ok(), "{wide:?} {:?}", read().await);
+        let narrow = read().await;
+        for (wide, narrow) in wide.iter().zip(&narrow) {
+            assert!(px(narrow) < px(wide), "{wide:?} {narrow:?}");
+        }
+
+        fixture
+            .console
+            .assert_clean("responsive field parts")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::form::ComboboxState,
     hooks::{ElementHandle, Typeahead, use_localization, use_theme},
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 use super::super::{
@@ -35,7 +35,7 @@ pub(super) struct ListSetup<'a> {
     pub(super) searchable: bool,
     /// Disabled or read-only: the keys do nothing.
     pub(super) inert: bool,
-    pub(super) size: Size,
+    pub(super) size: Responsive<Size>,
     pub(super) radius: Size,
 }
 

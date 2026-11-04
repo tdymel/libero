@@ -322,7 +322,7 @@ pub fn CascaderPage() -> Element {
             markdown: "/md/cascader.md",
             properties: vec![
                 props("Cascader", vec![
-                    prop("size", "Responsive<Size>").default(theme.cascader.size.as_str()).doc("Height, padding and font size of the frame and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list keeps the base size."),
+                    prop("size", "Responsive<Size>").default(theme.cascader.size.as_str()).doc("Height, padding and font size of the frame and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list follows it."),
                     prop("radius", "Responsive<ThemeAwareValue>").default(theme.cascader.radius.as_str()).doc("Corner radius of the frame and the list. Any CSS, e.g. `radius: \"0\"`, rounds the frame; the list keeps the theme's step. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("data", "Vec<CascaderOption<T>>").default("required")
                         .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. A disabled option disables its whole branch, and `new` takes anything `Into<T>`, so a `&str` for a `String` tree."),

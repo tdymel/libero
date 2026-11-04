@@ -144,7 +144,6 @@ field_props! {
 pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let theme = use_theme();
     let sizes = props.size.copied_or(theme.cascader.size.into());
-    let size = sizes.base();
     let radius = ScaleOrCss::new(
         props
             .radius
@@ -231,7 +230,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         opened,
         searchable,
         inert: disabled || readonly,
-        size,
+        size: sizes,
         radius: radius.size,
         parts: &props.dropdown_parts,
         class: None,

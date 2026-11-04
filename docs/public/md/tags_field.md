@@ -63,7 +63,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Responsive<Size>` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips keep the base size. |
+| `size` | `Responsive<Size>` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips follow it. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `value` | `Vec<String>` | `[]` | The tags, in order. Controlled with `onchange`; a path `name` binds the list to the `Form` instead. With neither, the field starts from it and keeps its own edits until a form reset. |
 | `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |

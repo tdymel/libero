@@ -21,7 +21,7 @@ use crate::{
     },
     platform::{self, ElementApi},
     sx::{Sx, ThemeAwareValue, sx},
-    theme::{FileFieldVariant, Size},
+    theme::{FileFieldVariant, Responsive, Size},
     utils::warn,
 };
 
@@ -212,7 +212,6 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let opening = use_hook(|| Rc::new(Cell::new(false)));
 
     let sizes = props.size.copied_or(theme.file_field.size.into());
-    let size = sizes.base();
     let radius = ScaleOrCss::new(
         props
             .radius
@@ -325,7 +324,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let has_files = !value.is_empty();
     // Chips ride inside the control, so they sit one step down the field's
     // own scale. The loader takes the same step, for the same reason.
-    let chip_size = size.step_down();
+    let chip_size = sizes.map(Size::step_down);
+    crate::components::form::use_chip_ranges(&sizes);
     let trailing = trailing_slot(
         loading.then_some(chip_size),
         clearable && has_files && editable,
@@ -401,7 +401,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         icon_size: sizes
             .map(|size| ThemeAwareValue::Size(slot_icon_size(size)))
             .into(),
-        size,
+        size: sizes,
         // Only once the surface is gone: otherwise the loader is on the
         // surface, and one is enough.
         card_loader: (loading && !surface).then_some(chip_size),
@@ -498,7 +498,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
             control,
             states,
             Cards {
-                prompt: dropzone_prompt(&props, loading.then_some(size)),
+                prompt: dropzone_prompt(&props, loading.then_some(sizes)),
                 drawn,
                 style: card_list_style,
                 list_element,
@@ -616,7 +616,7 @@ fn file_input(
 
 /// The surface: an icon or `loader`, the prompt (`children`, `placeholder`,
 /// then the localization's), and a hint read off `accept`.
-fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
+fn dropzone_prompt(props: &FileFieldProps, loader: Option<Responsive<Size>>) -> Element {
     let written = props
         .children
         .as_ref()

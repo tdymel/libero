@@ -772,6 +772,30 @@ mod tests {
         assert!(!registry.take_outlet_change(), "no `<style>` after mount");
     }
 
+    /// A user-static base's copy stays in its own layer, ahead of that layer's component sheets.
+    #[test]
+    fn a_range_copy_stays_in_the_layer_of_its_base() {
+        let (registry, rules) = attached();
+        let base = Stylesheet::from(&sx().padding("lg"));
+        let copy = Stylesheet::from(format!(
+            "@media (min-width: 62rem){{.{}[data-state~=\"md-:size-xl\"]{{padding:1px;}}}}",
+            base.class_name().unwrap_or_default()
+        ))
+        .keyed();
+        let nested = block_rules(copy.as_str(), true, &A11yAnswers::default())
+            .unwrap_or_default()
+            .concat();
+
+        registry.acquire(base.clone(), CssLayer::UserStatic, SheetRank::Component);
+        registry.acquire(copy, CssLayer::UserStatic, SheetRank::Range);
+
+        assert_eq!(
+            block(&rules, CssLayer::UserStatic),
+            [nested, base.as_str().to_string()]
+        );
+        assert!(block(&rules, CssLayer::Framework).is_empty());
+    }
+
     /// A keyed global rule (`hidden_from`'s) goes in like a class-scoped one and is retained.
     #[test]
     fn a_keyed_sheet_is_inserted_and_retained_a_plain_global_one_is_not() {

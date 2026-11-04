@@ -133,7 +133,7 @@ From `use_combobox()`. It is `Copy`, so it goes into event handlers by value.
 | `active` | `bool` | from the `Combobox` | Overrides the keyboard highlight. |
 | `disabled` | `bool` | from the `Combobox` | Overrides whether the row is refused. A refused row is greyed and ignores the click and Enter. |
 | `onpick` | `EventHandler<()>` | - | Called on a click, and by Enter while the row is active. The only way to pick. |
-| `size` | `Size` | the `Combobox`'s | Row height and font size. Defaults to the `Combobox`'s `size`. |
+| `size` | `Responsive<Size>` | the `Combobox`'s | Row height and font size. Defaults to the `Combobox`'s `size`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `ThemeAwareValue` | the `Combobox`'s | Corner radius, or any CSS, e.g. `radius: "0"`. Defaults to the `Combobox`'s, reduced so the row nests inside the dropdown. |
 | `children` | `Element` | required | The row's content. Put a long label in `span { "data-slot": "label" }` to end it in an ellipsis. |
 

@@ -13,16 +13,16 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{COMBOBOX_ROW_HEIGHT, ComboboxDefaults, Size, SizeCss},
+    theme::{COMBOBOX_ROW_HEIGHT, ComboboxDefaults, Responsive, Size, SizeCss},
 };
 
-use crate::components::form::DropdownPart;
+use crate::components::form::{DropdownPart, use_state_ranges};
 
 /// Shared with the rows. Signals: a provider runs once, so plain fields would freeze.
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct ComboboxContext {
     pub id: Signal<String>,
-    pub size: Signal<Size>,
+    pub size: Signal<Responsive<Size>>,
     pub radius: Signal<ScaleOrCss>,
     /// Each drawn row's `onpick` by row key, so Enter fires the highlighted one. Not reactive.
     pub picks: CopyValue<HashMap<usize, Callback<()>>>,
@@ -138,9 +138,9 @@ base_props! {
         disabled: Option<bool>,
         #[props(default)]
         onpick: Option<EventHandler<()>>,
-        /// Defaults to the `Combobox`'s `size`.
+        /// Defaults to the `Combobox`'s `size`. Or one per breakpoint, as `responsive(Size::Sm).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Defaults to the `Combobox`'s, tightened by the dropdown's padding.
         /// A size word or any CSS, as `radius: "0"`.
         #[props(default, into)]
@@ -170,9 +170,9 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
     let combobox = try_consume_context::<ComboboxContext>();
     let row = try_consume_context::<Signal<ComboboxRowContext>>();
 
-    let size = props.size.copied_or(match combobox {
+    let sizes = props.size.copied_or(match combobox {
         Some(context) => (context.size)(),
-        None => theme.combobox.size,
+        None => theme.combobox.size.into(),
     });
     let radius = match (props.radius.as_ref(), combobox) {
         (None, Some(context)) => (context.radius)(),
@@ -230,13 +230,20 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with(radius.size.radius_state_name(), true)
         .with("active", active)
         .with("selected", props.selected.unwrap_or(false))
         .with("disabled", disabled)
         .into();
 
+    let children = match props.size.as_ref().is_some_and(|sizes| !sizes.is_plain()) {
+        true => rsx! {
+            RowRanges { sizes }
+            {props.children}
+        },
+        false => props.children,
+    };
     use_box()
         .framework_sx(&COMBOBOX_ROW_SX)
         .class(&props.class)
@@ -259,7 +266,22 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
             event.prevent_default();
         })
         .event("onclick", move |_: MouseEvent| pick.call(()))
-        .render(HtmlTag::Div, props.attributes, props.children)
+        .render(HtmlTag::Div, props.attributes, children)
+}
+
+/// Registers the row sheet's range copies for a responsive row size. A hook; a plain size registers nothing.
+pub(super) fn use_row_ranges(sizes: &Responsive<Size>) {
+    let states: Input<States> = States::default()
+        .responsive(sizes, |size| size.state_name())
+        .into();
+    use_state_ranges(&COMBOBOX_ROW_SX, Some(&states));
+}
+
+/// A row with its own responsive `size` registers its copies; a field's rows share its.
+#[component]
+fn RowRanges(sizes: Responsive<Size>) -> Element {
+    use_row_ranges(&sizes);
+    rsx! {}
 }
 
 /// A default row's text, the element that can ellipsise. Shared by the pickers' own rows.

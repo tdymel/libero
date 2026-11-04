@@ -25,7 +25,7 @@ use crate::{
     localization::fill,
     platform::{ElementApi, blur_counts, focus_tab_from, focus_without_ring, is_tab},
     sx::{StaticSx, Sx, sx},
-    theme::{FIELD_PADDING_X, FOCUS_RING_WIDTH, Size, ios_text_floor_sx},
+    theme::{FIELD_PADDING_X, FOCUS_RING_WIDTH, Responsive, Size, ios_text_floor_sx},
     utils::digits_of,
 };
 
@@ -234,7 +234,6 @@ field_props! {
 pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let theme = use_theme();
     let sizes = props.size.copied_or(theme.phone_field.size.into());
-    let size = sizes.base();
     let radius = ScaleOrCss::new(
         props
             .radius
@@ -509,7 +508,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             opened,
             held,
             home_row,
-            size,
+            size: sizes,
             radius: radius.size,
             disabled: disabled || readonly,
             dial: country.dial,
@@ -855,7 +854,7 @@ struct Picker {
     /// Opened by a touch: the search box waits for its own tap.
     held: bool,
     home_row: Rc<dyn Fn() -> Option<usize>>,
-    size: Size,
+    size: Responsive<Size>,
     radius: Size,
     disabled: bool,
     dial: &'static str,

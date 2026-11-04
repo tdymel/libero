@@ -20,7 +20,7 @@ use crate::{
         use_field_list_layer, use_popover_on,
     },
     sx::{StaticSx, Sx},
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 use super::{
@@ -98,7 +98,7 @@ pub(super) struct DropdownSetup<'a> {
     pub(super) opened: bool,
     pub(super) searchable: bool,
     pub(super) search: ElementHandle,
-    pub(super) size: Size,
+    pub(super) size: Responsive<Size>,
     pub(super) radius: Size,
     pub(super) layout: CascaderLayout,
     /// [`PressOpen::pressed`].
@@ -166,7 +166,7 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         .style(Some(sheet_clearance_style(sheet_clearance)))
         .prepare();
     let dropdown_states: Input<States> = States::new()
-        .with(size.state_name(), true)
+        .responsive(&size, |size| size.state_name())
         .with(radius.radius_state_name(), true)
         .with("bordered", true)
         .with(layout.state_name(), true)

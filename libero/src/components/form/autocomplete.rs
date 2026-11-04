@@ -124,7 +124,6 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let localization = use_localization();
     let nothing_found = localization.combobox.nothing_found;
     let sizes = props.size.copied_or(theme.autocomplete.size.into());
-    let size = sizes.base();
     let radius = ScaleOrCss::new(
         props
             .radius
@@ -375,7 +374,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             empty,
             nothing_found,
             loading,
-            size,
+            size: sizes,
             radius: radius.value(),
             disabled: disabled || readonly,
             width: PopoverWidth::Match,

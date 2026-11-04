@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::form::use_bound;
+use crate::components::form::{use_bound, use_chip_ranges};
 
 use crate::{
     components::{
@@ -133,7 +133,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         }
     });
     let sizes = props.size.copied_or(theme.multi_select.size.into());
-    let size = sizes.base();
+    use_chip_ranges(&sizes);
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
 
@@ -166,7 +166,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                     disabled,
                     readonly,
                 }),
-                None => removable_chip(label.clone(), remove, size, disabled || readonly),
+                None => removable_chip(label.clone(), remove, sizes, disabled || readonly),
             };
             (chip, remove, label)
         });
@@ -292,7 +292,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             description_position: props.description_position,
             helper: props.helper,
             status: props.status,
-            size,
+            size: sizes,
             radius: Input::Value(
                 props
                     .radius

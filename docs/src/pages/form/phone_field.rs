@@ -63,7 +63,7 @@ pub fn PhoneFieldPage() -> Element {
                 props("PhoneField", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.phone_field.size.as_str())
-                        .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the country list keeps the base size."),
+                        .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the country list follows it."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.phone_field.radius.as_str())
                         .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),

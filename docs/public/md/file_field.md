@@ -59,7 +59,7 @@ fn Demo() -> Element {
 | `onreject` | `EventHandler<Vec<FileRejection>>` | - | Fires with the files a pick or a drop brought that the field refused: a type `accept` excludes, a file past `max_files` or past the first on a field without `multiple`, or a file larger than `max_size`. Each `FileRejection` holds the `file` and a `reason`, `RejectReason::Type`, `TooMany` or `TooLarge`. The field already announces the refusal politely, in the localization's `file_field.rejected_type`, `rejected_many`, `rejected_max_files` (its limit as `files` counts it) and `rejected_large`. Use it to show the refusal on screen, for example in `status`. Upgrading from 0.6: `rejected_max` is `rejected_max_files`, its `{max}` holding the noun, so drop "files" from your own template. |
 | `validate` | `Validators<Files>` | - | Rules over the files, shown once the field loses focus or its form is submitted. |
 | `children` | `Element` | - | The dropzone's prompt. The `input` variant shows `placeholder` instead. |
-| `size` | `Responsive<Size>` | `md` | Control height, font size and the chips' size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the file chips keep the base size. |
+| `size` | `Responsive<Size>` | `md` | Control height, font size and the chips' size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the file chips follow it. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `label` | `Caption` | - | The field's caption. It names the field and its Browse button. |
 | `description` | `Caption` | - | Between the label and the control. Which files are wanted. |

@@ -170,8 +170,8 @@ pub fn ComboboxPage() -> Element {
                         .doc("Overrides whether the row is refused. A refused row is greyed and ignores the click and Enter."),
                     prop("onpick", "EventHandler<()>")
                         .doc("Called on a click, and by Enter while the row is active. The only way to pick."),
-                    prop("size", "Size")
-                        .doc("Row height and font size. Defaults to the `Combobox`'s `size`."),
+                    prop("size", "Responsive<Size>")
+                        .doc("Row height and font size. Defaults to the `Combobox`'s `size`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("radius", "ThemeAwareValue")
                         .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Defaults to the `Combobox`'s, reduced so the row nests inside the dropdown."),
                     prop("children", "Element")

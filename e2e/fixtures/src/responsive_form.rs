@@ -1,7 +1,10 @@
 //! Responsive `size`, `radius` and card variant on the form family (todo 5652).
 
 use dioxus::prelude::*;
-use libero::components::{Button, Checkbox, Flex, Options, SegmentedControl, TextField, Variant};
+use libero::components::{
+    Button, Checkbox, FieldStatus, Fields, Flex, Form, Options, SegmentedControl, Select, TagsField,
+    TextField, Variant,
+};
 use libero::sx::ThemeAwareValue;
 use libero::theme::{ChoiceVariant, Size, responsive};
 
@@ -15,12 +18,18 @@ enum View {
     Grid,
 }
 
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Draft {
+    name: String,
+}
+
 /// A field small under 62rem and large from it, beside plain `sm` and `lg` ones to measure
 /// against; a checkbox that turns into a card; a segmented control whose segments, look and gap
 /// switch at md; a late field registers its copies after mount.
 #[component]
 fn ResponsiveFormPage() -> Element {
     let mut late = use_signal(|| false);
+    let draft = use_store(Draft::default);
     rsx! {
         Flex { direction: "column", gap: "md",
             div { id: "rspf-sm", TextField { label: "Small", size: "sm" } }
@@ -42,6 +51,31 @@ fn ResponsiveFormPage() -> Element {
                     size: responsive(Size::Sm).md(Size::Lg),
                     variant: responsive(Variant::Filled).md(Variant::Outlined),
                     gap: responsive(ThemeAwareValue::from("2px")).md("10px".into()),
+                }
+            }
+            div { id: "rspf-tags",
+                TagsField {
+                    label: "Tags",
+                    value: vec!["alpha".to_string()],
+                    size: responsive(Size::Sm).md(Size::Lg),
+                    onchange: move |_: Vec<String>| {},
+                }
+            }
+            div { id: "rspf-select",
+                Select {
+                    label: "View",
+                    value: View::List,
+                    size: responsive(Size::Sm).md(Size::Lg),
+                    onchange: move |_| {},
+                }
+            }
+            div { id: "rspf-pending",
+                Form { value: draft, pending_loader: true,
+                    TextField {
+                        label: "Name",
+                        status: FieldStatus::Pending,
+                        size: responsive(Size::Sm).md(Size::Lg),
+                    }
                 }
             }
             Button { id: "rspf-add", onclick: move |_| late.set(true), "Add" }

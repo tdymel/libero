@@ -14,8 +14,8 @@ use crate::{
             CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, FocusOpen, FormScope,
             SelectionArgs, clear_button, field_control_sx, field_parts_enum, field_props,
             framed_remove_sx, removable_chip, row_label, use_bound, use_chip_announcer,
-            use_chip_handles, use_edited, use_field, use_field_frame, use_focus_open, use_prefill,
-            use_row_cache,
+            use_chip_handles, use_chip_ranges, use_edited, use_field, use_field_frame,
+            use_focus_open, use_prefill, use_row_cache,
         },
         layout::{BoxStyle, use_box},
     },
@@ -23,7 +23,7 @@ use crate::{
     localization::{TagsFieldLabels, fill},
     platform::{ElementApi, caret_edges, is_tab, logical_key},
     sx::{StaticSx, sx},
-    theme::Size,
+    theme::{Responsive, Size},
     utils::warn,
 };
 
@@ -163,7 +163,7 @@ field_props! {
 pub fn TagsField(props: TagsFieldProps) -> Element {
     let theme = use_theme();
     let sizes = props.size.copied_or(theme.tags_field.size.into());
-    let size = sizes.base();
+    use_chip_ranges(&sizes);
     let radius = ScaleOrCss::new(
         props
             .radius
@@ -327,7 +327,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         &held,
         &onchange,
         props.tag,
-        size,
+        sizes,
         (disabled, readonly),
         &focus,
         touched,
@@ -523,7 +523,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 caret_keys: CaretKeys::Unhighlighted,
                 labelled_by: field.label_id(),
                 aria_label,
-                size,
+                size: sizes,
                 radius: radius.value(),
                 disabled: disabled || readonly,
                 // Stays up after a pick, as on `MultiSelect`.
@@ -745,7 +745,7 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     held: &[String],
     onchange: &Option<F>,
     draw_tag: Option<Callback<SelectionArgs<String>, Element>>,
-    size: Size,
+    size: Responsive<Size>,
     (disabled, readonly): (bool, bool),
     focus: &ChipFocus,
     touched: CopyValue<bool>,

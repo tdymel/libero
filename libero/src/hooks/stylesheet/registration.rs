@@ -398,6 +398,16 @@ impl Drop for RangeRegistrations {
 /// class: `@media <run>{.<class>[data-state~="<word>"]{..}}`, the plain word block's specificity,
 /// shared by every instance using the word. A plain instance registers nothing. One hook slot.
 pub(crate) fn use_range_css(base: &'static StaticSx, copies: Vec<RangeCopy<'_>>) {
+    use_range_css_in(CssLayer::Framework, base, copies);
+}
+
+/// [`use_range_css`] for a `base` that lives in `layer` (a user `sx` such as the chip's): the
+/// copies must share their base's layer, or the cascade order between them breaks.
+pub(crate) fn use_range_css_in(
+    layer: CssLayer,
+    base: &'static StaticSx,
+    copies: Vec<RangeCopy<'_>>,
+) {
     let state = use_hook(|| {
         Rc::new(RangeRegistrations {
             context: RefCell::new(consume_context::<LiberoContext>()),
@@ -427,7 +437,7 @@ pub(crate) fn use_range_css(base: &'static StaticSx, copies: Vec<RangeCopy<'_>>)
             let key = (!sheet.as_str().is_empty()).then(|| {
                 context
                     .stylesheet_registry
-                    .acquire(sheet, CssLayer::Framework, SheetRank::Range)
+                    .acquire(sheet, layer, SheetRank::Range)
             });
             (copy.word, key)
         })

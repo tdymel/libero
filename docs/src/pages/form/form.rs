@@ -224,7 +224,7 @@ pub fn FormPage() -> Element {
                         .doc("`Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). `FormLabels` gains fields in minor releases, so build yours from a built-in set, `..FormLabels::ENGLISH`. Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does."),
                     prop("pending_loader", "bool")
                         .default("false")
-                        .doc("Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit). The box keeps its height; the control is `aria-busy=\"true\"` either way. Not in a `PinField`'s cells."),
+                        .doc("Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit). The box keeps its height; the control is `aria-busy=\"true\"` either way. The loader follows a responsive field size. Not in a `PinField`'s cells."),
                     prop("form", "FormHandle")
                         .doc("Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form."),
                     prop("children", "Element")
