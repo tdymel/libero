@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::context::{PortalEntry, PortalHost, ThemeScopeContext};
 use crate::sx::{SCHEME_ATTRIBUTE, THEME_SCOPE_ATTRIBUTE};
+use crate::theme::Theme;
 use crate::utils::unique_id;
 
 /// One component's claim on a slot in `PortalOutlet`, written through
@@ -43,21 +44,23 @@ impl PortalSlot {
 }
 
 impl PortalSlot {
-    /// `content` in a box carrying the nearest [`ThemeScope`](crate::ThemeScope)'s theme.
+    /// `content` in a box carrying the nearest [`ThemeScope`](crate::ThemeScope)'s theme, for its
+    /// CSS and for `use_theme` inside.
     fn scoped(&self, content: Element) -> Element {
-        let Some(name) = self.scope.and_then(|scope| scope.name.cloned()) else {
+        let Some(scope) = self.scope else {
             return content;
         };
-        let scheme = self
-            .scope
-            .and_then(|scope| scope.theme.cloned())
-            .map_or(dioxus::core::AttributeValue::None, |theme| {
-                dioxus::core::AttributeValue::Text(theme.surface.color_scheme().to_string())
-            });
+        let Some(name) = scope.name.cloned() else {
+            return content;
+        };
+        let theme = scope.theme.cloned();
+        let scheme = theme.map_or(dioxus::core::AttributeValue::None, |theme| {
+            dioxus::core::AttributeValue::Text(theme.surface.color_scheme().to_string())
+        });
         let attribute = vec![
             Attribute::new(
                 THEME_SCOPE_ATTRIBUTE,
-                dioxus::core::AttributeValue::Text(name),
+                dioxus::core::AttributeValue::Text(name.clone()),
                 None,
                 false,
             ),
@@ -65,9 +68,25 @@ impl PortalSlot {
         ];
         // `contents`: the box must not become the overlay's containing block or take a line.
         rsx! {
-            div { display: "contents", ..attribute, {content} }
+            div { display: "contents", ..attribute,
+                ScopeContext { name, theme, {content} }
+            }
         }
     }
+}
+
+/// Provides the slot's scope to the portalled content, which mounts under the outlet.
+#[component]
+fn ScopeContext(
+    name: String,
+    #[props(!optional)] theme: Option<&'static Theme>,
+    children: Element,
+) -> Element {
+    // Owned here: the slot's memos and the props' signals belong to scopes outside the outlet.
+    let name = use_memo(use_reactive!(|name| Some(name)));
+    let theme = use_memo(use_reactive!(|theme| theme));
+    use_context_provider(|| ThemeScopeContext { name, theme });
+    children
 }
 
 /// Claims a portal slot for this component, and releases it on drop.

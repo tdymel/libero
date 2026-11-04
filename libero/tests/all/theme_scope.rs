@@ -95,6 +95,47 @@ fn an_overlay_opened_inside_carries_the_scope_out_of_the_tree() {
     );
 }
 
+/// Todo 5710: a portalled overlay mounts under the outlet, yet reads its scope's theme, and an
+/// unknown inner scope carries the scope around it.
+#[test]
+fn an_overlay_opened_inside_reads_the_scopes_theme() {
+    #[component]
+    fn Probe() -> Element {
+        let surface = use_theme().surface.to_string();
+        rsx! { span { id: "probe", "{surface}" } }
+    }
+    #[component]
+    fn Opener() -> Element {
+        let options = DrawerOptions {
+            aria_label: Some("Settings".into()),
+            ..Default::default()
+        };
+        let drawer = use_drawer(options, |_: ModalScope<()>| rsx! { Probe {} });
+        use_hook(move || drawer.open());
+        rsx! {}
+    }
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ThemeScope { theme: "dark",
+                    ThemeScope { theme: "sepia", Opener {} }
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+    let probe = html.find(r#"id="probe""#).expect(&html);
+    let rest = &html[probe..];
+    assert_eq!(
+        &rest[rest.find('>').unwrap() + 1..rest.find("</span>").unwrap()],
+        Theme::DARK.surface.to_string()
+    );
+    let carried = html[..probe].rfind("data-lsx-theme-scope").expect(&html);
+    let tag = &html[html[..carried].rfind('<').unwrap()..probe];
+    assert!(tag.contains(r#"data-lsx-theme-scope="dark""#), "{tag}");
+    assert!(tag.contains(r#"data-lsx-scheme="dark""#), "{tag}");
+}
+
 /// Todo 5681: a scope carries its theme's scheme, which `Sx::dark` and `Sx::light` read.
 #[test]
 fn a_scope_writes_its_theme_scheme() {

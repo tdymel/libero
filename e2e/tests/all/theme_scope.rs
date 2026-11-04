@@ -7,6 +7,7 @@ const LIGHT: &str = "#light > [data-lsx-theme-scope=light]";
 const DARK: &str = "#dark > [data-lsx-theme-scope=dark]";
 /// `Theme::DARK.surface`, `#1A1B1E`.
 const DARK_SURFACE: &str = "rgb(26, 27, 30)";
+const DARK_SURFACE_HEX: &str = "#1A1B1E";
 
 async fn scopes_paint_their_theme<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let dark = d.style(DARK, "background-color").await?;
@@ -72,6 +73,33 @@ async fn dark_arms_follow_the_scope_in_a_dark_page<D: Driver>(
 ) -> Result<()> {
     probes_follow_their_scope(d, GREEN).await
 }
+
+/// Todo 5710: the drawer mounts under the outlet, yet `use_theme` inside gives the scope's theme.
+async fn a_drawer_opened_inside_reads_the_scopes_theme<D: Driver>(
+    d: &mut D,
+    _route: &str,
+) -> Result<()> {
+    d.click("#open-drawer").await?;
+    eventually(d, "the drawer reads the dark theme", async |d| {
+        Ok(d.exists("#drawer-theme").await?
+            && d.text("#drawer-theme")
+                .await?
+                .eq_ignore_ascii_case(DARK_SURFACE_HEX))
+    })
+    .await?;
+    ensure!(
+        d.exists("[data-lsx-theme-scope=dark] #drawer-theme")
+            .await?,
+        "the drawer sits in the carried scope"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_drawer_opened_inside_reads_the_scopes_theme,
+    "/theme-scope",
+    a_drawer_opened_inside_reads_the_scopes_theme
+);
 
 e2e::scenario!(
     dark_arms_follow_the_scope_in_a_light_page,

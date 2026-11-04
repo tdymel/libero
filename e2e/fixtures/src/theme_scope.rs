@@ -1,11 +1,13 @@
 //! Todo 5638: a light and a dark `ThemeScope` side by side, a `Select` inside the dark one
 //! whose portalled list must carry the scope. Todo 5681: `Sx::dark` inside a scope follows the
-//! scope, whichever scheme the page pins.
+//! scope, whichever scheme the page pins. Todo 5710: a drawer opened inside reads the scope's
+//! theme through `use_theme`.
 
 use dioxus::prelude::*;
 use libero::{
     LiberoContext, ThemeScope,
     components::{Box, Flex, Paper, Select},
+    hooks::{DrawerOptions, ModalScope, use_drawer, use_theme},
     sx::sx,
     theme::{Theme, ThemeSet},
 };
@@ -49,10 +51,32 @@ fn ThemeScopePage() -> Element {
                         value: fruit(),
                         onchange: move |next| fruit.set(next),
                     }
+                    DrawerOpener {}
                 }
             }
         }
     }
+}
+
+#[component]
+fn DrawerOpener() -> Element {
+    let options = DrawerOptions {
+        aria_label: Some("Theme".into()),
+        ..Default::default()
+    };
+    let drawer = use_drawer(options, |_: ModalScope<()>| rsx! { DrawerTheme {} });
+    rsx! {
+        button { id: "open-drawer", onclick: move |_| {
+                drawer.open();
+            }, "Open drawer" }
+    }
+}
+
+/// The surface `use_theme` gives inside the portalled drawer.
+#[component]
+fn DrawerTheme() -> Element {
+    let surface = use_theme().surface.to_string();
+    rsx! { span { id: "drawer-theme", "{surface}" } }
 }
 
 /// Red, green in a dark scheme.

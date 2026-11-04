@@ -54,8 +54,11 @@ pub fn ThemeScope(
     let parent = use_hook(try_consume_context::<ThemeScopeContext>);
     let resolved =
         use_memo(move || own().or_else(|| parent.and_then(|parent| parent.theme.cloned())));
+    // An unknown scope's overlays carry the scope around it, as its children inherit it.
+    let carried =
+        use_memo(move || scope().or_else(|| parent.and_then(|parent| parent.name.cloned())));
     use_context_provider(|| ThemeScopeContext {
-        name: scope,
+        name: carried,
         theme: resolved,
     });
     use_css(

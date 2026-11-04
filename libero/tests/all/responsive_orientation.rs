@@ -305,7 +305,8 @@ fn a_responsive_slider_renders_its_base_on_the_server() {
     assert!(!has_range_copy(&html));
 }
 
-/// Both axes per breakpoint: a third run word keys the cards' row on the ranges they share.
+/// Both axes per breakpoint: the generic cross copy keys the cards' row on the ranges they share
+/// (todo 5730), with no word of its own.
 #[test]
 fn a_radio_group_with_both_axes_responsive_grows_its_cards_where_they_meet() {
     fn app() -> Element {
@@ -323,13 +324,10 @@ fn a_radio_group_with_both_axes_responsive_grows_its_cards_where_they_meet() {
 
     let html = render(app);
     let page = body(&html);
-    assert!(page.contains("base-lg:no-card-row lg-:card-row"), "{page}");
-    let row = copy(&html, "lg-:card-row");
-    assert!(
-        row.starts_with(r#"[data-state~="lg-:card-row"] > *{flex:1 1 12rem;}"#),
-        "{row}"
-    );
-    assert!(!html.contains(r#"[data-state~="base-lg:no-card-row"]"#));
+    assert!(!page.contains("card-row"), "{page}");
+    let row = r#"[data-state~="lg-:cards"][data-state~="md-:horizontal"] > *{flex:1 1 12rem;}"#;
+    assert_eq!(html.matches(row).count(), 1, "{html}");
+    assert!(!html.contains(r#"[data-state~="base-lg:plain"][data-state~="md-:horizontal"]"#));
 }
 
 #[test]
