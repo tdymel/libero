@@ -7,8 +7,9 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Button, ButtonGroup, DataList, DataListItem, Options, Orientation, Sortable,
-        SortableItem, Splitter, Stepper, Toolbar,
+        ActionIcon, Button, ButtonGroup, Carousel, DataList, DataListItem, Divider, Marquee,
+        Options, Orientation, RadioGroup, RangeSlider, Slider, Sortable, SortableItem, Splitter,
+        Stepper, Toolbar,
     },
     theme::responsive,
 };
@@ -51,6 +52,8 @@ fn a_plain_orientation_keeps_its_words_and_registers_nothing() {
                 Splitter { aria_label: "Panes", orientation: "horizontal",
                     panel_a: rsx! { "A" }, panel_b: rsx! { "B" },
                 }
+                RadioGroup::<Plan> { label: "Plan", orientation: "horizontal", onchange: |_| {} }
+                Divider { orientation: "vertical", "or" }
             }
         }
     }
@@ -185,5 +188,117 @@ fn a_responsive_stepper_renders_its_base_on_the_server() {
     let html = render(app);
     let page = body(&html);
     assert!(page.contains("vertical"), "{page}");
+    assert!(!has_range_copy(&html));
+}
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Plan {
+    Free,
+    Pro,
+}
+
+#[test]
+fn a_responsive_radio_group_wraps_its_row_only_in_its_range() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RadioGroup::<Plan> { label: "Plan", orientation: stacked(), variant: "card", onchange: |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(body(&html).contains("base-md:vertical md-:horizontal"));
+    let row = copy(&html, "md-:horizontal");
+    assert!(row.contains("flex-wrap:wrap"), "{row}");
+    // `horizontal && cards` keeps its cards half inside the copy.
+    assert!(
+        row.contains(r#"[data-state~="cards"] > *{flex:1 1 12rem;}"#),
+        "{row}"
+    );
+    // The column is the static sheet's: its range needs no rule.
+    assert!(!html.contains(r#"[data-state~="base-md:vertical"]"#));
+}
+
+#[test]
+fn a_responsive_divider_turns_its_line_per_range_and_names_the_base() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Divider { orientation: stacked(), "or" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let page = body(&html);
+    assert!(page.contains("base-md:vertical md-:horizontal"), "{page}");
+    assert!(page.contains(r#"aria-orientation="vertical""#), "{page}");
+    let column = copy(&html, "base-md:vertical");
+    assert!(column.contains("flex-direction:column"), "{column}");
+    // The label span's class is the base's; the row copy restyles it.
+    let row = copy(&html, "md-:horizontal");
+    assert!(
+        row.contains("[data-slot='label']") && row.contains("overflow-wrap:anywhere"),
+        "{row}"
+    );
+}
+
+#[test]
+fn a_responsive_marquee_scrolls_on_the_axis_of_its_range() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Marquee { orientation: stacked(), span { "Rust" } }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(body(&html).contains("base-md:vertical md-:horizontal"));
+    assert!(copy(&html, "base-md:vertical").contains("translateY("));
+    assert!(copy(&html, "md-:horizontal").contains("translateX("));
+}
+
+/// Laid out in Rust (controls, scrollbars, drag axis): the server draws the base.
+#[test]
+fn a_responsive_carousel_renders_its_base_on_the_server() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Photos",
+                    orientation: stacked(),
+                    height: "240px",
+                    slides: vec![rsx! { "One" }, rsx! { "Two" }],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(body(&html).contains("vertical"));
+    assert!(!has_range_copy(&html));
+}
+
+/// Laid out in Rust (bars, segments, drag axis): the server draws the base.
+#[test]
+fn a_responsive_slider_renders_its_base_on_the_server() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider::<f64> { label: "Volume", value: 40.0, orientation: stacked() }
+                RangeSlider::<f64> { label: "Price", value: (20.0, 60.0), orientation: stacked() }
+            }
+        }
+    }
+
+    let html = render(app);
+    let page = body(&html);
+    assert_eq!(
+        page.matches(r#"aria-orientation="vertical""#).count(),
+        3,
+        "{page}"
+    );
     assert!(!has_range_copy(&html));
 }

@@ -28,7 +28,7 @@ use crate::{
         data_display::responsive_props::{and_sx, plain_var, var_sx},
         layout::{Box, use_box, use_scroll_area},
     },
-    hooks::{use_element, use_focus_within, use_id, use_localization, use_theme},
+    hooks::{use_element, use_focus_within, use_id, use_localization, use_responsive, use_theme},
     localization::fill,
     platform::page_task,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -173,9 +173,10 @@ base_props! {
         gap: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
         align: Input<CarouselAlign>,
-        /// `"horizontal"` by default, unlike `Orientation`'s own default.
+        /// `"horizontal"` by default, unlike `Orientation`'s own default. Per breakpoint
+        /// too; a server-rendered page draws the base until mount.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Required for a vertical carousel. Per breakpoint too:
         /// `responsive(ThemeAwareValue::from("240px")).md("400px".into())`.
         #[props(default, into)]
@@ -250,8 +251,10 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let per_view = props.per_view.copied_or(theme.carousel.per_view).max(0.1);
     // Every slide fits and a loop has none to wrap: status, track and dot would be dead stops.
     let quiet = count as f64 <= per_view && !(props.r#loop && count > 1);
-    // `Orientation` defaults to vertical; a carousel does not.
-    let orientation = props.orientation.copied_or(Orientation::Horizontal);
+    // `Orientation` defaults to vertical; a carousel does not. Resolved in Rust: the controls,
+    // scrollbars and drag axis differ per orientation, so a responsive one switches after mount.
+    let orientation =
+        use_responsive(&props.orientation.copied_or(Orientation::Horizontal.into()))();
     let align = props.align.copied_or(theme.carousel.align);
     // No slides: no chrome, no landmark, no tab stop. The root keeps its box.
     let empty = count == 0;

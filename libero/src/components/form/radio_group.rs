@@ -107,9 +107,9 @@ field_props! {
         /// `Card` draws every option as a bordered surface that is its hit area.
         #[props(default, into)]
         variant: Input<Responsive<ChoiceVariant>>,
-        /// Lays the options out in a row instead of a column.
+        /// Lays the options out in a row instead of a column; per breakpoint too.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// The ring and dot colour of the selected option.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -144,7 +144,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let sizes = props.size.copied_or(theme.radio.size.into());
     let required = crate::components::form::fieldset_required(props.required);
-    let horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
+    // `Responsive<Orientation>` has no `Default`.
+    let orientation = props.orientation.copied_or(Orientation::Vertical.into());
     let variant = props.variant.copied_or(theme.radio.variant.into());
 
     let bound = use_bound(&props.name, props.onchange.is_some());
@@ -198,16 +199,27 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or_default()
-        .with("horizontal", horizontal)
+        .with(
+            "horizontal",
+            orientation.is_plain() && orientation.base() == Orientation::Horizontal,
+        )
         .with(
             "cards",
             variant.is_plain() && variant.base() == ChoiceVariant::Card,
         );
-    let states: Input<States> = match variant.is_plain() {
+    let states = match variant.is_plain() {
         true => states,
         false => states.responsive(&variant, |variant| match variant {
             ChoiceVariant::Card => "cards",
             ChoiceVariant::Plain => "plain",
+        }),
+    };
+    // Run words; the `horizontal` copy keeps its nested `cards` block.
+    let states: Input<States> = match orientation.is_plain() {
+        true => states,
+        false => states.responsive(&orientation, |orientation| match orientation {
+            Orientation::Horizontal => "horizontal",
+            Orientation::Vertical => "vertical",
         }),
     }
     .into();

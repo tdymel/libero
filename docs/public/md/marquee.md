@@ -38,7 +38,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `parts` | `Parts<MarqueePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | What scrolls, rendered once per copy. Interactive children work only in the first copy, and an `id` repeats in every copy. |
-| `orientation` | `Orientation` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. |
+| `orientation` | `Responsive<Orientation>` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. Or one per breakpoint, `orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical)`, with the height set from the same breakpoint: the strip switches with the window from the first paint. |
 | `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
 | `duration` | `u32` | `40000` | Milliseconds per full cycle. The same number moves a longer strip faster. |
 | `gap` | `Responsive<ThemeAwareValue>` | `md` | Between copies, and between the last and the first, or any CSS, e.g. `gap: "0"`. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent. |

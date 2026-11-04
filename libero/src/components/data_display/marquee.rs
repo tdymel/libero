@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{use_localization, use_theme},
+    hooks::{use_localization, use_range_css, use_responsive, use_theme},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         FOCUS_RING_HALO_SPREAD, MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE,
@@ -253,9 +253,9 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
 base_props! {
     parts(MarqueePart);
     pub struct MarqueeProps {
-        /// The scroll axis. A vertical marquee needs a height from the caller.
+        /// The scroll axis, per breakpoint too. A vertical marquee needs a height from the caller.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Scrolls towards the end instead of the start.
         #[props(default)]
         reverse: Option<bool>,
@@ -317,14 +317,15 @@ pub fn Marquee(props: MarqueeProps) -> Element {
     let theme = use_theme();
     let defaults = theme.marquee;
     let labels = use_localization().marquee;
-    let orientation = props.orientation.copied_or(Orientation::Horizontal);
+    let orientations = props.orientation.copied_or(Orientation::Horizontal.into());
     let repeat = props
         .repeat
         .copied_or(defaults.repeat)
         .max(MARQUEE_MIN_REPEAT);
     let gap = ScaleOrCss::new(props.gap.as_ref().map(Responsive::base_ref), defaults.gap);
     let gap_sx = var_sx(&props.gap, MARQUEE_GAP, Some(SizeCss::SPACING));
-    let horizontal = orientation == Orientation::Horizontal;
+    // The debug length check; the scroll follows the breakpoints through range copies.
+    let horizontal = use_responsive(&orientations)() == Orientation::Horizontal;
 
     // Debug builds only: a blank strip is a fault of the caller's `repeat` or content.
     let mut lengths = use_signal(|| (0.0_f64, 0.0_f64));
@@ -372,7 +373,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(orientation.state_name(), true)
+        .responsive(&orientations, |orientation| orientation.state_name())
         .with("reverse", props.reverse.unwrap_or(false))
         .with("paused", paused)
         .with(
@@ -406,6 +407,13 @@ pub fn Marquee(props: MarqueeProps) -> Element {
         .into();
 
     let pause_control = props.pause_control.unwrap_or(defaults.pause_control);
+    let word = |orientation: Orientation| orientation.state_name();
+    use_range_css(
+        &MARQUEE_BASE_SX,
+        orientations.range_copies(word, move |orientation| {
+            MARQUEE_BASE_SX.axis_block(word(orientation))
+        }),
+    );
 
     use_box()
         .framework_sx(&MARQUEE_BASE_SX)

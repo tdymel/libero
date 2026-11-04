@@ -9,8 +9,9 @@ use crate::{
         common::{Input, Orientation},
         form::{field_props, use_bound, use_field},
     },
-    hooks::{use_localization, use_theme},
+    hooks::{use_localization, use_responsive, use_theme},
     sx::ThemeAwareValue,
+    theme::Responsive,
 };
 
 field_props! {
@@ -64,8 +65,9 @@ field_props! {
         validate: crate::components::form::Validators<V>,
         /// `vertical` runs the track bottom to top, `12rem` tall unless the `sx` says;
         /// marks caption at its side. A vertical track is a line, never bars or segments.
+        /// Per breakpoint too; a server-rendered page draws the base until mount.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         #[props(default)]
         track: SliderTrack,
         /// A bubble over the value a hovering mouse or pen points at, before a press
@@ -125,6 +127,9 @@ pub enum SliderTrack {
 #[component]
 pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
     let theme = use_theme();
+    // Resolved in Rust: a vertical track drops bars and segments, so it switches after mount.
+    let vertical = use_responsive(&props.orientation.copied_or(Orientation::Horizontal.into()))()
+        == Orientation::Vertical;
     let scale = Scale::of::<V>(props.min.as_ref(), props.max.as_ref(), props.step);
     let (min, max, step) = scale.bounds();
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -225,7 +230,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             },
             group_digits: props.group_digits,
             preview_on_hover: props.preview_on_hover,
-            vertical: props.orientation.copied_or(Orientation::Horizontal) == Orientation::Vertical,
+            vertical,
         }
     };
 

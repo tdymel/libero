@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Button, Chip, Code, Flex, Marquee, MarqueePart, Text},
+    components::{Anchor, Button, Chip, Code, Flex, Marquee, MarqueePart, Orientation, Text},
     sx::{ThemeAwareValue, sx},
     theme::{Responsive, Size, responsive},
     use_theme,
@@ -92,8 +92,67 @@ fn with_links(source: &str) -> String {
         })
 }
 
-fn vertical(values: &DemoValues) -> bool {
-    values.str("orientation") == "vertical"
+fn picked(values: &DemoValues) -> Orientation {
+    Orientation::from(values.str("orientation").as_str())
+}
+
+fn other(orientation: Orientation) -> Orientation {
+    match orientation {
+        Orientation::Horizontal => Orientation::Vertical,
+        Orientation::Vertical => Orientation::Horizontal,
+    }
+}
+
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
+/// The other orientation below `md`, the picked one from it, while `responsive` is on.
+fn orientation_of(values: &DemoValues) -> Responsive<Orientation> {
+    match responsive_on(values) {
+        true => responsive(other(picked(values))).md(picked(values)),
+        false => picked(values).into(),
+    }
+}
+
+/// The height a vertical strip needs, only in the ranges where it is vertical.
+fn height_sx(values: &DemoValues) -> Option<libero::sx::Sx> {
+    match (responsive_on(values), picked(values)) {
+        (true, Orientation::Vertical) => {
+            Some(sx().breakpoint(Size::Md, sx().height(VERTICAL_HEIGHT)))
+        }
+        // Vertical below `md`; the row from it takes its own height back.
+        (true, Orientation::Horizontal) => Some(
+            sx().height(VERTICAL_HEIGHT)
+                .breakpoint(Size::Md, sx().height("auto")),
+        ),
+        (false, Orientation::Vertical) => Some(sx().height(VERTICAL_HEIGHT)),
+        (false, Orientation::Horizontal) => None,
+    }
+}
+
+fn orientation_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match (responsive_on(values), picked(values)) {
+        (true, orientation) => vec![
+            format!(
+                "orientation: responsive(Orientation::{:?}).md(Orientation::{orientation:?})",
+                other(orientation)
+            ),
+            match orientation {
+                Orientation::Vertical => {
+                    format!("sx: sx().breakpoint(Size::Md, sx().height({VERTICAL_HEIGHT:?}))")
+                }
+                Orientation::Horizontal => format!(
+                    "sx: sx().height({VERTICAL_HEIGHT:?}).breakpoint(Size::Md, sx().height(\"auto\"))"
+                ),
+            },
+        ],
+        (false, Orientation::Vertical) => vec![
+            "orientation: \"vertical\"".to_string(),
+            format!("sx: sx().height({VERTICAL_HEIGHT:?})"),
+        ],
+        (false, Orientation::Horizontal) => vec![],
+    }
 }
 
 /// The page's own pause button, which `pause_control: false` asks for (WCAG 2.2.2).
@@ -134,8 +193,8 @@ fn MarqueePreview(values: DemoValues) -> Element {
                 }
             }
             Marquee {
-                orientation: values.str("orientation"),
-                sx: vertical(&values).then(|| sx().height(VERTICAL_HEIGHT)),
+                orientation: orientation_of(&values),
+                sx: height_sx(&values),
                 duration: values.str("duration").parse::<u32>().ok(),
                 gap: gap_of(&values),
                 repeat: values.str("repeat").parse::<u8>().ok(),
@@ -173,9 +232,9 @@ pub fn MarqueePage() -> Element {
                 prop("children", "Element")
                     .default("required")
                     .doc("What scrolls, rendered once per copy. Interactive children work only in the first copy, and an `id` repeats in every copy."),
-                prop("orientation", "Orientation")
+                prop("orientation", "Responsive<Orientation>")
                     .default("horizontal")
-                    .doc("The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies."),
+                    .doc("The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. Or one per breakpoint, `orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical)`, with the height set from the same breakpoint: the strip switches with the window from the first paint."),
                 prop("reverse", "bool")
                     .default("false")
                     .doc("Scrolls towards the end instead of the start."),
@@ -250,13 +309,7 @@ pub fn MarqueePage() -> Element {
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
-                        .code(|_, values| match vertical(values) {
-                            true => vec![
-                                "orientation: \"vertical\"".to_string(),
-                                format!("sx: sx().height({VERTICAL_HEIGHT:?})"),
-                            ],
-                            false => vec![],
-                        }),
+                        .code(orientation_code),
                     Control::slider("duration", ["10000", "25000", "40000", "80000"])
                         .default(defaults.duration.to_string())
                         .code(integer),

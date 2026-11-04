@@ -35,7 +35,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | The direction of the rule. A vertical rule stretches to its row's height, so it needs a flex row parent; in a block parent it is 0px high and does not show. |
+| `orientation` | `Responsive<Orientation>` | `horizontal` | The direction of the rule. A vertical rule stretches to its row's height, so it needs a flex row parent; in a block parent it is 0px high and does not show. Or one per breakpoint, `orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical)`: the rule switches with the window from the first paint, while `aria-orientation` follows after mount when the page was rendered on a server. |
 | `size` | `Responsive<Size>` | `xs` | Line thickness. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Sm)`. |
 | `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
 | `spacing` | `Responsive<ThemeAwareValue>` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. Or one per breakpoint, `spacing: responsive(Size::Xs).md(Size::Lg)`. |

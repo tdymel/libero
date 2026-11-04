@@ -4,7 +4,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::theme::{Responsive, Size, responsive};
 use libero::{
-    components::{Box, Divider, DividerPart, Input, Text},
+    components::{Box, Divider, DividerPart, Input, Orientation, Text},
     sx::sx,
     use_theme,
 };
@@ -29,6 +29,88 @@ fn size_code(control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
+fn picked(values: &DemoValues) -> Orientation {
+    Orientation::from(values.str("orientation").as_str())
+}
+
+fn other(orientation: Orientation) -> Orientation {
+    match orientation {
+        Orientation::Horizontal => Orientation::Vertical,
+        Orientation::Vertical => Orientation::Horizontal,
+    }
+}
+
+/// The other orientation below `md`, the picked one from it, while the `responsive` switch is on.
+fn responsive_orientation(values: &DemoValues) -> Responsive<Orientation> {
+    match responsive_on(values) {
+        true => responsive(other(picked(values))).md(picked(values)),
+        false => picked(values).into(),
+    }
+}
+
+fn orientation_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    match (responsive_on(values), picked(values)) {
+        (true, orientation) => vec![format!(
+            "orientation: responsive(Orientation::{:?}).md(Orientation::{orientation:?})",
+            other(orientation)
+        )],
+        (false, Orientation::Horizontal) => vec![],
+        (false, orientation) => vec![format!("orientation: {:?}", orientation.as_str())],
+    }
+}
+
+/// The wrapper's layout for one orientation: a row a vertical rule can span, or a column.
+fn layout_code(orientation: Orientation) -> &'static str {
+    match orientation {
+        Orientation::Vertical => {
+            r#".flex_direction("row").align_items("center").justify_content("center").height("120px")"#
+        }
+        Orientation::Horizontal => r#".flex_direction("column").width("240px")"#,
+    }
+}
+
+fn layout_sx(orientation: Orientation) -> libero::sx::Sx {
+    match orientation {
+        Orientation::Vertical => sx()
+            .flex_direction("row")
+            .align_items("center")
+            .justify_content("center")
+            // The label takes ~43px: a shorter row leaves stubs of rule.
+            .height("120px")
+            .width("auto"),
+        Orientation::Horizontal => sx().flex_direction("column").width("240px").height("auto"),
+    }
+}
+
+/// The wrapper follows the rule: per breakpoint when the rule is.
+fn wrapper_sx(values: &DemoValues) -> libero::sx::Sx {
+    let base = sx().display("flex").text_align("center");
+    match responsive_on(values) {
+        true => base
+            .and(layout_sx(other(picked(values))))
+            .breakpoint(Size::Md, layout_sx(picked(values))),
+        false => base.and(layout_sx(picked(values))),
+    }
+}
+
+fn wrapper_code(values: &DemoValues) -> String {
+    match responsive_on(values) {
+        true => format!(
+            "sx().display(\"flex\").text_align(\"center\"){}.breakpoint(Size::Md, sx(){})",
+            layout_code(other(picked(values))),
+            layout_code(picked(values))
+        ),
+        false => format!(
+            "sx().display(\"flex\").text_align(\"center\"){}",
+            layout_code(picked(values))
+        ),
+    }
+}
+
 /// The label is a child, not a prop, so a control has to decide it here.
 fn label_child(values: &DemoValues) -> String {
     match values.str("with_label").as_str() {
@@ -40,14 +122,10 @@ fn label_child(values: &DemoValues) -> String {
 /// A printed wrapper gives the rule an axis to span and neighbours for `spacing`'s margin.
 fn wrap_rule(values: &DemoValues, code: &str) -> String {
     let indented = indent(code);
-    match values.str("orientation").as_str() {
-        "vertical" => format!(
-            "Box {{\n    sx: sx().display(\"flex\").align_items(\"center\").justify_content(\"center\").height(\"120px\"),\n    Text {{ \"Left\" }}\n{indented}    Text {{ \"Right\" }}\n}}"
-        ),
-        _ => format!(
-            "Box {{\n    sx: sx().width(\"240px\").text_align(\"center\"),\n    Text {{ \"Above\" }}\n{indented}    Text {{ \"Below\" }}\n}}"
-        ),
-    }
+    format!(
+        "Box {{\n    sx: {},\n    Text {{ \"One\" }}\n{indented}    Text {{ \"Two\" }}\n}}",
+        wrapper_code(values)
+    )
 }
 
 #[component]
@@ -59,9 +137,9 @@ pub fn DividerPage() -> Element {
             source: "libero/src/components/layout/divider.rs",
             markdown: "/md/divider.md",
             properties: vec![props("Divider", vec![
-                prop("orientation", "Orientation")
+                prop("orientation", "Responsive<Orientation>")
                     .default("horizontal")
-                    .doc("The direction of the rule. A vertical rule stretches to its row's height, so it needs a flex row parent; in a block parent it is 0px high and does not show."),
+                    .doc("The direction of the rule. A vertical rule stretches to its row's height, so it needs a flex row parent; in a block parent it is 0px high and does not show. Or one per breakpoint, `orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical)`: the rule switches with the window from the first paint, while `aria-orientation` follows after mount when the page was rendered on a server."),
                 prop("size", "Responsive<Size>").default(theme.divider.size.as_str()).doc("Line thickness. Or one per breakpoint, `size: responsive(Size::Xs).md(Size::Sm)`."),
                 prop("label_position", "LabelPosition")
                     .default(theme.divider.label_position.as_str())
@@ -95,7 +173,9 @@ pub fn DividerPage() -> Element {
                 children_text: "OR",
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
-                        .labels(["Horizontal", "Vertical"]),
+                        .labels(["Horizontal", "Vertical"])
+                        .default("horizontal")
+                        .code(orientation_code),
                     Control::sizes("size")
                         .default(theme.divider.size.as_str()).code(size_code),
                     // On, so the breakpoint switch shows without another switch: resize the window.
@@ -122,7 +202,7 @@ pub fn DividerPage() -> Element {
                 render: move |values: DemoValues| {
                     let divider = rsx! {
                         Divider {
-                            orientation: values.str("orientation"),
+                            orientation: responsive_orientation(&values),
                             size: responsive_size(&values),
                             label_position: values.str("label_position"),
                             color: match values.str("color").as_str() {
@@ -139,28 +219,12 @@ pub fn DividerPage() -> Element {
                                 .then(|| rsx! { "OR" }),
                         }
                     };
-                    match values.str("orientation").as_str() {
-                        "vertical" => rsx! {
-                            Box {
-                                sx: sx()
-                                    .display("flex")
-                                    .align_items("center")
-                                    .justify_content("center")
-                                    // The label takes ~43px: a shorter row leaves stubs of rule.
-                                    .height("120px"),
-                                Text { "Left" }
-                                {divider}
-                                Text { "Right" }
-                            }
-                        },
-                        _ => rsx! {
-                            Box {
-                                sx: sx().width("240px").text_align("center"),
-                                Text { "Above" }
-                                {divider}
-                                Text { "Below" }
-                            }
-                        },
+                    rsx! {
+                        Box { sx: wrapper_sx(&values),
+                            Text { "One" }
+                            {divider}
+                            Text { "Two" }
+                        }
                     }
                 },
                 wrap: Wrap(wrap_rule),

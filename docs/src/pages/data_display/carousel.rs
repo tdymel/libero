@@ -1,11 +1,70 @@
 use crate::components::{Control, Demo, DemoFile, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Carousel, CarouselPart, Input, Text},
+    components::{Carousel, CarouselPart, Input, Orientation, Text},
     sx::ThemeAwareValue,
     theme::{Responsive, Size, responsive},
     use_theme,
 };
+
+fn other(orientation: Orientation) -> Orientation {
+    match orientation {
+        Orientation::Horizontal => Orientation::Vertical,
+        Orientation::Vertical => Orientation::Horizontal,
+    }
+}
+
+/// The height a vertical strip needs, per range.
+fn height_in(orientation: Orientation) -> ThemeAwareValue {
+    match orientation {
+        Orientation::Vertical => "300px".into(),
+        Orientation::Horizontal => "auto".into(),
+    }
+}
+
+/// The other orientation below `md`, the picked one from it, while `responsive` is on; a
+/// vertical range takes a height.
+fn orientation_of(
+    values: &DemoValues,
+) -> (Responsive<Orientation>, Input<Responsive<ThemeAwareValue>>) {
+    let picked = Orientation::from(values.str("orientation").as_str());
+    match (values.str("responsive") == "true", picked) {
+        (true, picked) => (
+            responsive(other(picked)).md(picked),
+            responsive(height_in(other(picked)))
+                .md(height_in(picked))
+                .into(),
+        ),
+        (false, Orientation::Vertical) => (picked.into(), "300px".into()),
+        (false, Orientation::Horizontal) => (picked.into(), Input::None),
+    }
+}
+
+fn orientation_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    let picked = Orientation::from(values.str("orientation").as_str());
+    let height = |orientation| match orientation {
+        Orientation::Vertical => "\"300px\"",
+        Orientation::Horizontal => "\"auto\"",
+    };
+    match (values.str("responsive") == "true", picked) {
+        (true, picked) => vec![
+            format!(
+                "orientation: responsive(Orientation::{:?}).md(Orientation::{picked:?})",
+                other(picked)
+            ),
+            format!(
+                "height: responsive(ThemeAwareValue::from({})).md({}.into())",
+                height(other(picked)),
+                height(picked)
+            ),
+        ],
+        (false, Orientation::Vertical) => vec![
+            r#"orientation: "vertical""#.to_string(),
+            r#"height: "300px""#.to_string(),
+        ],
+        (false, Orientation::Horizontal) => vec![],
+    }
+}
 
 /// A gap step as a value: `"0"` is CSS, the rest are sizes.
 fn gap_value(gap: &str) -> ThemeAwareValue {
@@ -80,9 +139,9 @@ pub fn CarouselPage() -> Element {
                     prop("align", "CarouselAlign")
                         .default(theme.carousel.align.as_str())
                         .doc("Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach."),
-                    prop("orientation", "Orientation")
+                    prop("orientation", "Responsive<Orientation>")
                         .default("horizontal")
-                        .doc("Scroll axis."),
+                        .doc("Scroll axis. Or one per breakpoint, `orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical)`, with `height` from the same breakpoint. The controls, keys and drag follow the window after mount: a server-rendered page draws the base orientation until then."),
                     prop("height", "Responsive<ThemeAwareValue>")
                         .default("auto")
                         .doc("Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. Or one per breakpoint, `height: responsive(ThemeAwareValue::from(\"240px\")).md(\"400px\".into())`."),
@@ -180,15 +239,7 @@ pub fn CarouselPage() -> Element {
                     // sets one - and prints it, because the component needs it.
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
-                        .code(
-                        |_, values| match values.str("orientation").as_str() {
-                            "vertical" => vec![
-                                r#"orientation: "vertical""#.to_string(),
-                                r#"height: "300px""#.to_string(),
-                            ],
-                            _ => vec![],
-                        },
-                    ),
+                        .code(orientation_code),
                     Control::switch("controls").default(theme.carousel.controls.to_string()),
                     // On, though the theme's default is off: the dots show `align` moving the
                     // reachable window. `code` prints against the theme.
@@ -215,7 +266,7 @@ pub fn CarouselPage() -> Element {
                     }),
                 ],
                 render: move |values: DemoValues| {
-                    let vertical = values.str("orientation") == "vertical";
+                    let (orientation, height) = orientation_of(&values);
 
                     rsx! {
                         Carousel {
@@ -225,9 +276,9 @@ pub fn CarouselPage() -> Element {
                             per_view: values.str("per_view").parse::<f64>().unwrap_or(1.0),
                             gap: gap_of(&values),
                             align: values.str("align"),
-                            orientation: values.str("orientation"),
+                            orientation,
                             // `None`, not `""`: an empty string is a value, not "no height".
-                            height: vertical.then_some("300px"),
+                            height,
                             controls: values.str("controls") == "true",
                             indicators: values.str("indicators") == "true",
                             draggable: values.str("draggable") == "true",

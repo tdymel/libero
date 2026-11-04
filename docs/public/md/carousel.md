@@ -62,7 +62,7 @@ fn Demo() -> Element {
 | `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. The strip runs out of scroll before the slides, so six slides three-up stop at index 3. |
 | `gap` | `Responsive<ThemeAwareValue>` | `md` | Between slides, or any CSS, e.g. `gap: "0"`. Or one per breakpoint, `gap: responsive(ThemeAwareValue::from(Size::Xs)).md(Size::Lg.into())`. Breakpoints follow the window, not the parent. |
 | `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
-| `orientation` | `Orientation` | `horizontal` | Scroll axis. |
+| `orientation` | `Responsive<Orientation>` | `horizontal` | Scroll axis. Or one per breakpoint, `orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical)`, with `height` from the same breakpoint. The controls, keys and drag follow the window after mount: a server-rendered page draws the base orientation until then. |
 | `height` | `Responsive<ThemeAwareValue>` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. Or one per breakpoint, `height: responsive(ThemeAwareValue::from("240px")).md("400px".into())`. |
 | `controls` | `bool` | `true` | Previous and next buttons. Hidden while every slide fits. |
 | `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |

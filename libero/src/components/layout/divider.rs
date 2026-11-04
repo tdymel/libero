@@ -10,8 +10,8 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_css, use_id, use_range_css, use_theme},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    hooks::{use_css, use_id, use_range_css, use_responsive, use_theme},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         ColorCss, ColorShade, ColorValue, CssVar, DIVIDER_LINE, DividerDefaults, LabelPosition,
         Responsive, Size, SizeCss,
@@ -146,6 +146,33 @@ static DIVIDER_LABEL_VERTICAL_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
 });
 
+/// A responsive divider's copy for one orientation range: the static `when` blocks, the label
+/// span's sheet in full (its class keeps the base's), and the border `label` clears.
+fn orientation_copy(orientation: Orientation) -> Sx {
+    let word = orientation.state_name();
+    let (label, border) = match orientation {
+        Orientation::Vertical => (
+            sx().padding("8px 0")
+                .white_space("nowrap")
+                .min_width("auto")
+                .overflow_wrap("normal")
+                .text_align("start"),
+            sx().border_right("0"),
+        ),
+        Orientation::Horizontal => (
+            sx().padding("0 12px")
+                .white_space("normal")
+                .min_width("0")
+                .overflow_wrap("anywhere")
+                .text_align("center"),
+            sx().border_bottom("0"),
+        ),
+    };
+    DIVIDER_BASE_SX
+        .axis_block(word)
+        .when("label", border.selector("& > [data-slot='label']", label))
+}
+
 parts_enum! {
     /// [`Divider`]'s inner parts, for its `parts` prop.
     pub enum DividerPart {
@@ -157,10 +184,10 @@ parts_enum! {
 base_props! {
     parts(DividerPart);
     pub struct DividerProps {
-        /// `"horizontal"` (the default) or `"vertical"`. A vertical rule
+        /// `"horizontal"` (the default) or `"vertical"`, per breakpoint too. A vertical rule
         /// stretches to its parent's height, so the parent must be a flex row.
         #[props(default, into)]
-        orientation: Input<Orientation>,
+        orientation: Input<Responsive<Orientation>>,
         /// Line thickness. Defaults to the theme's `divider.size`, `xs` out of the box.
         /// Per breakpoint too: `responsive(Size::Xs).md(Size::Sm)`.
         #[props(default, into)]
@@ -195,8 +222,9 @@ base_props! {
 /// Docs: <https://libero-ui.dev/layout/divider>
 #[component]
 pub fn Divider(props: DividerProps) -> Element {
-    let orientation = props.orientation.copied_or(Orientation::Horizontal);
-    let vertical = orientation == Orientation::Vertical;
+    let orientations = props.orientation.copied_or(Orientation::Horizontal.into());
+    // `aria-orientation` and the label's class; the line follows the breakpoints through copies.
+    let vertical = use_responsive(&orientations)() == Orientation::Vertical;
     let has_label = props.children.is_some();
     let theme = use_theme();
     let label_position = props.label_position.copied_or(theme.divider.label_position);
@@ -206,8 +234,7 @@ pub fn Divider(props: DividerProps) -> Element {
         .states
         .unwrap_or_default()
         .responsive(&sizes, |size| size.state_name())
-        .with("vertical", vertical)
-        .with("horizontal", !vertical)
+        .responsive(&orientations, |orientation| orientation.state_name())
         .with("label", has_label)
         .with("label-start", label_position == LabelPosition::Start)
         .with("label-end", label_position == LabelPosition::End);
@@ -226,10 +253,9 @@ pub fn Divider(props: DividerProps) -> Element {
         }),
         &props.sx,
     );
-    use_range_css(
-        &DIVIDER_BASE_SX,
-        sizes.range_copies(|size| size.state_name(), DividerDefaults::size_sx),
-    );
+    let mut copies = sizes.range_copies(|size| size.state_name(), DividerDefaults::size_sx);
+    copies.extend(orientations.range_copies(|o| o.state_name(), orientation_copy));
+    use_range_css(&DIVIDER_BASE_SX, copies);
     let data_state = divider_states.data_state();
 
     // A static class, not a component: `use_css` always, the span only with a label.
