@@ -83,7 +83,7 @@ fn Demo() -> Element {
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the value to select next, or `None` when the selection was cleared. |
 | `any_level` | `bool` | `false` | Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits. |
 | `allow_deselect` | `bool` | `false` | Picking the selected option again clears it. Off, a re-pick keeps the value. |
-| `layout` | `CascaderLayout` | `columns` | `"columns"` draws one list per level, `"paths"` one row per full path. A search always renders `"paths"`. Without `any_level` it lists only leaf paths. On a screen narrower than the `sm` breakpoint, `"columns"` shows one level at a time under a back header. |
+| `layout` | `Responsive<CascaderLayout>` | `columns` | `"columns"` draws one list per level, `"paths"` one row per full path. A search always renders `"paths"`. Without `any_level` it lists only leaf paths. On a screen narrower than the `sm` breakpoint, `"columns"` shows one level at a time under a back header. Or one per breakpoint, `layout: responsive(CascaderLayout::Paths).md(CascaderLayout::Columns)`, read when the list opens. Breakpoints follow the window, not the parent. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list, which narrows it to the paths that match. |
 | `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | Narrows the paths while searching. Defaults to a case-insensitive `contains` over the joined path. |
 | `separator` | `String` | `" / "` | Between labels, in the trigger and in a `"paths"` row. |
@@ -155,7 +155,7 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 | `children` | `Element` | required | The trigger, a `button` carrying `state.a11y_attributes()`. It needs no click or key handler of its own: Enter and Space click it, and the dropdown takes the click and the keys. A debug build warns when the list opens and no element carries the trigger's id. |
 | `any_level` | `bool` | `false` | As on `Cascader`. |
 | `allow_deselect` | `bool` | `false` | As on `Cascader`. |
-| `layout` | `CascaderLayout` | `columns` | As on `Cascader`, the narrow drill-in included. |
+| `layout` | `Responsive<CascaderLayout>` | `columns` | As on `Cascader`, the narrow drill-in and per breakpoint included. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list. Focus moves into it while the list is open, and back to the trigger when it closes. |
 | `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | As on `Cascader`. |
 | `separator` | `String` | `" / "` | Between labels in a `"paths"` row. |

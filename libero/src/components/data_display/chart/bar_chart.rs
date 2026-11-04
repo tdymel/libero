@@ -34,9 +34,11 @@ chart_props! {
         /// [`SeriesKind::Line`](super::SeriesKind) one is drawn as a line over the bars. A bar
         /// series' [`Series::mark_line`] is drawn only on upright, `grouped` bars.
         series: Vec<Series>,
-        /// Side by side, stacked, or stacked to 100%. Unset, the theme's.
+        /// Side by side, stacked, or stacked to 100%. Unset, the theme's. Per breakpoint too:
+        /// `responsive(BarLayout::Stacked).md(BarLayout::Grouped)`, drawn in Rust, so it
+        /// switches after mount when server-rendered.
         #[props(default, into)]
-        layout: Input<BarLayout>,
+        layout: Input<Responsive<BarLayout>>,
         /// `"horizontal"` lays the categories down the side, top to bottom. Unset, vertical.
         /// Per breakpoint too: `responsive(Orientation::Horizontal).md(Orientation::Vertical)`,
         /// drawn in Rust, so it switches after mount when server-rendered.
@@ -150,7 +152,7 @@ pub fn BarChart(props: BarChartProps) -> Element {
     let forced = use_accessibility().forced_colors();
     let horizontal = use_responsive(&props.orientation.copied_or(Orientation::Vertical.into()))()
         == Orientation::Horizontal;
-    let layout = props.layout.copied_or(theme.chart.bar_layout);
+    let layout = use_responsive(&props.layout.copied_or(theme.chart.bar_layout.into()))();
     // Bars are never dashed, so neither are their legend keys. A lying chart draws its
     // lines as bars; a percent one measures them on the right axis, off the shares, and
     // keeps its bars on the left. A lying chart has one value axis.

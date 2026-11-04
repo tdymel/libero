@@ -74,6 +74,24 @@ fn gap_value(gap: &str) -> ThemeAwareValue {
     }
 }
 
+/// One slide a view below `md`, the pick from it, while `responsive` is on.
+fn per_view_of(values: &DemoValues) -> Responsive<f64> {
+    let per_view = values.str("per_view").parse::<f64>().unwrap_or(1.0);
+    match values.str("responsive") == "true" {
+        true => responsive(1.0).md(per_view),
+        false => per_view.into(),
+    }
+}
+
+/// One slide a step below `md`, the pick from it, while `responsive` is on.
+fn slides_to_scroll_of(values: &DemoValues) -> Responsive<usize> {
+    let step = values.str("slides_to_scroll").parse::<usize>().unwrap_or(1);
+    match values.str("responsive") == "true" {
+        true => responsive(1).md(step),
+        false => step.into(),
+    }
+}
+
 /// `xs` below `md`, the chosen gap from it, while `responsive` is on.
 fn gap_of(values: &DemoValues) -> Input<Responsive<ThemeAwareValue>> {
     let gap = gap_value(&values.str("gap"));
@@ -132,9 +150,9 @@ pub fn CarouselPage() -> Element {
                     prop("onindexchange", "EventHandler<usize>")
                         .default("None")
                         .doc("Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here."),
-                    prop("per_view", "f64")
+                    prop("per_view", "Responsive<f64>")
                         .default(theme.carousel.per_view.to_string())
-                        .doc("Slides visible at once. A fraction lets the next one peek in. The strip runs out of scroll before the slides, so six slides three-up stop at index 3."),
+                        .doc("Slides visible at once. A fraction lets the next one peek in. The strip runs out of scroll before the slides, so six slides three-up stop at index 3. Or one per breakpoint, `per_view: responsive(1.0).md(3.0)`: the slide widths follow the window at once, the status, dots and last stop of a server-rendered page after mount. Breakpoints follow the window, not the parent."),
                     prop("gap", "Responsive<ThemeAwareValue>").default(theme.carousel.gap.as_str()).doc("Between slides, or any CSS, e.g. `gap: \"0\"`. Or one per breakpoint, `gap: responsive(ThemeAwareValue::from(Size::Xs)).md(Size::Lg.into())`. Breakpoints follow the window, not the parent."),
                     prop("align", "CarouselAlign")
                         .default(theme.carousel.align.as_str())
@@ -160,9 +178,9 @@ pub fn CarouselPage() -> Element {
                     prop("drag_free", "bool")
                         .default("false")
                         .doc("A drag or swipe rests where it ends instead of snapping to a slide; pair it with `draggable` for a mouse. Arrow keys, controls and dots still land on a slide. Ignored with `loop`."),
-                    prop("slides_to_scroll", "Option<usize>")
+                    prop("slides_to_scroll", "Responsive<usize>")
                         .default("1")
-                        .doc("Slides one control, arrow key or autoplay step moves, stopping at the last place the strip can rest. Zero counts as 1; a looping strip caps it at the slides in view. The dots stay one per place."),
+                        .doc("Slides one control, arrow key or autoplay step moves, stopping at the last place the strip can rest. Zero counts as 1; a looping strip caps it at the slides in view. The dots stay one per place. Or one per breakpoint, `slides_to_scroll: responsive(1).md(3)`; a server-rendered page steps by the base until it mounts."),
                     prop("autoplay", "bool")
                         .default("false")
                         .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. Without `loop` it stops on the last slide and presses Pause; Play there starts over from the first."),
@@ -224,7 +242,10 @@ pub fn CarouselPage() -> Element {
                             // `{:?}` keeps the `.0` a whole step needs.
                             value => {
                                 let per_view = value.parse::<f64>().unwrap_or(1.0);
-                                vec![format!("per_view: {per_view:?}")]
+                                match values.str("responsive") == "true" {
+                                    true => vec![format!("per_view: responsive(1.0).md({per_view:?})")],
+                                    false => vec![format!("per_view: {per_view:?}")],
+                                }
                             }
                         }),
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl"])
@@ -254,6 +275,9 @@ pub fn CarouselPage() -> Element {
                     Control::slider("slides_to_scroll", ["1", "2", "3"]).code(|_, values| {
                         match values.str("slides_to_scroll").as_str() {
                             "1" => vec![],
+                            value if values.str("responsive") == "true" => {
+                                vec![format!("slides_to_scroll: responsive(1).md({value})")]
+                            }
                             value => vec![format!("slides_to_scroll: {value}")],
                         }
                     }),
@@ -273,7 +297,7 @@ pub fn CarouselPage() -> Element {
                             aria_label: "Product photos",
                             index: index(),
                             onindexchange: move |next| index.set(next),
-                            per_view: values.str("per_view").parse::<f64>().unwrap_or(1.0),
+                            per_view: per_view_of(&values),
                             gap: gap_of(&values),
                             align: values.str("align"),
                             orientation,
@@ -283,7 +307,7 @@ pub fn CarouselPage() -> Element {
                             indicators: values.str("indicators") == "true",
                             draggable: values.str("draggable") == "true",
                             drag_free: values.str("drag_free") == "true",
-                            slides_to_scroll: values.str("slides_to_scroll").parse::<usize>().ok(),
+                            slides_to_scroll: slides_to_scroll_of(&values),
                             autoplay: values.str("autoplay") == "true",
                             r#loop: values.str("loop") == "true",
                             slides: demo_slides(),

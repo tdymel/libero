@@ -133,6 +133,7 @@ mod rating;
 mod refused;
 mod repository;
 mod responsive;
+mod responsive_counts;
 mod responsive_data;
 mod responsive_feedback;
 mod responsive_form;

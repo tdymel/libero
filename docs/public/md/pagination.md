@@ -19,7 +19,7 @@ are not available. A listing that wants shareable URLs navigates in
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::Pagination;
+use libero::{components::Pagination, theme::responsive};
 
 #[component]
 fn Demo() -> Element {
@@ -31,7 +31,7 @@ fn Demo() -> Element {
             onchange: move |next| page.set(next),
             aria_label: "Demo pages",
             total: 10,
-            with_pages: false,
+            siblings: responsive(0).md(1),
         }
     }
 }
@@ -45,8 +45,8 @@ fn Demo() -> Element {
 | `page` | `u32` | required | The current page, 1-based and clamped into range. |
 | `onchange` | `EventHandler<u32>` | - | Asks for a new page. Without it the page never changes, and the component warns. |
 | `aria_label` | `String` | required | Names the `<nav>` landmark, so two paginations on one page can be told apart. |
-| `siblings` | `u8` | `1` | Pages on each side of the current one. Past `2·siblings + 2·boundaries + 3` pages the row is always that many items wide; fewer pages all show. An ellipsis never stands for a single page. |
-| `boundaries` | `u8` | `1` | Pages pinned at each end. `0` counts as 1. |
+| `siblings` | `Responsive<u8>` | `1` | Pages on each side of the current one. Past `2·siblings + 2·boundaries + 3` pages the row is always that many items wide; fewer pages all show. An ellipsis never stands for a single page. Or one per breakpoint, `siblings: responsive(0).md(2)`; the row is built in Rust, so a server-rendered page shows the base count until it mounts. Breakpoints follow the window, not the parent. |
+| `boundaries` | `Responsive<u8>` | `1` | Pages pinned at each end. `0` counts as 1. Or one per breakpoint, `boundaries: responsive(1).md(2)`, switching after mount like `siblings`. |
 | `size` | `Responsive<Size>` | `md` | Control box and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `color` | `ThemeAwareValue` | `primary` | Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white. |

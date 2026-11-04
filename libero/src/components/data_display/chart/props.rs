@@ -6,6 +6,7 @@ use crate::{
 input_from_str!(Curve);
 input_from_str!(LegendPosition);
 input_from_str!(BarLayout);
+crate::sx::input::input_from_responsive!(str BarLayout);
 input_from_str!(PieLabels);
 input_from_str!(BarLabelPosition);
 input_from_str!(PieLabelPosition);

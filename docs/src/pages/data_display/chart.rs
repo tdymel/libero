@@ -11,7 +11,7 @@ use libero::{
     },
     theme::{
         BarLabelPosition, BarLayout, Curve, LegendPosition, PieLabelPosition, PieLabels,
-        PointSymbol, Size, responsive,
+        PointSymbol, Responsive, Size, responsive,
     },
 };
 
@@ -100,6 +100,22 @@ fn on(value: bool) -> &'static str {
 /// The bar demo's orientation from the `md` breakpoint up, `horizontal` below it.
 fn responsive_on(values: &DemoValues) -> bool {
     values.str("responsive") == "true"
+}
+
+/// The bar layout from `md` up; below it `stacked`, or `grouped` when stacked is the pick.
+fn bar_layout_of(values: &DemoValues) -> Responsive<BarLayout> {
+    let picked = BarLayout::from(values.str("layout").as_str());
+    match responsive_on(values) {
+        true => responsive(narrow_bar_layout(picked)).md(picked),
+        false => picked.into(),
+    }
+}
+
+fn narrow_bar_layout(picked: BarLayout) -> BarLayout {
+    match picked {
+        BarLayout::Stacked => BarLayout::Grouped,
+        _ => BarLayout::Stacked,
+    }
 }
 
 fn slices() -> Vec<Slice> {
@@ -624,7 +640,7 @@ pub fn ChartPage() -> Element {
                     prop("series", "Vec<Series>").default("required").doc("The bars' series, each with one value per x value. `None` leaves no bar. `.colors([..])` colours bars one by one, `.negative_color(..)` those below 0, and `.errors([(low, high), ..])` draws error bars, written after the value in the tooltip. A stack rounds only its topmost positive and lowest negative segment. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars. A bar series' `.mark_line(..)` is drawn on upright, `grouped` bars only, and warns in development otherwise."),
                     prop("title", "Option<String>").doc("Shown above the chart, and its accessible name."),
                     prop("description", "Option<String>").doc("A sentence under the title: what to read from the chart."),
-                    prop("layout", "BarLayout").default(theme.chart.bar_layout.as_str()).doc("`grouped` side by side, `stacked`, or `percent`: stacked to 100%."),
+                    prop("layout", "Responsive<BarLayout>").default(theme.chart.bar_layout.as_str()).doc("`grouped` side by side, `stacked`, or `percent`: stacked to 100%. Or one per breakpoint, `layout: responsive(BarLayout::Stacked).md(BarLayout::Grouped)`. It is laid out in Rust, so it switches after mount when server-rendered."),
                     prop("orientation", "Responsive<Orientation>").default("vertical").doc("`horizontal` lays the categories down the side, top to bottom. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. It is laid out in Rust, so it switches after mount when server-rendered."),
                     prop("radius", "Size").default(theme.chart.bar_radius.as_str()).doc("Corner radius of a bar's free end, the one away from its axis, on the theme's radius scale."),
                     prop("value_labels", "Option<bool>").default(on(theme.chart.value_labels)).doc("Each bar's value written on it."),
@@ -983,7 +999,18 @@ pub fn ChartPage() -> Element {
                         }),
                     Control::select("layout", ["grouped", "stacked", "percent"])
                         .default(theme.chart.bar_layout.as_str())
-                        .hidden_when(is("bar")),
+                        .hidden_when(is("bar"))
+                        .code(|control, values| {
+                            let picked = BarLayout::from(values.str("layout").as_str());
+                            match responsive_on(values) {
+                                true => vec![format!(
+                                    "layout: responsive(BarLayout::{:?}).md(BarLayout::{picked:?})",
+                                    narrow_bar_layout(picked)
+                                )],
+                                false if values.str("layout") == control.default => vec![],
+                                false => vec![format!("layout: {:?}", picked.as_str())],
+                            }
+                        }),
                     Control::toggle("orientation", ["vertical", "horizontal"])
                         .hidden_when(is("bar"))
                         .code(|_, values| match (responsive_on(values), values.str("orientation").as_str()) {
@@ -1221,7 +1248,7 @@ pub fn ChartPage() -> Element {
                                 x: QUARTERS,
                                 series: vec![marked(&values, profit_2025(&values).1), Series::new("2026", PROFIT_2026)]
                                     .into_iter().chain(margin(&values).map(|m| m.1)).collect::<Vec<_>>(),
-                                layout: BarLayout::from(values.str("layout").as_str()),
+                                layout: bar_layout_of(&values),
                                 orientation: match (responsive_on(&values), Orientation::from(values.str("orientation").as_str())) {
                                     (true, chosen) => responsive(Orientation::Horizontal).md(chosen),
                                     (false, chosen) => chosen.into(),

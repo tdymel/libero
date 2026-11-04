@@ -7,7 +7,8 @@ use crate::{
         common::{Input, Options, Parts},
         form::{DropdownPart, field_props, use_bound},
     },
-    hooks::use_theme,
+    hooks::{use_responsive, use_theme},
+    theme::Responsive,
     utils::warn,
 };
 
@@ -62,9 +63,10 @@ field_props! {
         /// Picking the committed option again clears it. Off by default, as in APG.
         #[props(default)]
         allow_deselect: Option<bool>,
-        /// `"columns"` (default) or `"paths"`. A search always renders `"paths"`.
+        /// `"columns"` (default) or `"paths"`. A search always renders `"paths"`. Per
+        /// breakpoint too: `responsive(CascaderLayout::Paths).md(CascaderLayout::Columns)`.
         #[props(default, into)]
-        layout: Input<CascaderLayout>,
+        layout: Input<Responsive<CascaderLayout>>,
         /// Puts a search box at the top of the list.
         #[props(default)]
         searchable: Option<bool>,
@@ -130,6 +132,8 @@ field_props! {
 #[component]
 pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
     let theme = use_theme();
+    // The list opens after load, so the window's layout is known by then.
+    let layout = use_responsive(&props.layout.copied_or(CascaderLayout::default().into()))();
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let current = bound.value().unwrap_or_else(|| props.value.clone());
@@ -202,7 +206,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             separator,
             any_level: props.any_level.unwrap_or(false),
             allow_deselect: props.allow_deselect.unwrap_or(false),
-            layout: props.layout.copied_or_default(),
+            layout,
             searchable: props.searchable.unwrap_or(false),
             column_width,
             placeholder: props.placeholder,

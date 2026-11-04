@@ -23,7 +23,7 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, Orientation, Part, States, Variables, base_props, input_from_str,
-            parts_enum, variables, with_own,
+            parts_enum, responsive_var_sx, variables, with_own,
         },
         data_display::responsive_props::{and_sx, plain_var, var_sx},
         layout::{Box, use_box, use_scroll_area},
@@ -39,6 +39,8 @@ use crate::{
 pub use crate::theme::CarouselAlign;
 
 input_from_str!(CarouselAlign);
+crate::sx::input::input_from_responsive!(f64);
+crate::sx::input::input_from_responsive!(usize);
 
 static CAROUSEL_ROOT_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
@@ -104,12 +106,12 @@ impl CarouselJump {
 const CAROUSEL_HEIGHT: CssVar = CssVar::new("--lsx-carousel-height");
 
 fn carousel_variables(
-    per_view: f64,
+    per_view: Option<String>,
     gap: &Input<Responsive<ThemeAwareValue>>,
     height: &Input<Responsive<ThemeAwareValue>>,
 ) -> Variables {
     variables()
-        .with(CAROUSEL_PER_VIEW.override_var(), Some(per_view.to_string()))
+        .with(CAROUSEL_PER_VIEW.override_var(), per_view)
         .with(
             CAROUSEL_GAP.override_var(),
             plain_var(gap, Some(SizeCss::SPACING)),
@@ -117,15 +119,17 @@ fn carousel_variables(
         .with(CAROUSEL_HEIGHT, plain_var(height, Some(SizeCss::SPACING)))
 }
 
-/// The per-breakpoint `gap` and `height`, in the user layer under the caller's `sx`.
-fn carousel_sx(props: &CarouselProps) -> Input<Sx> {
+/// The per-breakpoint `per_view`, `gap` and `height`, in the user layer under the caller's `sx`.
+fn carousel_sx(props: &CarouselProps, per_views: &Responsive<f64>) -> Input<Sx> {
+    let edges = per_views.map(|per_view| ThemeAwareValue::from(per_view.max(0.1).to_string()));
+    let per_view = responsive_var_sx(&edges, CAROUSEL_PER_VIEW.override_var(), None);
     let gap = var_sx(
         &props.gap,
         CAROUSEL_GAP.override_var(),
         Some(SizeCss::SPACING),
     );
     let height = var_sx(&props.height, CAROUSEL_HEIGHT, Some(SizeCss::SPACING));
-    with_own(and_sx(gap, height), &props.sx)
+    with_own(and_sx(per_view, and_sx(gap, height)), &props.sx)
 }
 
 parts_enum! {
@@ -164,9 +168,11 @@ base_props! {
         /// Fired once a scroll settles, and on every control, key and indicator.
         #[props(default)]
         onindexchange: Option<EventHandler<usize>>,
-        /// Slides visible at once. Fractional peeks the next one.
+        /// Slides visible at once. Fractional peeks the next one. Per breakpoint too:
+        /// `responsive(1.0).md(3.0)`; the widths are exact at once, while the status, the
+        /// dots and the last stop of a server-rendered page follow after mount.
         #[props(default, into)]
-        per_view: Input<f64>,
+        per_view: Input<Responsive<f64>>,
         /// Space between slides: a size word or any CSS, as `gap: "0"`.
         /// Per breakpoint too: `responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
@@ -198,9 +204,10 @@ base_props! {
         #[props(default)]
         drag_free: bool,
         /// Slides one control, arrow key or autoplay step moves; 1 by default.
-        /// A looping strip caps it at the slides visible.
-        #[props(default)]
-        slides_to_scroll: Option<usize>,
+        /// A looping strip caps it at the slides visible. Per breakpoint too:
+        /// `responsive(1).md(3)`; a server-rendered page steps by the base until mount.
+        #[props(default, into)]
+        slides_to_scroll: Input<Responsive<usize>>,
         /// Advances on a timer, with a pause control (WCAG 2.2.2). Without `loop` it stops on the last slide.
         #[props(default)]
         autoplay: bool,
@@ -248,7 +255,10 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let jump = try_use_context::<CarouselJump>();
 
     let count = props.slides.len();
-    let per_view = props.per_view.copied_or(theme.carousel.per_view).max(0.1);
+    let per_views = props.per_view.copied_or(theme.carousel.per_view.into());
+    // The slide widths ride a var per breakpoint; the counts in Rust switch after mount.
+    let per_view = use_responsive(&per_views)().max(0.1);
+    let scroll_by = use_responsive(&props.slides_to_scroll.copied_or(1.into()))().max(1);
     // Every slide fits and a loop has none to wrap: status, track and dot would be dead stops.
     let quiet = count as f64 <= per_view && !(props.r#loop && count > 1);
     // `Orientation` defaults to vertical; a carousel does not. Resolved in Rust: the controls,
@@ -301,7 +311,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         named: own_label.is_some(),
         quiet,
         track_stop: !quiet && !jump.as_ref().is_some_and(CarouselJump::slide_stop),
-        scroll_by: props.slides_to_scroll.unwrap_or(1).max(1),
+        scroll_by,
         free: props.drag_free && !props.r#loop,
     };
     let state = use_carousel_state(setup);
@@ -325,9 +335,13 @@ pub fn Carousel(props: CarouselProps) -> Element {
         .unwrap_or_default()
         .with(orientation.state_name(), true)
         .into();
-    let variables: Input<Variables> =
-        carousel_variables(per_view, &props.gap, &props.height).into();
-    let sx = carousel_sx(&props);
+    let variables: Input<Variables> = carousel_variables(
+        per_views.is_plain().then(|| per_view.to_string()),
+        &props.gap,
+        &props.height,
+    )
+    .into();
+    let sx = carousel_sx(&props, &per_views);
 
     // A focusout is decided a task later: a focusin in between is a move within the
     // root, no new entry (2393, WebView 2664), on every platform that reports the pair.

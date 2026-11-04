@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Pagination, PaginationPart, Text},
+    theme::{Responsive, responsive},
     use_theme,
 };
 
@@ -14,6 +15,26 @@ fn unquoted(control: &Control, values: &DemoValues) -> Vec<String> {
     match value == control.default {
         true => vec![],
         false => vec![format!("{}: {value}", control.name)],
+    }
+}
+
+/// While the `responsive` switch is on, no siblings below `md` and the pick from it.
+fn responsive_siblings(values: &DemoValues) -> Responsive<u8> {
+    let siblings = values.str("siblings").parse::<u8>().unwrap_or(1);
+    match values.str("responsive") == "true" {
+        true => responsive(0).md(siblings),
+        false => siblings.into(),
+    }
+}
+
+/// The `siblings` line, the responsive form while the switch is on.
+fn responsive_siblings_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match values.str("responsive") == "true" {
+        true => vec![format!(
+            "siblings: responsive(0).md({})",
+            values.str("siblings")
+        )],
+        false => unquoted(control, values),
     }
 }
 
@@ -38,10 +59,10 @@ pub fn PaginationPage() -> Element {
                     .doc("Asks for a new page. Without it the page never changes, and the component warns."),
                 prop("aria_label", "String").default("required")
                     .doc("Names the `<nav>` landmark, so two paginations on one page can be told apart."),
-                prop("siblings", "u8").default(theme.pagination.siblings.to_string())
-                    .doc("Pages on each side of the current one. Past `2·siblings + 2·boundaries + 3` pages the row is always that many items wide; fewer pages all show. An ellipsis never stands for a single page."),
-                prop("boundaries", "u8").default(theme.pagination.boundaries.to_string())
-                    .doc("Pages pinned at each end. `0` counts as 1."),
+                prop("siblings", "Responsive<u8>").default(theme.pagination.siblings.to_string())
+                    .doc("Pages on each side of the current one. Past `2·siblings + 2·boundaries + 3` pages the row is always that many items wide; fewer pages all show. An ellipsis never stands for a single page. Or one per breakpoint, `siblings: responsive(0).md(2)`; the row is built in Rust, so a server-rendered page shows the base count until it mounts. Breakpoints follow the window, not the parent."),
+                prop("boundaries", "Responsive<u8>").default(theme.pagination.boundaries.to_string())
+                    .doc("Pages pinned at each end. `0` counts as 1. Or one per breakpoint, `boundaries: responsive(1).md(2)`, switching after mount like `siblings`."),
                 prop("size", "Responsive<Size>").default(theme.pagination.size.as_str()).doc("Control box and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("radius", "Responsive<ThemeAwareValue>").default(theme.pagination.radius.as_str()).doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("color", "ThemeAwareValue").default(theme.pagination.color.as_str())
@@ -109,15 +130,14 @@ pub fn PaginationPage() -> Element {
                         .code(|_, values| vec![format!("total: {}", values.str("total"))]),
                     Control::slider("siblings", ["0", "1", "2", "3"])
                         .default("1")
-                        .code(unquoted),
+                        .code(responsive_siblings_code),
                     Control::slider("boundaries", ["1", "2", "3"]).default("1").code(unquoted),
                     Control::sizes("size").default(theme.pagination.size.as_str()).code(responsive_size_code),
                     responsive_switch(),
                     Control::sizes("radius").default(theme.pagination.radius.as_str()),
                     Control::color("color").default(theme.pagination.color.as_str()),
-                    // Off, so the preview shows the arrows with a "Page 3 of 10" of its own;
-                    // the component's own default is on.
-                    Control::switch("with_pages").default("false").code(|_, values| {
+                    // On, so the responsive siblings show at the default switches.
+                    Control::switch("with_pages").default("true").code(|_, values| {
                         match values.str("with_pages").as_str() {
                             "false" => vec!["with_pages: false".to_string()],
                             _ => vec![],
@@ -137,7 +157,7 @@ pub fn PaginationPage() -> Element {
                                 page: page(),
                                 onchange: move |next| page.set(next),
                                 aria_label: "Demo pages",
-                                siblings: values.str("siblings").parse::<u8>().unwrap_or(1),
+                                siblings: responsive_siblings(&values),
                                 boundaries: values.str("boundaries").parse::<u8>().unwrap_or(1),
                                 size: responsive_size(&values),
                                 radius: values.str("radius"),

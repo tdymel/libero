@@ -11,9 +11,10 @@ use crate::{
         form::{DropdownPart, use_combobox},
         layout::use_box,
     },
-    hooks::{use_element, use_theme},
+    hooks::{use_element, use_responsive, use_theme},
     platform::{ElementApi, SCROLL_MARGIN_BOTTOM_VAR, blur_counts, mounted_by_selector},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::Responsive,
     theme::Size,
     utils::warn,
 };
@@ -187,9 +188,10 @@ base_props! {
         /// Picking the committed option again clears it. Off by default, as in APG.
         #[props(default)]
         allow_deselect: Option<bool>,
-        /// `"columns"` (default) or `"paths"`. A search always renders `"paths"`.
+        /// `"columns"` (default) or `"paths"`. A search always renders `"paths"`. Per
+        /// breakpoint too: `responsive(CascaderLayout::Paths).md(CascaderLayout::Columns)`.
         #[props(default, into)]
-        layout: Input<CascaderLayout>,
+        layout: Input<Responsive<CascaderLayout>>,
         /// Puts a search box at the top of the list.
         #[props(default)]
         searchable: Option<bool>,
@@ -251,6 +253,8 @@ base_props! {
 #[component]
 pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element {
     let theme = use_theme();
+    // The list opens after load, so the window's layout is known by then.
+    let layout = use_responsive(&props.layout.copied_or(CascaderLayout::default().into()))();
     let state = props.state.clone();
     let combobox = state.combobox;
     let disabled = props.disabled.unwrap_or(false);
@@ -313,7 +317,7 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
         separator,
         any_level: props.any_level.unwrap_or(false),
         allow_deselect: props.allow_deselect.unwrap_or(false),
-        layout: props.layout.copied_or_default(),
+        layout,
         column_width,
         search_placeholder: props.search_placeholder.clone(),
     };

@@ -5,8 +5,8 @@ use crate::components::{
     required_prop, status_prop,
 };
 use dioxus::prelude::*;
-use libero::components::CascaderPart;
-use libero::theme::{Size, responsive};
+use libero::components::{CascaderLayout, CascaderPart};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
 use libero::{
     components::{
@@ -221,6 +221,35 @@ fn responsive_on(values: &DemoValues) -> bool {
     values.str("responsive") == "true"
 }
 
+/// The other layout below `md` and the pick from it, while `responsive` is on.
+fn layout_of(values: &DemoValues) -> Responsive<CascaderLayout> {
+    let picked = CascaderLayout::from(values.str("layout").as_str());
+    match responsive_on(values) {
+        true => responsive(other_layout(picked)).md(picked),
+        false => picked.into(),
+    }
+}
+
+fn other_layout(layout: CascaderLayout) -> CascaderLayout {
+    match layout {
+        CascaderLayout::Columns => CascaderLayout::Paths,
+        CascaderLayout::Paths => CascaderLayout::Columns,
+    }
+}
+
+/// The `layout` line, the responsive form while the switch is on.
+fn layout_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    let picked = CascaderLayout::from(values.str("layout").as_str());
+    match responsive_on(values) {
+        true => vec![format!(
+            "layout: responsive(CascaderLayout::{:?}).md(CascaderLayout::{picked:?})",
+            other_layout(picked)
+        )],
+        false if values.str("layout") == control.default => vec![],
+        false => vec![format!("layout: {:?}", picked.as_str())],
+    }
+}
+
 /// The `CascaderDropdown` state, as `ORE_PICKER` prints it.
 #[component]
 fn OrePicker() -> Element {
@@ -307,9 +336,9 @@ pub fn CascaderPage() -> Element {
                     prop("allow_deselect", "bool")
                         .default("false")
                         .doc("Picking the selected option again clears it. Off, a re-pick keeps the value."),
-                    prop("layout", "CascaderLayout")
+                    prop("layout", "Responsive<CascaderLayout>")
                         .default("columns")
-                        .doc("`\"columns\"` draws one list per level, `\"paths\"` one row per full path. A search always renders `\"paths\"`. Without `any_level` it lists only leaf paths. On a screen narrower than the `sm` breakpoint, `\"columns\"` shows one level at a time under a back header."),
+                        .doc("`\"columns\"` draws one list per level, `\"paths\"` one row per full path. A search always renders `\"paths\"`. Without `any_level` it lists only leaf paths. On a screen narrower than the `sm` breakpoint, `\"columns\"` shows one level at a time under a back header. Or one per breakpoint, `layout: responsive(CascaderLayout::Paths).md(CascaderLayout::Columns)`, read when the list opens. Breakpoints follow the window, not the parent."),
                     prop("searchable", "bool")
                         .default("false")
                         .doc("Puts a search box at the top of the list, which narrows it to the paths that match."),
@@ -400,7 +429,7 @@ pub fn CascaderPage() -> Element {
                         .doc("The trigger, a `button` carrying `state.a11y_attributes()`. It needs no click or key handler of its own: Enter and Space click it, and the dropdown takes the click and the keys. A debug build warns when the list opens and no element carries the trigger's id."),
                     prop("any_level", "bool").default("false").doc("As on `Cascader`."),
                     prop("allow_deselect", "bool").default("false").doc("As on `Cascader`."),
-                    prop("layout", "CascaderLayout").default("columns").doc("As on `Cascader`, the narrow drill-in included."),
+                    prop("layout", "Responsive<CascaderLayout>").default("columns").doc("As on `Cascader`, the narrow drill-in and per breakpoint included."),
                     prop("searchable", "bool").default("false").doc("Puts a search box at the top of the list. Focus moves into it while the list is open, and back to the trigger when it closes."),
                     prop("filter", "Callback<CascaderFilterArgs<T>, bool>").doc("As on `Cascader`."),
                     prop("separator", "String").default("\" / \"").doc("Between labels in a `\"paths\"` row."),
@@ -486,7 +515,8 @@ pub fn CascaderPage() -> Element {
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.cascader.radius.as_str()),
                     Control::toggle("layout", ["columns", "paths"])
                         .labels(["Columns", "Paths"])
-                        .default("columns"),
+                        .default("columns")
+                        .code(layout_code),
                 ], field_controls::<CategoryCopy>(), vec![
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {
@@ -533,7 +563,7 @@ pub fn CascaderPage() -> Element {
                                     (false, size) => size.into(),
                                 },
                                 radius: values.str("radius"),
-                                layout: values.str("layout"),
+                                layout: layout_of(&values),
                                 label: field.label,
                                 aria_label: field.aria_label,
                                 description: field.description,

@@ -42,6 +42,7 @@ str_enum! {
 }
 
 input_from_str!(CascaderLayout);
+crate::sx::input::input_from_responsive!(str CascaderLayout);
 
 /// The value-free tree, compared by `Rc` pointer; see `CascaderCoreProps::options`.
 #[derive(Clone)]

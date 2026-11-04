@@ -87,7 +87,7 @@ fn Demo() -> Element {
 | `series` | `Vec<Series>` | required | The bars' series, each with one value per x value. `None` leaves no bar. `.colors([..])` colours bars one by one, `.negative_color(..)` those below 0, and `.errors([(low, high), ..])` draws error bars, written after the value in the tooltip. A stack rounds only its topmost positive and lowest negative segment. Upright, a `.kind(SeriesKind::Line)` one is drawn as a line over the bars. A bar series' `.mark_line(..)` is drawn on upright, `grouped` bars only, and warns in development otherwise. |
 | `title` | `Option<String>` | | Shown above the chart, and its accessible name. |
 | `description` | `Option<String>` | | A sentence under the title: what to read from the chart. |
-| `layout` | `BarLayout` | `grouped` | `grouped` side by side, `stacked`, or `percent`: stacked to 100%. |
+| `layout` | `Responsive<BarLayout>` | `grouped` | `grouped` side by side, `stacked`, or `percent`: stacked to 100%. Or one per breakpoint, `layout: responsive(BarLayout::Stacked).md(BarLayout::Grouped)`. It is laid out in Rust, so it switches after mount when server-rendered. |
 | `orientation` | `Responsive<Orientation>` | `vertical` | `horizontal` lays the categories down the side, top to bottom. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. It is laid out in Rust, so it switches after mount when server-rendered. |
 | `radius` | `Size` | `xs` | Corner radius of a bar's free end, the one away from its axis, on the theme's radius scale. |
 | `value_labels` | `Option<bool>` | `false` | Each bar's value written on it. |

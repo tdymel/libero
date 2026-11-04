@@ -14,7 +14,10 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
-    hooks::{ElementHandle, use_element, use_localization, use_range_css, use_silent_focus_out_of},
+    hooks::{
+        ElementHandle, use_element, use_localization, use_range_css, use_responsive,
+        use_silent_focus_out_of,
+    },
     localization::fill,
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -129,11 +132,13 @@ base_props! {
         onchange: Option<EventHandler<u32>>,
         /// Names the `<nav>` landmark, so two paginations are distinguishable.
         aria_label: String,
-        /// Pages shown beside the current one.
-        #[props(default)]
-        siblings: Option<u8>,
-        #[props(default)]
-        boundaries: Option<u8>,
+        /// Pages shown beside the current one. Per breakpoint too: `responsive(0).md(1)`;
+        /// a server-rendered page shows the base count until it mounts.
+        #[props(default, into)]
+        siblings: Input<Responsive<u8>>,
+        /// Pages kept at each end. Per breakpoint too, like `siblings`.
+        #[props(default, into)]
+        boundaries: Input<Responsive<u8>>,
         /// Per breakpoint too: `responsive(Size::Sm).md(Size::Md)`.
         #[props(default, into)]
         size: Input<Responsive<Size>>,
@@ -218,8 +223,9 @@ pub fn Pagination(props: PaginationProps) -> Element {
     .flatten()
     .reduce(Sx::and)
     .map(|extra| with_own(Some(extra), &props.sx));
-    let siblings = props.siblings.unwrap_or(defaults.siblings);
-    let boundaries = props.boundaries.unwrap_or(defaults.boundaries);
+    // The page list is built in Rust, so a responsive count switches after mount.
+    let siblings = use_responsive(&props.siblings.copied_or(defaults.siblings.into()))();
+    let boundaries = use_responsive(&props.boundaries.copied_or(defaults.boundaries.into()))();
     // A disabled `Fieldset` renders no native `disabled` (todo 3873).
     let group_disabled = use_fieldset_disabled();
     let disabled = props.disabled.unwrap_or(false) || group_disabled;
