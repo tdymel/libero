@@ -59,7 +59,7 @@ fn Demo() -> Element {
 The defaults come from `TooltipDefaults` on the theme.
 
 Like every component, `Tooltip` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the bubble.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the bubble.
 
 ## Accessibility
 

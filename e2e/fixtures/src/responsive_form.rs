@@ -66,6 +66,7 @@ fn ResponsiveFormPage() -> Element {
                     label: "View",
                     value: View::List,
                     size: responsive(Size::Sm).md(Size::Lg),
+                    radius: responsive(Size::Xs).md(Size::Xl),
                     onchange: move |_| {},
                 }
             }

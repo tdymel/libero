@@ -51,7 +51,7 @@ fn Demo() -> Element {
 | `fade_color` | `ThemeAwareValue` | paper background | What the ends fade from. Assumes a paper surface unless set, so set it to the surface the marquee sits on. |
 
 Like every component, `Marquee` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

@@ -51,7 +51,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The surface's contents. |
 
 Like every component, `Paper` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes, `href`, `target` and `rel`
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes, `href`, `target` and `rel`
 included for the `component: "a"` form. A caller's `role` or `aria-label`
 reaches the element untouched.
 

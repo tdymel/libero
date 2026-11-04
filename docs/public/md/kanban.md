@@ -74,7 +74,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The card's content, between the handle and the move buttons. The board draws no card look: the demo builds issue cards from Text, Badge, Icon and Avatar. |
 
 Like every component, all three also take the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

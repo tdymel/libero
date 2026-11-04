@@ -93,7 +93,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<MenubarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. The menus take `menu_parts`. |
 
 Like every component, `Menubar` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the bar.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the bar.
 
 ### `MenubarMenu`
 

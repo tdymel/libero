@@ -68,7 +68,7 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ### Domain enums
 

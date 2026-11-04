@@ -59,7 +59,7 @@ fn Demo() -> Element {
 
 `Textarea` also takes the `<textarea>` HTML attributes (`maxlength`, `wrap`,
 ...) and, like every component, the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

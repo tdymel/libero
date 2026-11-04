@@ -92,7 +92,7 @@ fn Demo() -> Element {
 | `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`. |
 | `labelled_by` | `String` | - | The id of the element that names the list, usually the trigger's label. Screen readers read it with the list. Without it, an `aria-label` on the `Combobox` names the list. |
 | `size` | `Size` | `md` | A row's height and font size. |
-| `radius` | `ThemeAwareValue` | `sm` | The dropdown's corner radius, or any CSS, e.g. `radius: "0"`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | The dropdown's corner radius, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Lg)`. |
 | `disabled` | `bool` | `false` | Draws no list and ignores the keys, and the trigger reads as closed. Disable the trigger too. |
 | `select_only` | `bool` | `false` | For a trigger with no text to type in, such as a button: Space picks the highlighted row like Enter, and Tab or Alt+Up pick it before closing, as a `Select` does. |
 | `selected_index` | `usize` | - | With `select_only`: the row the list opens on, usually the picked one, so Enter keeps the value instead of replacing it with the first row. Unset, or past the end, it opens on the first or last row. |
@@ -134,7 +134,7 @@ From `use_combobox()`. It is `Copy`, so it goes into event handlers by value.
 | `disabled` | `bool` | from the `Combobox` | Overrides whether the row is refused. A refused row is greyed and ignores the click and Enter. |
 | `onpick` | `EventHandler<()>` | - | Called on a click, and by Enter while the row is active. The only way to pick. |
 | `size` | `Responsive<Size>` | the `Combobox`'s | Row height and font size. Defaults to the `Combobox`'s `size`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
-| `radius` | `ThemeAwareValue` | the `Combobox`'s | Corner radius, or any CSS, e.g. `radius: "0"`. Defaults to the `Combobox`'s, reduced so the row nests inside the dropdown. |
+| `radius` | `Responsive<ThemeAwareValue>` | the `Combobox`'s | Corner radius, or any CSS, e.g. `radius: "0"`. Defaults to the `Combobox`'s, reduced so the row nests inside the dropdown. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Lg)`. |
 | `children` | `Element` | required | The row's content. Put a long label in `span { "data-slot": "label" }` to end it in an ellipsis. |
 
 ## Style API

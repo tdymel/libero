@@ -52,7 +52,7 @@ fn Demo() -> Element {
 | `panel_b` | `Element` | required | The end or bottom pane. For more than two panes, put a `Splitter` in a pane, split the other way. |
 
 Like every component, `Splitter` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

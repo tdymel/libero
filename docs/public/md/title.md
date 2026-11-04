@@ -43,7 +43,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The heading text. An `Anchor` inside it takes the title's font, size and weight. |
 
 Like every component, `Title` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

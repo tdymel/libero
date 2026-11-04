@@ -52,7 +52,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The content that animates. It is unmounted once the exit ends, and the empty wrapper leaves the layout, so a `Flex` or `Stack` gap closes. |
 
 Like every component, `Transition` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

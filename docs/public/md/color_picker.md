@@ -105,7 +105,7 @@ fn Demo() -> Element {
 | `children` | `Element` | - | Drawn on the color, such as a check mark, in black or white, whichever reads. |
 
 Like every component, each of them also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. The attributes land on the
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. The attributes land on the
 root.
 
 ## Style API

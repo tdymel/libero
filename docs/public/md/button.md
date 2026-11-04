@@ -64,7 +64,7 @@ fn Demo() -> Element {
 
 `Button` also takes the `<button>` HTML attributes (`type`, `form`, `name`,
 `value`, ...) and, like every component, the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

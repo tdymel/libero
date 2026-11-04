@@ -51,7 +51,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The content that loads. `sx`, `class` and extra attributes land on the box around it. |
 
 Like every component, `Overlay` and `LoadingOverlay` also take the shared props
-`sx`, `class`, `style`, `states`, and any extra HTML attributes.
+`sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

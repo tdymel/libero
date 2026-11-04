@@ -299,7 +299,7 @@ fn Demo() -> Element {
 | `handle` | `Option<ChartHandle>` | | From `use_chart()`: reads the drawing as SVG or PNG, saves it (through `save_file`: a download on the web, the share sheet on Android). |
 
 Like every component, each chart also takes the shared props `sx`, `class`,
-`style`, `states`, `parts` (`ChartPart`), and any extra HTML attributes.
+`style`, `states`, `parts` (`ChartPart`), `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

@@ -49,7 +49,7 @@ fn Demo() -> Element {
 | `gradient` | `Gradient` | - | Each match's `gradient`, as on `Mark`. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

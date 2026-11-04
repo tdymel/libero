@@ -208,7 +208,7 @@ the Bold button reads as pressed.
 | `readonly` | `bool` | `false` | Shows the document, focusable but not editable, without the toolbar. |
 
 `RichTextEditor` also takes the `<div>` HTML attributes and, like every
-component, the shared props `sx`, `class`, `style`, `states`, and any extra
+component, the shared props `sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra
 HTML attributes.
 
 ### `RichTextView`
@@ -220,7 +220,7 @@ HTML attributes.
 | `heading_offset` | `u8` | `0` | Added to every heading's level, clamped at `h6`, so a comment's `#` sits below the host page's headings: `1` draws `h1` as `h2`. |
 
 `RichTextView` also takes the `<div>` HTML attributes and, like every
-component, the shared props `sx`, `class`, `style`, `states`, and any extra
+component, the shared props `sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra
 HTML attributes.
 
 ## Style API

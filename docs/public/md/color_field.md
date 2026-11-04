@@ -87,7 +87,7 @@ fn Demo() -> Element {
 | `dropdown_parts` | `Parts<ColorDropdownPart>` | - | Styles the portaled dropdown and the picker in it. |
 
 `ColorField` also takes the `<input>` HTML attributes and, like every
-component, the shared props `sx`, `class`, `style`, `states`, and any extra
+component, the shared props `sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra
 HTML attributes.
 
 ## Style API

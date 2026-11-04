@@ -44,7 +44,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The quote. |
 
 Like every component, `Blockquote` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the `<figure>`,
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the `<figure>`,
 a `<div>` without `attribution` or `work`.
 
 ## Style API

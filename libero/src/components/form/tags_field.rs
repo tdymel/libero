@@ -13,9 +13,9 @@ use crate::{
         form::{
             CaretKeys, ChipFocus, ComboboxCore, ComboboxOption, DropdownPart, FocusOpen, FormScope,
             SelectionArgs, clear_button, field_control_sx, field_parts_enum, field_props,
-            framed_remove_sx, removable_chip, row_label, use_bound, use_chip_announcer,
-            use_chip_handles, use_chip_ranges, use_edited, use_field, use_field_frame,
-            use_focus_open, use_prefill, use_row_cache,
+            framed_remove_sx, list_radius, removable_chip, row_label, use_bound,
+            use_chip_announcer, use_chip_handles, use_chip_ranges, use_edited, use_field,
+            use_field_frame, use_focus_open, use_prefill, use_row_cache,
         },
         layout::{BoxStyle, use_box},
     },
@@ -524,7 +524,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 labelled_by: field.label_id(),
                 aria_label,
                 size: sizes,
-                radius: radius.value(),
+                radius: list_radius(props.radius.as_ref(), &radius),
                 disabled: disabled || readonly,
                 // Stays up after a pick, as on `MultiSelect`.
                 close_on_pick: false,

@@ -51,7 +51,7 @@ fn Profile(name: Option<String>) -> Element {
 | `children` | `Element` | - | The real content, when the skeleton wraps it. |
 
 Like every component, `Skeleton` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

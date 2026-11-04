@@ -68,7 +68,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The caption. An ordered list does not number it, but a screen reader counts it: use one ordered `List` per group instead. |
 
 Like every component, all three also take the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

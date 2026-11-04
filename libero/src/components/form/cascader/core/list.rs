@@ -36,7 +36,7 @@ pub(super) struct ListSetup<'a> {
     /// Disabled or read-only: the keys do nothing.
     pub(super) inert: bool,
     pub(super) size: Responsive<Size>,
-    pub(super) radius: Size,
+    pub(super) radius: Responsive<Size>,
 }
 
 /// The keyboard, the rows and the drawn body of the open tree, with the ids the trigger points at.

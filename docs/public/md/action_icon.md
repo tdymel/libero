@@ -65,7 +65,7 @@ fn Demo() -> Element {
 | `children` | `Element` | - | The icon, when it is not `SvgData`: your own svg, or any element. |
 
 Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

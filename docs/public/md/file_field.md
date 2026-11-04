@@ -72,7 +72,7 @@ fn Demo() -> Element {
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 
 Like every component, `FileField` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ### `SelectionArgs`
 

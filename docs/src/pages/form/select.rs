@@ -6,7 +6,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::SelectPart;
-use libero::theme::{Size, responsive};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
 use libero::{
     choices,
@@ -14,7 +14,7 @@ use libero::{
         Choices, Code, Flex, OptionItem, OptionList, OptionSource, Options, Select,
         SelectFilterArgs, SelectOptionArgs, Text,
     },
-    sx::sx,
+    sx::{ThemeAwareValue, sx},
 };
 
 struct FruitCopy;
@@ -297,6 +297,15 @@ fn responsive_on(values: &DemoValues) -> bool {
     values.str("responsive") == "true"
 }
 
+/// The demo's radius from `md` up, square below it while responsive; the open list follows.
+fn radius_of(values: &DemoValues) -> Responsive<ThemeAwareValue> {
+    let radius = ThemeAwareValue::from(values.str("radius"));
+    match responsive_on(values) {
+        true => responsive(ThemeAwareValue::from("0")).md(radius),
+        false => radius.into(),
+    }
+}
+
 #[component]
 pub fn SelectPage() -> Element {
     let theme = use_theme();
@@ -465,7 +474,14 @@ pub fn SelectPage() -> Element {
                     // On, so the breakpoint switch shows without another switch: resize the window.
                     Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
-                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.select.radius.as_str()),
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.select.radius.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("radius")) {
+                            (true, radius) => vec![format!(
+                                "radius: responsive(ThemeAwareValue::from(\"0\")).md({radius:?}.into())"
+                            )],
+                            (false, radius) if radius == control.default => vec![],
+                            (false, radius) => vec![format!("radius: {radius:?}")],
+                        }),
                 ], field_controls::<FruitCopy>(), vec![
                     // Draws the rows and the trigger through `option` and
                     // `selection` - what `NativeSelect` cannot do at all.
@@ -541,7 +557,7 @@ pub fn SelectPage() -> Element {
                                     (true, size) => responsive(Size::Sm).md(size),
                                     (false, size) => size.into(),
                                 },
-                                radius: values.str("radius"),
+                                radius: radius_of(&values),
                                 label: field.label,
                                 aria_label: field.aria_label,
                                 description: field.description,
@@ -569,7 +585,7 @@ pub fn SelectPage() -> Element {
                             (true, size) => responsive(Size::Sm).md(size),
                             (false, size) => size.into(),
                         },
-                        radius: values.str("radius"),
+                        radius: radius_of(&values),
                         label: field.label,
                         aria_label: field.aria_label,
                         description: field.description,

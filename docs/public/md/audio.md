@@ -44,7 +44,7 @@ fn Demo() -> Element {
 | `children` | `Element` | a sentence and a link | Shown instead of the controls where nothing plays media (Blitz). |
 
 Like every component, `Audio` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

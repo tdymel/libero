@@ -107,7 +107,7 @@ fn Demo() -> Element {
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. The attributes land on the trigger.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes. The attributes land on the trigger.
 
 ### `CascaderNodeArgs`
 
@@ -166,7 +166,7 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 | `radius` | `ThemeAwareValue` | `sm` | The list's corner radius. |
 | `disabled` | `bool` | `false` | The trigger opens nothing, and an open list closes. Disable your button too. |
 
-It also takes the shared props `sx`, `class`, `style`, `states`, and any extra
+It also takes the shared props `sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra
 HTML attributes. They land on the dropdown box, and `parts` styles its
 `DropdownPart`s.
 

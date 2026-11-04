@@ -53,7 +53,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<BurgerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Burger` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes, `aria-controls` among them.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes, `aria-controls` among them.
 
 ## Style API
 

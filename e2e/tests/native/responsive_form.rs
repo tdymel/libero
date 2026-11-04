@@ -4,7 +4,10 @@
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
 use libero::{
-    components::{Checkbox, Flex, Options, SegmentedControl, TextField},
+    components::{
+        Checkbox, FieldStatus, Fields, Flex, Form, Options, SegmentedControl, Select, TagsField,
+        TextField,
+    },
     sx::ThemeAwareValue,
     theme::{ChoiceVariant, Size, responsive},
 };
@@ -78,4 +81,68 @@ fn a_segmented_control_follows_the_window_width() {
     let (narrow, narrow_gap) = (page.rect(segment).3, page.computed(gap, "column-gap"));
     assert!(narrow < wide, "{narrow} {wide}");
     assert_eq!((wide_gap.as_str(), narrow_gap.as_str()), ("10px", "2px"));
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Draft {
+    name: String,
+}
+
+/// Todo 5708: a chip, the pending loader and the open list's rows in fields with a size per
+/// breakpoint.
+fn parts_app() -> Element {
+    let draft = use_store(Draft::default);
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            div { id: "rspf-tags",
+                TagsField {
+                    label: "Tags",
+                    value: vec!["alpha".to_string()],
+                    size: responsive(Size::Sm).md(Size::Lg),
+                    onchange: move |_: Vec<String>| {},
+                }
+            }
+            div { id: "rspf-pending",
+                Form { value: draft, pending_loader: true,
+                    TextField {
+                        label: "Name",
+                        status: FieldStatus::Pending,
+                        size: responsive(Size::Sm).md(Size::Lg),
+                    }
+                }
+            }
+            div { id: "rspf-select",
+                Select {
+                    label: "View",
+                    value: View::List,
+                    size: responsive(Size::Sm).md(Size::Lg),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+}
+
+/// The chip's height, the loader's width and the first open row's height.
+fn parts(page: &Page) -> [f64; 3] {
+    [
+        page.rect("#rspf-tags [data-slot='tag'] > *").3,
+        page.rect("#rspf-pending [data-pending] > *").2,
+        page.rect("[role='option']").3,
+    ]
+}
+
+#[test]
+fn chips_loaders_and_open_rows_follow_the_window_width() {
+    let mut page = mount(parts_app);
+    page.resize(1280, 800);
+    page.click("#rspf-select [role='combobox']");
+    assert!(page.exists("[role='option']"), "the list did not open");
+    let wide = parts(&page);
+
+    page.resize(600, 800);
+    let narrow = parts(&page);
+    for (wide, narrow) in wide.iter().zip(&narrow) {
+        assert!(narrow < wide, "{wide:?} {narrow:?}");
+    }
 }

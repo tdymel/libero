@@ -47,7 +47,7 @@ fn Demo() -> Element {
 | `menu_parts` | `Parts<MenuPart>` | - | The menu's `parts`, the [`Menu`](menu.md) page's Style API table. The menu opens in a portal, out of the trigger's `sx`. |
 
 Like every component, `Tldr` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the trigger.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the trigger.
 
 ## SummaryProvider
 

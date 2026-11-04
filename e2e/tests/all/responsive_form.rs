@@ -165,3 +165,51 @@ fn chips_loaders_and_open_rows_follow_the_viewport_width() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5706: the open list's box and its first row round by the field's radius per breakpoint.
+const RADII: &str = "(() => { const r = el => el ? getComputedStyle(el).borderTopLeftRadius : '-'; \
+    return [r(document.querySelector('[data-slot=dropdown]')), r(document.querySelector('[role=option]'))].join('|'); })()";
+
+#[test]
+fn an_open_list_rounds_by_the_responsive_field_radius() {
+    block_on(async {
+        let fixture = Fixture::open("/responsive-form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "#rspf-select [role=combobox]")
+            .await
+            .unwrap();
+        wait::for_visible(page, "[role=option]").await.unwrap();
+        let read = || async {
+            let text: String = page
+                .evaluate_bounded(RADII)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            text
+        };
+        let px = |v: &str| v.trim_end_matches("px").parse::<f64>().unwrap();
+        let wide = read().await;
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(600, 800, 1.0, false))
+            .await
+            .unwrap();
+        let every = format!(
+            "(() => {{ const was = '{wide}'.split('|'); return {RADII}.split('|').every((v, i) => v !== was[i]); }})()"
+        );
+        let switched = wait::for_js_true(page, &every, "both radii switched").await;
+        assert!(switched.is_ok(), "{wide} {}", read().await);
+        let narrow = read().await;
+        for (wide, narrow) in wide.split('|').zip(narrow.split('|')) {
+            assert!(px(narrow) < px(wide), "{wide:?} {narrow:?}");
+        }
+
+        fixture
+            .console
+            .assert_clean("responsive list radius")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

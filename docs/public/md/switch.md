@@ -58,7 +58,7 @@ fn Demo() -> Element {
 | `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws the switch as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes, `value` among them, since the props
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes, `value` among them, since the props
 extend `input`'s own.
 
 ## Style API

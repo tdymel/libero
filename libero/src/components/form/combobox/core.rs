@@ -6,8 +6,9 @@ use crate::{
     components::{
         accessibility::VISUALLY_HIDDEN_FIXED_SX,
         common::{
-            COARSE_POINTER, ClassList, HtmlTag, Input, NavigationChord, Part, Parts, ScaleOrCss,
-            States, Variables, base_props, has_shortcut_modifier, navigation_chord, variables,
+            COARSE_POINTER, ClassList, HtmlTag, Input, NavigationChord, Part, Parts,
+            ResponsiveScale, ScaleOrCss, States, Variables, base_props, has_shortcut_modifier,
+            navigation_chord, variables,
         },
         form::{
             DropdownPart,
@@ -21,12 +22,14 @@ use crate::{
     hooks::{
         ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET,
         Typeahead, current_localization, placement_sx, typeahead_match, use_element,
-        use_field_list_layer, use_media_query, use_popover_on, use_responsive, use_theme,
-        use_typeahead,
+        use_field_list_layer, use_media_query, use_popover_on, use_range_css, use_responsive,
+        use_theme, use_typeahead,
     },
     platform::{ElementApi, is_tab},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{COMBOBOX_PADDING, OWN_SHADOW, Responsive, Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{
+        COMBOBOX_PADDING, OWN_SHADOW, PaperDefaults, Responsive, Size, SizeCss, Z_INDEX_POPOVER,
+    },
 };
 
 use super::{
@@ -137,7 +140,7 @@ base_props! {
         #[props(default, into)]
         size: Input<Responsive<Size>>,
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Disabled or read-only: the list is neither drawn nor opened by a key.
         disabled: bool,
         /// Enter closes after picking. A multi-select keeps the list open.
@@ -193,9 +196,24 @@ base_props! {
 pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let theme = use_theme();
     let sizes = props.size.copied_or(theme.combobox.size.into());
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.combobox.radius);
+    let radius = ResponsiveScale::new(
+        props.radius.as_ref(),
+        theme.combobox.radius,
+        SizeCss::RADIUS,
+    );
 
-    use_row_ranges(&sizes);
+    use_row_ranges(&sizes, &radius.steps);
+    // Registered with the field, not the open list, so the copies render with the page.
+    let dropdown_sheet = match props.sheet {
+        true => &COMBOBOX_SHEET_SX,
+        false => &COMBOBOX_DROPDOWN_SX,
+    };
+    use_range_css(
+        dropdown_sheet,
+        radius
+            .steps
+            .range_copies(|size| size.radius_state_name(), PaperDefaults::radius_sx),
+    );
     let context = use_combobox_context(props.state.id(), sizes, radius.clone());
     // For a row inside the trigger; the portaled dropdown gets it as a prop.
     use_context_provider(|| context);
@@ -284,7 +302,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .states
         .unwrap_or_default()
         .responsive(&sizes, |size| size.state_name())
-        .with(radius.size.radius_state_name(), true)
+        .responsive(&radius.steps, |size| size.radius_state_name())
         .with("bordered", true)
         .with("disabled", disabled)
         .with("pointer", *by_pointer.peek())
@@ -393,6 +411,17 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         )
 }
 
+/// A field's `radius` for its list: the whole value when responsive, else the resolved base.
+pub(crate) fn list_radius(
+    radius: Option<&Responsive<ThemeAwareValue>>,
+    base: &ScaleOrCss,
+) -> Responsive<ThemeAwareValue> {
+    match radius.filter(|radius| !radius.is_plain()) {
+        Some(radius) => radius.clone(),
+        None => base.value().into(),
+    }
+}
+
 /// The dropdown's text for a query that matched nothing. `Cascader` draws it too.
 pub(crate) fn nothing_found_row(text: &str) -> Element {
     rsx! {
@@ -411,7 +440,7 @@ struct ComboboxPopupProps {
     sx: Input<Sx>,
     parts: Input<Parts<DropdownPart>>,
     states: Input<States>,
-    radius: ScaleOrCss,
+    radius: ResponsiveScale,
     attributes: Vec<Attribute>,
     rows: Vec<Element>,
     row_keys: Vec<usize>,
@@ -450,11 +479,13 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
             .remeasure(props.remeasure),
     );
     let radius_variables: Input<Variables> = variables()
-        .with(
-            SizeCss::RADIUS.override_var(),
-            props.radius.custom_css(SizeCss::RADIUS),
-        )
+        .with(SizeCss::RADIUS.override_var(), props.radius.custom_css())
         .into();
+    let sheet_sx = match props.sheet {
+        true => &COMBOBOX_SHEET_SX,
+        false => &COMBOBOX_DROPDOWN_SX,
+    };
+    let own_sx = props.radius.with_own(&props.sx);
     // Off the sheet's width the room is never read: no measure, no redraw.
     let narrow = use_media_query(&narrow_query());
     let narrow = props.sheet && narrow();
@@ -469,12 +500,9 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
         style: drag,
     } = use_sheet_swipe(*popover.floating(), props.onclose);
     let dropdown = use_box()
-        .framework_sx(match props.sheet {
-            true => &COMBOBOX_SHEET_SX,
-            false => &COMBOBOX_DROPDOWN_SX,
-        })
+        .framework_sx(sheet_sx)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&props.states)
         .variables(&radius_variables)
@@ -579,7 +607,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
 fn use_combobox_context(
     state_id: String,
     size: Responsive<Size>,
-    radius: ScaleOrCss,
+    radius: ResponsiveScale,
 ) -> ComboboxContext {
     let id = use_hook(|| Signal::new_in_scope(state_id, ScopeId::ROOT));
     let mut shared_size = use_hook(|| Signal::new_in_scope(size, ScopeId::ROOT));

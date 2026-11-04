@@ -111,7 +111,7 @@ fn Demo() -> Element {
 | `hidden` | `bool` | `false` | Fades it out, and out of the tab order and the accessibility tree at once, as for hiding it while the page scrolls down. Instant under reduced motion. |
 
 Like every component, `FloatingActionButton` also takes the shared props
-`sx`, `class`, `style`, `states`, and any extra HTML attributes. They land on
+`sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on
 the button, not on the floating wrapper.
 
 The theme's `floating_action_button` (`FloatingActionButtonDefaults`) sets

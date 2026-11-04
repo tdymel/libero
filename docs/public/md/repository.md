@@ -45,7 +45,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<RepositoryPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Repository` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the link.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the link.
 
 ## Style API
 

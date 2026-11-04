@@ -56,7 +56,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The term's descriptions, in one `<dd>`. To give a description an `id` (an `aria-describedby` target) or a style, wrap it in a `div` here: `div { id: "plan-note", "Pro" }`. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

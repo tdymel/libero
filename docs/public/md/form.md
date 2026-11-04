@@ -20,6 +20,8 @@ rules and paths fit together, what a
 use dioxus::prelude::*;
 use libero::components::{Button, Checkbox, FieldError, Fields, Form, FormErrors, Rule, Submit, Text, TextField, checked, not_empty};
 use libero::localization::Localization;
+use libero::components::FieldStatus;
+use libero::theme::{Size, responsive};
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Signup {
@@ -43,6 +45,7 @@ fn SignupForm() -> Element {
             validate: (|s: &Signup| s.email.is_empty() || !s.password.value.contains(&s.email))
                 .warn("Your password contains your email address.")
                 .on([Signup::FIELDS.password().value()]),
+            pending_loader: true,
             onsubmit: Submit::parse(new_account, move |account: NewAccount| sent.set(account.email)),
             // `required` alone blocks an empty submit with "Fill in this field.".
             TextField { label: "Name", name: Signup::FIELDS.name(), required: true }
@@ -51,6 +54,12 @@ fn SignupForm() -> Element {
             NewPasswordFieldset { path: Signup::FIELDS.password() }
             // The text parses into an `Age`; a rule on the age runs only once it did.
             TextField { label: "Age", name: Signup::FIELDS.age().parsed().rules([checked(Age::adult)]) }
+            // Pending, as while an async rule checks: the loader follows the size per breakpoint.
+            TextField {
+                label: "Username",
+                status: FieldStatus::Pending,
+                size: responsive(Size::Sm).md(Size::Lg),
+            }
             Checkbox {
                 label: "I accept the terms",
                 name: Signup::FIELDS.terms(),
@@ -145,13 +154,13 @@ impl Age {
 | `onsubmit` | `Submit<V>` | - | Fires on a submit with no errors: a closure over the `FormEvent` or an `EventHandler<FormEvent>`, optional too, `Submit::parse(parse, handler)`, or the async `Submit::parse_async(parse, handler)` and `Submit::task(handler)`. Without an `action`, the browser's own submit is cancelled. A `javascript:`, `data:` or `vbscript:` `action` is dropped with a debug warning, so it counts as none. |
 | `summary_title` | `String` | - | A heading over the error summary. |
 | `summary` | `SummaryMode` | `Visible` | `Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). `FormLabels` gains fields in minor releases, so build yours from a built-in set, `..FormLabels::ENGLISH`. Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does. |
-| `pending_loader` | `bool` | `false` | Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit). The box keeps its height; the control is `aria-busy="true"` either way. The loader follows a responsive field size. Not in a `PinField`'s cells. |
+| `pending_loader` | `bool` | `false` | Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit), or while its `status` is `FieldStatus::Pending`. The box keeps its height; the control is `aria-busy="true"` either way. The loader follows a responsive field size. Not in a `PinField`'s cells. |
 | `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form. |
 | `children` | `Element` | required | The fields, fieldsets and buttons. |
 
 `Form` also takes the `<form>` HTML attributes (`action`, `method`, ...) and,
-like every component, the shared props `sx`, `class`, `style`, `states`, and
-any extra HTML attributes.
+like every component, the shared props `sx`, `class`, `style`, `states`,
+`hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ### `FormHandle`
 

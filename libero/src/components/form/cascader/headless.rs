@@ -220,7 +220,7 @@ base_props! {
         #[props(default)]
         disabled: Option<bool>,
         /// The trigger, carrying `state.a11y_attributes()`: a `button`, so Enter and Space click it.
-        /// `sx` and co. style the dropdown box.
+        /// `sx`, `class`, `states`, `hidden_from` and `visible_from` style the dropdown box.
         children: Element,
     }
 }
@@ -354,10 +354,12 @@ pub fn CascaderDropdown<T: Options>(props: CascaderDropdownProps<T>) -> Element 
         searchable,
         inert: disabled,
         size: size.into(),
-        radius: radius.size,
+        radius: radius.size.into(),
         parts: &props.parts,
         class: Some(&props.class),
         sx: Some(&props.sx),
+        states: Some(&props.states),
+        visibility: Some((&props.hidden_from, &props.visible_from)),
         attributes: props.attributes,
     });
 

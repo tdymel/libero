@@ -38,7 +38,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The key label. |
 
 Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

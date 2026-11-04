@@ -65,7 +65,7 @@ fn Demo() -> Element {
 | `panel_focusable` | `bool` | `true` | Whether the selected panel is a tab stop, as the APG asks when it holds no focusable content. Turn it off for a panel with its own controls. Not themed. |
 | `parts` | `Parts<TabsPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
-`Tabs` also takes the shared props `sx`, `class`, `states`, and any extra HTML
+`Tabs` also takes the shared props `sx`, `class`, `states`, `hidden_from`, `visible_from`, and any extra HTML
 attributes.
 
 ### OptionLabel

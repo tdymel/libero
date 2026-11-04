@@ -71,7 +71,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The item's content. |
 
 Like every component, all three also take the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

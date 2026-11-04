@@ -49,7 +49,7 @@ fn Demo() -> Element {
 `ImageLoading` takes `eager` or `lazy`.
 
 Like every component, `Image` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

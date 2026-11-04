@@ -139,7 +139,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<TreePart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ### `TreeNode<T>`
 

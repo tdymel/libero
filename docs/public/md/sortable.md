@@ -53,7 +53,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<SortableItemPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 | `children` | `Element` | required | The item's content, between the handle and the move buttons. |
 
-Like every component, both also take the shared props `sx`, `class`, `states`,
+Like every component, both also take the shared props `sx`, `class`, `states`, `hidden_from`, `visible_from`,
 and any extra HTML attributes.
 
 ## Style API

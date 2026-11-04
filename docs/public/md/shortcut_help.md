@@ -52,7 +52,7 @@ fn Demo() -> Element {
 | `full_screen` | `Responsive<bool>` | `never` | Inside a modal, fills the screen edge to edge instead of centring: `"phone"` below the `sm` breakpoint, `"always"` at every width, or one per breakpoint, `responsive(true).md(false)`. The list then grows past its 24rem cap and the modal scrolls. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`. |
 
 Like every component, `ShortcutHelp` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They go to its `Dialog`.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They go to its `Dialog`.
 
 ## Accessibility
 

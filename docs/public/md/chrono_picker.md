@@ -73,7 +73,7 @@ Props that only some value types use are ignored by the rest, with a warning in
 debug builds.
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. The attributes land on the root.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes. The attributes land on the root.
 
 ## Style API
 

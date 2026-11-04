@@ -59,7 +59,7 @@ fn Demo() -> Element {
 | `children` | `Element` | `required` | `Button`s, `ActionIcon`s, and components built on them, such as `ThemeSwitcher`. |
 
 Like every component, `ButtonGroup` also takes the shared props `sx`,
-`class`, `style`, `states`, and any extra HTML attributes.
+`class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

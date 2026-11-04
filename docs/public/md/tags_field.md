@@ -100,7 +100,7 @@ fn Demo() -> Element {
 `MultiSelect` and `FileField`.
 
 `TagsField` also takes the `<input>` HTML attributes and, like every component,
-the shared props `sx`, `class`, `style`, `states`, and any extra HTML
+the shared props `sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra HTML
 attributes. They land on the input.
 
 ### `TagsFieldOptionArgs`

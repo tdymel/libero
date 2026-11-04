@@ -77,7 +77,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The label, cut at the chip's edge. Text and `Icon` only. |
 
 Like every component, `Chip` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

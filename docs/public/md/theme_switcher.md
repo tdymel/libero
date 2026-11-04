@@ -42,7 +42,7 @@ fn Demo() -> Element {
 | `menu_parts` | `Parts<MenuPart>` | - | The theme-set menu's `parts`, the `Menu` page's Style API table. The menu opens in a portal, out of `sx` and `parts`. |
 
 Like every component, `ThemeSwitcher` also takes the shared props `sx`,
-`class`, `style`, `states`, and any extra HTML attributes.
+`class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

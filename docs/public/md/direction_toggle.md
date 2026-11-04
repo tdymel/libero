@@ -39,7 +39,7 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 
 Like every component, `DirectionToggle` also takes the shared props `sx`,
-`class`, `style`, `states`, and any extra HTML attributes.
+`class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

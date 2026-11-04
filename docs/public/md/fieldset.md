@@ -83,7 +83,7 @@ fn AddressFieldset() -> Element {
 | `children` | `Element` | required | The fields. |
 
 `Fieldset` also takes the `<fieldset>` HTML attributes and, like every
-component, the shared props `sx`, `class`, `style`, `states`, and any extra
+component, the shared props `sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra
 HTML attributes.
 
 ## Style API

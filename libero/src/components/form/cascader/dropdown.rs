@@ -17,10 +17,10 @@ use crate::{
     },
     hooks::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, use_element,
-        use_field_list_layer, use_popover_on,
+        use_field_list_layer, use_popover_on, use_range_css,
     },
     sx::{StaticSx, Sx},
-    theme::{Responsive, Size},
+    theme::{PaperDefaults, Responsive, Size},
 };
 
 use super::{
@@ -99,7 +99,7 @@ pub(super) struct DropdownSetup<'a> {
     pub(super) searchable: bool,
     pub(super) search: ElementHandle,
     pub(super) size: Responsive<Size>,
-    pub(super) radius: Size,
+    pub(super) radius: Responsive<Size>,
     pub(super) layout: CascaderLayout,
     /// [`PressOpen::pressed`].
     pub(super) pressed: bool,
@@ -110,6 +110,8 @@ pub(super) struct DropdownSetup<'a> {
     /// `CascaderDropdown`'s own `class` and `sx`; the field styles its box by `dropdown_parts` only.
     pub(super) class: Option<&'a Input<ClassList>>,
     pub(super) sx: Option<&'a Input<Sx>>,
+    pub(super) states: Option<&'a Input<States>>,
+    pub(super) visibility: Option<(&'a Input<Size>, &'a Input<Size>)>,
 }
 
 pub(super) struct Dropdown {
@@ -140,6 +142,8 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         parts,
         class,
         sx: own_sx,
+        states,
+        visibility,
     } = setup;
 
     // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
@@ -165,13 +169,18 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         // Always printed: a renderer never removes a declaration that stops being printed.
         .style(Some(sheet_clearance_style(sheet_clearance)))
         .prepare();
-    let dropdown_states: Input<States> = States::new()
+    let dropdown_states: Input<States> = states
+        .and_then(Input::as_ref)
+        .cloned()
+        .unwrap_or_default()
         .responsive(&size, |size| size.state_name())
-        .with(radius.radius_state_name(), true)
+        .responsive(&radius, |size| size.radius_state_name())
         .with("bordered", true)
         .with(layout.state_name(), true)
         .with("pointer", pressed)
         .into();
+    let copies = radius.range_copies(|size| size.radius_state_name(), PaperDefaults::radius_sx);
+    use_range_css(&CASCADER_DROPDOWN_SX, copies);
     let mut dropdown = use_box()
         // `use_popover` caps it to the viewport; wide columns scroll inside instead of off-screen.
         .framework_sx(&CASCADER_DROPDOWN_SX)
@@ -184,6 +193,9 @@ pub(super) fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     }
     if let Some(own_sx) = own_sx {
         dropdown = dropdown.sx(own_sx);
+    }
+    if let Some((hidden_from, visible_from)) = visibility {
+        dropdown = dropdown.visibility(hidden_from, visible_from);
     }
     let dropdown = dropdown.prepare();
 

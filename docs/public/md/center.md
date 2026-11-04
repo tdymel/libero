@@ -40,7 +40,7 @@ fn Demo() -> Element {
 Leave `inline` unset to use the theme's default.
 
 Like every component, `Center` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

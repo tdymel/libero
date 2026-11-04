@@ -71,7 +71,7 @@ fn Demo() -> Element {
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled country list and its inner parts. |
 
 `PhoneField` also takes the `<input>` HTML attributes and, like every
-component, the shared props `sx`, `class`, `style`, `states`, and any extra
+component, the shared props `sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra
 HTML attributes.
 
 ## Style API

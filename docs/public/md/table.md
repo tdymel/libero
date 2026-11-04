@@ -153,7 +153,7 @@ fn Demo() -> Element {
 | `column_menu_parts` | `Parts<MenuPart>` | none | The column menus' `parts`, the `Menu` page's Style API. The menus open in a portal, out of the table's `sx`. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes, `aria_label` among them.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes, `aria_label` among them.
 
 ### column()
 

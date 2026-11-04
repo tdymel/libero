@@ -114,7 +114,7 @@ fn Demo() -> Element {
 one with a caption.
 
 Like every component, `Slider` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. The attributes land on the
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. The attributes land on the
 field wrapper.
 
 ## Style API

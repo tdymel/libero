@@ -51,3 +51,45 @@ fn hidden_from_and_visible_from_follow_the_viewport_width() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5703: an open `CascaderDropdown` box carries the caller's `states` and hides under
+/// `visible_from: "md"` once the window narrows.
+#[test]
+fn a_cascader_dropdown_box_takes_states_and_visible_from() {
+    const DRAWN: &str = "(() => { const b = document.querySelector('[data-state~=\"ore-box\"][data-state~=\"visible-from-md\"]'); \
+        return b ? getComputedStyle(b).display : 'gone'; })()";
+    block_on(async {
+        let fixture = Fixture::open("/visibility/cascader", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "[aria-haspopup]").await.unwrap();
+        e2e::passes::pointer::click(page, "[aria-haspopup]")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!['none', 'gone'].includes({DRAWN})"),
+            "the wide box",
+        )
+        .await
+        .unwrap();
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(600, 800, 1.0, false))
+            .await
+            .unwrap();
+        let hidden =
+            wait::for_js_true(page, &format!("{DRAWN} === 'none'"), "the narrow box").await;
+        assert!(
+            hidden.is_ok(),
+            "{:?}",
+            page.evaluate_bounded(DRAWN)
+                .await
+                .unwrap()
+                .into_value::<String>()
+        );
+
+        fixture.console.assert_clean("cascader visibility").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

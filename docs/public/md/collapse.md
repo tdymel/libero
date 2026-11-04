@@ -53,7 +53,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The content that grows and shrinks. |
 
 Like every component, `Collapse` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

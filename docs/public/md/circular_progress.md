@@ -48,7 +48,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<CircularProgressPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(CircularProgressPart::Label, sx().font_weight("bold"))`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes, `aria_label` among them.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes, `aria_label` among them.
 
 ## Style API
 

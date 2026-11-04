@@ -67,7 +67,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<ScrollerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `Scroller` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes, which go on the root.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes, which go on the root.
 
 ## Style API
 

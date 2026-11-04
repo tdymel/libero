@@ -24,7 +24,7 @@ use crate::{
     },
     localization::fill,
     platform::{ElementApi, blur_counts, focus_tab_from, focus_without_ring, is_tab},
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{FIELD_PADDING_X, FOCUS_RING_WIDTH, Responsive, Size, ios_text_floor_sx},
     utils::digits_of,
 };
@@ -509,7 +509,11 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             held,
             home_row,
             size: sizes,
-            radius: radius.size,
+            // The list takes the step only, as before; a responsive radius whole.
+            radius: match props.radius.as_ref().filter(|radius| !radius.is_plain()) {
+                Some(radius) => radius.clone(),
+                None => Responsive::new(radius.size.into()),
+            },
             disabled: disabled || readonly,
             dial: country.dial,
             dial_id: dial_id.clone(),
@@ -855,7 +859,7 @@ struct Picker {
     held: bool,
     home_row: Rc<dyn Fn() -> Option<usize>>,
     size: Responsive<Size>,
-    radius: Size,
+    radius: Responsive<ThemeAwareValue>,
     disabled: bool,
     dial: &'static str,
     dial_id: String,

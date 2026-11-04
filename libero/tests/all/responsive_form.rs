@@ -440,3 +440,68 @@ fn dropdown_rows_follow_a_responsive_field() {
         );
     }
 }
+
+/// Todo 5706: a responsive field radius reaches its list. The dropdown's and the rows' sheets
+/// get their range copies with the field, before the list opens; a plain radius adds none.
+#[test]
+fn dropdown_radius_follows_a_responsive_field() {
+    use libero::components::{
+        Autocomplete, Cascader, CascaderOption, MultiSelect, PhoneField, Select,
+    };
+    use libero::theme::Responsive;
+
+    #[derive(Clone, PartialEq, Options)]
+    enum Fruit {
+        Apple,
+    }
+
+    type Radius = Responsive<ThemeAwareValue>;
+    fn select(radius: Radius) -> Element {
+        rsx! { LiberoProvider { Select { label: "Fruit", value: Fruit::Apple, radius, onchange: move |_| {} } } }
+    }
+    fn multi(radius: Radius) -> Element {
+        rsx! { LiberoProvider { MultiSelect { label: "Fruit", value: vec![Fruit::Apple], radius, onchange: move |_| {} } } }
+    }
+    fn auto(radius: Radius) -> Element {
+        let options = libero::components::OptionList::from(vec!["Berlin".to_string()]);
+        rsx! { LiberoProvider { Autocomplete { label: "City", value: "Ber", options, radius, oninput: move |_| {} } } }
+    }
+    fn phone(radius: Radius) -> Element {
+        rsx! { LiberoProvider { PhoneField { label: "Mobile", country: "US", value: "", radius, oninput: move |_: String| {} } } }
+    }
+    fn cascader(radius: Radius) -> Element {
+        rsx! { LiberoProvider { Cascader { label: "Place", data: vec![CascaderOption::new("a".to_string(), "A")], value: None, radius, onchange: move |_: Option<String>| {} } } }
+    }
+    type Page = fn(Radius) -> Element;
+    let pages: [(&str, Page, bool); 5] = [
+        ("Select", select, true),
+        ("MultiSelect", multi, true),
+        ("Autocomplete", auto, true),
+        ("PhoneField", phone, true),
+        // Its rows register their copies when they open, as for `size`.
+        ("Cascader", cascader, false),
+    ];
+    for (name, page, rows) in pages {
+        let html = render_with(
+            page,
+            responsive(ThemeAwareValue::from(Size::Sm)).md(Size::Xl.into()),
+        );
+        // Keyed but carried by no element: the closed list's sheets.
+        let carried = classes_carrying(&html, "md-:radius-xl");
+        let unmounted: BTreeSet<_> = classes_keyed_with(&html, "md-:radius-xl", "border-radius")
+            .difference(&carried)
+            .cloned()
+            .collect();
+        let row = classes_keyed_with(&html, "md-:radius-xl", "max(0px");
+        assert_eq!(!row.is_empty(), rows, "{name}: row copy {row:?}");
+        assert!(
+            unmounted.difference(&row).next().is_some(),
+            "{name}: no dropdown copy {unmounted:?}"
+        );
+        let plain = render_with(page, Responsive::new(ThemeAwareValue::from(Size::Xl)));
+        assert!(
+            !plain.contains("md-:radius"),
+            "{name}: a plain field adds a run"
+        );
+    }
+}

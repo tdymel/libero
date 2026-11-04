@@ -6,7 +6,10 @@ use libero::components::{Title, *};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/visibility", || rsx! { VisibilityPage {} })];
+pub const ROUTES: Routes = &[
+    ("/visibility", || rsx! { VisibilityPage {} }),
+    ("/visibility/cascader", || rsx! { CascaderVisibilityPage {} }),
+];
 
 #[component]
 fn VisibilityPage() -> Element {
@@ -30,5 +33,27 @@ fn VisibilityPage() -> Element {
         Badge { visible_from: "md", "Wide badge" }
         Flex { visible_from: "md", "Wide flex" }
         Dialog { hidden_from: "md", aria_label: "Narrow dialog", onclose: |_| {}, "Dialog" }
+    }
+}
+
+/// Todo 5703: `CascaderDropdown`'s `states` and `visible_from` land on its open box.
+#[component]
+fn CascaderVisibilityPage() -> Element {
+    let mut ore = use_signal(|| None::<String>);
+    let cascader = use_cascader(
+        vec![
+            CascaderOption::new("t1".to_string(), "Tier 1")
+                .children(vec![CascaderOption::new("iron".to_string(), "Iron ore")]),
+        ],
+        ore(),
+        move |next| ore.set(next),
+    );
+    rsx! {
+        CascaderDropdown {
+            state: cascader.clone(),
+            visible_from: "md",
+            states: States::new().with("ore-box", true),
+            Button { attributes: cascader.a11y_attributes(), "Ore" }
+        }
     }
 }

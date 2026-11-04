@@ -72,7 +72,7 @@ in full, or `"Ada Lovelace".into()` for a name alone.
 | `color` | `Option<ThemeAwareValue>` | `None` | This member's own tint. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

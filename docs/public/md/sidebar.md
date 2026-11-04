@@ -64,7 +64,7 @@ fn Demo() -> Element {
 `SidebarSide` is `start`, `end`, `top` or `bottom`. `start` and `end` follow the text direction: `start` is the right side under `dir="rtl"`.
 
 Like every component, `Sidebar` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

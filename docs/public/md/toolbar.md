@@ -147,7 +147,7 @@ are toggles, `selected` on each, so a screen reader hears whether they are on.
 | `children` | `Element` | `required` | `Button`s, `ActionIcon`s, `Select`s, `ButtonGroup`s, `TextField`s, `NumberField`s, `Checkbox`es, `Switch`es, `SegmentedControl`s, `ToolbarGroup`s and `ToolbarSeparator`s. |
 
 Like every component, `Toolbar` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ### `ToolbarGroup`
 

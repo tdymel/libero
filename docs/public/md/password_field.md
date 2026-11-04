@@ -59,7 +59,7 @@ fn Demo() -> Element {
 
 `PasswordField` also takes the `<input>` HTML attributes (`autocomplete`,
 `maxlength`, ...) and, like every component, the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

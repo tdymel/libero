@@ -63,7 +63,7 @@ fn Demo() -> Element {
 | `.line(..)` | `TimelineLine` | `Solid` | The connector below this event, `Solid`, `Dashed` or `Dotted`. |
 
 Like every component, `Timeline` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

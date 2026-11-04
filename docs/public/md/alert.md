@@ -49,7 +49,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The message, read as the alert's description. |
 
 Like every component, `Alert` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

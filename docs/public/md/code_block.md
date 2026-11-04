@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<CodeBlockPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |
 
 Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

@@ -64,7 +64,7 @@ fn Demo() -> Element {
 
 `TextField` also takes the `<input>` HTML attributes (`maxlength`,
 `autocomplete`, `type`, ...) and, like every component, the shared props `sx`,
-`class`, `style`, `states`, and any extra HTML attributes.
+`class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

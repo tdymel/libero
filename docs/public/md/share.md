@@ -55,7 +55,7 @@ fn Demo() -> Element {
 | `children` | `Element` | - | A visible label: renders a `Button` with the share glyph instead of an icon-only button. |
 
 Like every component, `Share` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the button.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the button.
 
 The words are `ShareLabels` in the [localization](localization.md): `share`
 (the icon-only name), `copied` and `share_failed` (what the status says). The

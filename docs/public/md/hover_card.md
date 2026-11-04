@@ -61,7 +61,7 @@ fn Demo() -> Element {
 | `disabled` | `bool` | `false` | No card. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus. |
 
 Like every component, `HoverCard` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the card.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the card.
 
 ## Accessibility
 

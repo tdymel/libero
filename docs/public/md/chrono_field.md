@@ -154,7 +154,7 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 with a warning in debug builds.
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. The attributes land on the input.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes. The attributes land on the input.
 
 ## Style API
 

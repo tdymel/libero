@@ -42,9 +42,9 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// A row's height and font size.
     #[props(default, into)]
     size: Input<Size>,
-    /// The dropdown's corner radius: a size word or any CSS, as `radius: "0"`.
+    /// The dropdown's corner radius: a size word or any CSS, as `radius: "0"`, or one per breakpoint.
     #[props(default, into)]
-    radius: Input<ThemeAwareValue>,
+    radius: Input<Responsive<ThemeAwareValue>>,
     /// Draws no list and ignores the keys; the trigger reads as closed. Disable the trigger too.
     #[props(default)]
     disabled: Option<bool>,

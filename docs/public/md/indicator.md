@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | `processing` | `bool` | `false` | A ping behind the dot that repeats until you set it back to `false`. Stops under `prefers-reduced-motion`. |
 
 Like every component, `Indicator` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

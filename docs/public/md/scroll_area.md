@@ -114,7 +114,7 @@ fn Demo() -> Element {
 | `item_key` | `Callback<usize, String>` | the index | A row's identity, such as its data's id. A row's state (focus, typed text, open details) follows its key, so set it when rows can be sorted, inserted or removed. |
 
 Like every component, `ScrollArea` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 `ScrollPositionEvent` is `Start(x, y)`, `Change(x, y)` or `End(x, y)`, in
 percent.

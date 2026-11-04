@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, Parts, ScaleOrCss, aria_label_of, input_from_str, names_itself,
-            use_name_warning,
+            HtmlTag, Input, Parts, ResponsiveScale, ScaleOrCss, aria_label_of, input_from_str,
+            names_itself, use_name_warning,
         },
         form::{
             Asks, ComboboxState, DropdownPart, PreparedField, PreparedFrame, clear_button,
@@ -16,7 +16,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_theme},
     str_enum::str_enum,
-    theme::{Responsive, Size},
+    theme::{Responsive, Size, SizeCss},
 };
 
 mod engine;
@@ -231,10 +231,17 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         searchable,
         inert: disabled || readonly,
         size: sizes,
-        radius: radius.size,
+        radius: ResponsiveScale::new(
+            props.radius.as_ref(),
+            theme.cascader.radius,
+            SizeCss::RADIUS,
+        )
+        .steps,
         parts: &props.dropdown_parts,
         class: None,
         sx: None,
+        states: None,
+        visibility: None,
         attributes: Vec::new(),
     });
 

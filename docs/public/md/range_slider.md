@@ -82,7 +82,7 @@ fn Demo() -> Element {
 | `label` | `String` | - | Caption below the tick. Leave it out for a bare tick. |
 
 Like every component, `RangeSlider` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. The attributes land on the
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. The attributes land on the
 field wrapper.
 
 ## Style API

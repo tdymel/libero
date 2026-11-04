@@ -73,7 +73,7 @@ fn Demo() -> Element {
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 
 `NumberField` also takes the `<input>` HTML attributes and, like every
-component, the shared props `sx`, `class`, `style`, `states`, and any extra
+component, the shared props `sx`, `class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra
 HTML attributes.
 
 ### `NumberValue`

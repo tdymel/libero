@@ -5,11 +5,12 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, Code, FieldError, FieldName, Fields, Fieldset, Flex, Form, FormErrors,
-    FormPart, PasswordField, Rule, Submit, SummaryMode, Text, TextField, Validators, checked,
-    checked_async, is_email, min_length, not_empty, use_form, use_form_context,
+    Button, Checkbox, Code, FieldError, FieldName, FieldStatus, Fields, Fieldset, Flex, Form,
+    FormErrors, FormPart, PasswordField, Rule, Submit, SummaryMode, Text, TextField, Validators,
+    checked, checked_async, is_email, min_length, not_empty, use_form, use_form_context,
 };
 use libero::localization::Localization;
+use libero::theme::{Size, responsive};
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
@@ -87,6 +88,8 @@ fn form_code(values: &DemoValues, _: &str) -> String {
         on("summary_hidden"),
         on("username_check"),
     );
+    // The static pending field, unless the live check stands in its place.
+    let pending = on("pending") && !username;
     let needs_form = handle || loading;
     let mut imports = Vec::new();
     if handle {
@@ -98,6 +101,9 @@ fn form_code(values: &DemoValues, _: &str) -> String {
     if username {
         imports.push("checked_async");
     }
+    if pending {
+        imports.push("FieldStatus");
+    }
     if needs_form {
         imports.push("use_form");
     }
@@ -107,6 +113,10 @@ fn form_code(values: &DemoValues, _: &str) -> String {
     let imports = match imports.is_empty() {
         true => String::new(),
         false => format!("\nuse libero::components::{{{}}};", imports.join(", ")),
+    };
+    let imports = match pending {
+        true => format!("{imports}\nuse libero::theme::{{Size, responsive}};"),
+        false => imports,
     };
     // Both wait on `delay`, printed below with its imports (todo 4370).
     let waits = loading || username;
@@ -129,7 +139,7 @@ fn form_code(values: &DemoValues, _: &str) -> String {
     if hidden {
         options += "\n            summary: SummaryMode::Hidden,";
     }
-    if username {
+    if username || pending {
         options += "\n            pending_loader: true,";
     }
     let submit = format!(
@@ -162,7 +172,11 @@ fn form_code(values: &DemoValues, _: &str) -> String {
         )
         .replace(
             "__USERNAME__",
-            &optional(username, format!("\n{}", nest("username"))),
+            &match (username, pending) {
+                (true, _) => format!("\n{}", nest("username")),
+                (false, true) => format!("\n{}", nest("pending")),
+                (false, false) => String::new(),
+            },
         )
         .replace(
             "__HANDLE__",
@@ -224,7 +238,7 @@ pub fn FormPage() -> Element {
                         .doc("`Visible`: a blocked submit or `set_errors` shows a summary of every error above the fields and focuses it. `Hidden`: no summary list; focus goes to the first field that shows its error, and a visually hidden status says how many errors there are (`form.error_count`). `FormLabels` gains fields in minor releases, so build yours from a built-in set, `..FormLabels::ENGLISH`. Errors no field shows, from `FormErrors::form` or a form rule without `.on(..)`, still show in the summary, which then takes focus when no field does."),
                     prop("pending_loader", "bool")
                         .default("false")
-                        .doc("Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit). The box keeps its height; the control is `aria-busy=\"true\"` either way. The loader follows a responsive field size. Not in a `PinField`'s cells."),
+                        .doc("Draws a silent `Loader` at the end of a framed field's box while a `checked_async` rule checks its value, once the field shows its rules (after a blur or a submit), or while its `status` is `FieldStatus::Pending`. The box keeps its height; the control is `aria-busy=\"true\"` either way. The loader follows a responsive field size. Not in a `PinField`'s cells."),
                     prop("form", "FormHandle")
                         .doc("Controls the form from outside, made with `use_form()`. Taken once, on mount. Without it the form makes its own, which `use_form_context()` returns inside the form."),
                     prop("children", "Element")
@@ -333,6 +347,8 @@ pub fn FormPage() -> Element {
                     Control::switch("company").code(silent),
                     Control::switch("async_submit").code(silent),
                     Control::switch("username_check").code(silent),
+                    // On, so the pending loader shows at the default switches; resize the window.
+                    Control::switch("pending").default("true").code(silent),
                 ],
                 render: move |values: DemoValues| {
                     let on = |name: &str| values.str(name) == "true";
@@ -347,6 +363,7 @@ pub fn FormPage() -> Element {
                                 company: on("company"),
                                 async_submit,
                                 username: on("username_check"),
+                                pending: on("pending"),
                             }
                         }
                     }
@@ -364,6 +381,7 @@ fn SignupForm(
     company: bool,
     async_submit: bool,
     username: bool,
+    pending: bool,
 ) -> Element {
     // demo-code: state start
     let signup = use_store(Signup::default);
@@ -386,7 +404,7 @@ fn SignupForm(
             // demo-code: rule end
             summary_title: summary_title.then(|| "Please fix these first:".to_string()),
             summary: if hidden { SummaryMode::Hidden } else { SummaryMode::Visible },
-            pending_loader: username,
+            pending_loader: username || pending,
             onsubmit: if async_submit {
                 // demo-code: async_submit start
                 Submit::parse_async(new_account, move |account: NewAccount| async move {
@@ -424,6 +442,15 @@ fn SignupForm(
                         .rules([checked_async(username_free).debounce(400)]),
                 }
                 // demo-code: username end
+            } else if pending {
+                // demo-code: pending start
+                // Pending, as while an async rule checks: the loader follows the size per breakpoint.
+                TextField {
+                    label: "Username",
+                    status: FieldStatus::Pending,
+                    size: responsive(Size::Sm).md(Size::Lg),
+                }
+                // demo-code: pending end
             }
             if company {
                 // demo-code: company start

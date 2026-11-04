@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
-        common::{ClassList, Input, Parts},
+        common::{ClassList, Input, Parts, States},
         form::{
             ComboboxState, DropdownPart, TouchHold, combobox::nothing_found_row,
             phone_sheet::SheetSwipe, use_refocus_on_close, use_touch_hold,
@@ -75,11 +75,14 @@ pub(in super::super) struct EngineSetup<'a> {
     /// Disabled or read-only: the keys do nothing.
     pub(in super::super) inert: bool,
     pub(in super::super) size: Responsive<Size>,
-    pub(in super::super) radius: Size,
+    pub(in super::super) radius: Responsive<Size>,
     pub(in super::super) parts: &'a Input<Parts<DropdownPart>>,
     /// The dropdown box's own `class`, `sx` and attributes, from `CascaderDropdown`.
     pub(in super::super) class: Option<&'a Input<ClassList>>,
     pub(in super::super) sx: Option<&'a Input<Sx>>,
+    /// `CascaderDropdown`'s `states`, `hidden_from` and `visible_from`, on the dropdown box too.
+    pub(in super::super) states: Option<&'a Input<States>>,
+    pub(in super::super) visibility: Option<(&'a Input<Size>, &'a Input<Size>)>,
     pub(in super::super) attributes: Vec<Attribute>,
 }
 
@@ -124,6 +127,8 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         parts,
         class,
         sx,
+        states,
+        visibility,
         attributes,
     } = setup;
     let theme = use_theme();
@@ -208,6 +213,8 @@ pub(in super::super) fn use_cascader_engine(setup: EngineSetup) -> Engine {
         parts,
         class,
         sx,
+        states,
+        visibility,
     });
 
     // Drawn in the list's place and said by the status region below.

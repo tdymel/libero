@@ -62,7 +62,7 @@ fn Demo() -> Element {
 | `rotate_chevron` | `bool` | `true` | `false` keeps the chevron pointing down when a section opens. |
 
 Like every component, `Accordion` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes. An `id` seeds the ids of its parts.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes. An `id` seeds the ids of its parts.
 
 ## Accessibility
 

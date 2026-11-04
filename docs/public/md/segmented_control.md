@@ -90,7 +90,7 @@ icon, hidden from screen readers, before the name. [Tabs](tabs.md) and a `Select
 row (`option: |args| label.render()`) use it too.
 
 Like every component, `SegmentedControl` also takes the shared props `sx`,
-`class`, `style`, `states`, and any extra HTML attributes. `sx`, `class` and
+`class`, `style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. `sx`, `class` and
 `states` land on the field's wrapper, and the attributes on the
 `radiogroup`.
 

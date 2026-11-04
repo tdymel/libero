@@ -44,7 +44,7 @@ fn Demo() -> Element {
 | `timeout` | `u32` | - | Milliseconds after a press before the check mark and the status reset. Unset, they reset when the pointer or the focus leaves. |
 
 Like every component, `Copy` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the button.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the button.
 
 The words are `CopyLabels` in the [localization](localization.md): `copy`
 (the name), `copied` and `copy_failed` (what the status says).

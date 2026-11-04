@@ -66,7 +66,7 @@ fn Demo() -> Element {
 | `restore_focus` | `bool` | `false` | On unmount, hands focus back to whatever held it when the trap mounted. |
 
 Like every component, `FocusTrap` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. `FocusTrapInitialFocus` takes
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. `FocusTrapInitialFocus` takes
 no props at all.
 
 ## Accessibility

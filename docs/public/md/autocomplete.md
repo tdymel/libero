@@ -89,7 +89,7 @@ fn Demo() -> Element {
 | `dropdown_parts` | `Parts<DropdownPart>` | - | Styles the portaled dropdown and its inner parts. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes. The attributes land on the input.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes. The attributes land on the input.
 
 ### `AutocompleteOptionArgs`
 

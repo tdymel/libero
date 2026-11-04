@@ -63,7 +63,7 @@ fn Demo() -> Element {
 | `aria_label` | `String` | - | Names the rating when it has no `label`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 

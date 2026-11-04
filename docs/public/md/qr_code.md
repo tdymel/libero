@@ -38,7 +38,7 @@ fn Demo() -> Element {
 | `aria_label` | `String` | required | The code's accessible name. Say where it leads. |
 
 Like every component, `QrCode` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

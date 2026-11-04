@@ -5,9 +5,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            COARSE_POINTER, HtmlTag, Input, Part, ROW_HOVER_TINT, ScaleOrCss, States, Variables,
-            base_props, disabled_look_sx, forced_on_sx, group_id, inset_focus_ring_sx, option_id,
-            variables,
+            COARSE_POINTER, HtmlTag, Input, Part, ROW_HOVER_TINT, ResponsiveScale, States,
+            Variables, base_props, disabled_look_sx, forced_on_sx, group_id, inset_focus_ring_sx,
+            option_id, variables,
         },
         layout::use_box,
     },
@@ -23,7 +23,7 @@ use crate::components::form::{DropdownPart, use_state_ranges};
 pub(super) struct ComboboxContext {
     pub id: Signal<String>,
     pub size: Signal<Responsive<Size>>,
-    pub radius: Signal<ScaleOrCss>,
+    pub radius: Signal<ResponsiveScale>,
     /// Each drawn row's `onpick` by row key, so Enter fires the highlighted one. Not reactive.
     pub picks: CopyValue<HashMap<usize, Callback<()>>>,
 }
@@ -142,9 +142,9 @@ base_props! {
         #[props(default, into)]
         size: Input<Responsive<Size>>,
         /// Defaults to the `Combobox`'s, tightened by the dropdown's padding.
-        /// A size word or any CSS, as `radius: "0"`.
+        /// A size word or any CSS, as `radius: "0"`, or one per breakpoint.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         children: Element,
     }
 }
@@ -176,14 +176,12 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
     });
     let radius = match (props.radius.as_ref(), combobox) {
         (None, Some(context)) => (context.radius)(),
-        (value, _) => ScaleOrCss::new(value, theme.combobox.radius),
+        (value, _) => ResponsiveScale::new(value, theme.combobox.radius, SizeCss::RADIUS),
     };
     let radius_variables: Input<Variables> = variables()
-        .with(
-            SizeCss::RADIUS.override_var(),
-            radius.custom_css(SizeCss::RADIUS),
-        )
+        .with(SizeCss::RADIUS.override_var(), radius.custom_css())
         .into();
+    let own_sx = radius.with_own(&props.sx);
 
     let disabled = props
         .disabled
@@ -231,15 +229,17 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .states
         .unwrap_or_default()
         .responsive(&sizes, |size| size.state_name())
-        .with(radius.size.radius_state_name(), true)
+        .responsive(&radius.steps, |size| size.radius_state_name())
         .with("active", active)
         .with("selected", props.selected.unwrap_or(false))
         .with("disabled", disabled)
         .into();
 
-    let children = match props.size.as_ref().is_some_and(|sizes| !sizes.is_plain()) {
+    let own_runs = props.size.as_ref().is_some_and(|sizes| !sizes.is_plain())
+        || props.radius.as_ref().is_some_and(|radii| !radii.is_plain());
+    let children = match own_runs {
         true => rsx! {
-            RowRanges { sizes }
+            RowRanges { sizes, radii: radius.steps }
             {props.children}
         },
         false => props.children,
@@ -248,7 +248,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .framework_sx(&COMBOBOX_ROW_SX)
         .class(&props.class)
         .visibility(&props.hidden_from, &props.visible_from)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .states(&states)
         .variables(&radius_variables)
         .prepare()
@@ -269,18 +269,20 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .render(HtmlTag::Div, props.attributes, children)
 }
 
-/// Registers the row sheet's range copies for a responsive row size. A hook; a plain size registers nothing.
-pub(super) fn use_row_ranges(sizes: &Responsive<Size>) {
+/// Registers the row sheet's range copies for a responsive row size and radius. A hook; plain
+/// values register nothing.
+pub(super) fn use_row_ranges(sizes: &Responsive<Size>, radii: &Responsive<Size>) {
     let states: Input<States> = States::default()
         .responsive(sizes, |size| size.state_name())
+        .responsive(radii, |size| size.radius_state_name())
         .into();
     use_state_ranges(&COMBOBOX_ROW_SX, Some(&states));
 }
 
-/// A row with its own responsive `size` registers its copies; a field's rows share its.
+/// A row with its own responsive `size` or `radius` registers its copies; a field's rows share its.
 #[component]
-fn RowRanges(sizes: Responsive<Size>) -> Element {
-    use_row_ranges(&sizes);
+fn RowRanges(sizes: Responsive<Size>, radii: Responsive<Size>) -> Element {
+    use_row_ranges(&sizes, &radii);
     rsx! {}
 }
 

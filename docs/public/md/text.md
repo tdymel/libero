@@ -37,7 +37,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The text. |
 
 Like every component, `Text` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

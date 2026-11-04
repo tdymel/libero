@@ -140,7 +140,7 @@ fn Demo() -> Element {
 | `parts` | `Parts<MenuPart>` | - | Styles for the inner parts in the Style API tab, on every menu level, submenus too, as `sx` does: `Parts::new().part(MenuPart::Label, sx().font_weight("500"))`. |
 
 Like every component, `Menu` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes. They land on the menu; `sx`
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes. They land on the menu; `sx`
 also on every submenu.
 
 ### MenuItem

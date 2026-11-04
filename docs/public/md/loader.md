@@ -38,7 +38,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `primary` | A theme color name paints its text shade, so the ink stands out from the page. Any other CSS color paints as given. |
 
 Like every component, `Loader` also takes the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

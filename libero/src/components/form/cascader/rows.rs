@@ -11,7 +11,7 @@ use crate::{
     },
     context::IconSlot,
     localization::{CascaderLabels, fill},
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, Responsive, Size},
 };
 
@@ -167,7 +167,7 @@ pub(super) struct CascaderRows {
     pub(super) commit: Rc<dyn Fn(Vec<usize>, bool)>,
     pub(super) any_level: bool,
     pub(super) size: Responsive<Size>,
-    pub(super) radius: Size,
+    pub(super) radius: Responsive<Size>,
     pub(super) labels: CascaderLabels,
     /// The highlight is on the narrow list's parent row, not on the cursor's.
     pub(super) parent_active: bool,
@@ -253,7 +253,7 @@ impl CascaderRows {
                 key: "{level}-{index}",
                 id: option_id(&self.id, level, index),
                 size: self.size,
-                radius: self.radius,
+                radius: self.radius.map(ThemeAwareValue::from),
                 selected: marked,
                 active: is_cursor,
                 states: States::new().with("committed", is_committed),
@@ -306,7 +306,7 @@ impl CascaderRows {
                 key: "{level}-parent",
                 id: parent_option_id(&self.id, level),
                 size: self.size,
-                radius: self.radius,
+                radius: self.radius.map(ThemeAwareValue::from),
                 selected: self.parent_active,
                 active: self.parent_active,
                 states: States::new().with("committed", is_committed),

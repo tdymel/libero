@@ -40,7 +40,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The container's content. |
 
 Like every component, `Container` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
+`style`, `states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Accessibility
 

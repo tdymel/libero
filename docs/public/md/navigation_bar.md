@@ -84,7 +84,7 @@ fn Demo() -> Element {
 | `children` | `Element` | required | The label. |
 
 Like every component, both also take the shared props `sx`, `class`,
-`states`, and any extra HTML attributes.
+`states`, `hidden_from`, `visible_from`, and any extra HTML attributes.
 
 ## Style API
 
