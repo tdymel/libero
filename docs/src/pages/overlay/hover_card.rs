@@ -66,12 +66,12 @@ pub fn HoverCardPage() -> Element {
                 prop("open", "bool")
                     .default("unset")
                     .doc("Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed."),
-                prop("radius", "ThemeAwareValue")
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.hover_card.radius.as_str())
-                    .doc("The card's corner radius, or any CSS, e.g. `radius: \"0\"`."),
-                prop("shadow", "Size")
+                    .doc("The card's corner radius, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                prop("shadow", "Responsive<Size>")
                     .default(theme.hover_card.shadow.as_str())
-                    .doc("The card's elevation."),
+                    .doc("The card's elevation. Or one per breakpoint, `shadow: responsive(Size::Xs).md(Size::Md)`. Breakpoints follow the window, not the parent."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("No card. The trigger keeps its wrapper, so enabling or disabling does not remount it or drop its focus."),

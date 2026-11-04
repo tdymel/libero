@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props, responsive_size,
+    responsive_size_code, responsive_switch,
 };
 use dioxus::prelude::*;
 use libero::components::{Code, MenubarPart, Text};
@@ -44,12 +45,12 @@ pub fn MenubarPage() -> Element {
                     prop("align", "Align")
                         .default("Start")
                         .doc("Where each menu lines up along that side. A phone-width menu is a bottom sheet and ignores it."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.menubar.size.as_str())
-                        .doc("The triggers' font and padding, and each menu's item size."),
-                    prop("radius", "ThemeAwareValue")
+                        .doc("The triggers' font and padding, and each menu's item size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.menubar.radius.as_str())
-                        .doc("The triggers' and the menus' corner radius, or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("The triggers' and the menus' corner radius, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("menu_parts", "Parts<MenuPart>")
                         .doc("Every menu's `parts`, the `Menu` page's Style API table. The menus open in a portal, out of the bar's `sx` and `parts`."),
                     prop("parts", "Parts<MenubarPart>")
@@ -103,7 +104,8 @@ pub fn MenubarPage() -> Element {
                 controls: vec![
                     Control::side(["bottom", "top"]),
                     Control::align(),
-                    Control::sizes("size").default(theme.menubar.size.as_str()),
+                    Control::sizes("size").default(theme.menubar.size.as_str()).code(responsive_size_code),
+                    responsive_switch(),
                     Control::sizes("radius").default(theme.menubar.radius.as_str()),
                     Control::switch("loop_focus").default("true"),
                 ],
@@ -111,7 +113,7 @@ pub fn MenubarPage() -> Element {
                     MenubarDemo {
                         side: values.str("side"),
                         align: values.str("align"),
-                        size: values.str("size"),
+                        size: responsive_size(&values),
                         radius: values.str("radius"),
                         loop_focus: values.str("loop_focus") == "true",
                     }

@@ -8,9 +8,9 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_range_css, use_theme},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, LOADER_COLOR, LOADER_SIZE, LoaderDefaults, Size},
+    theme::{CssVar, LOADER_COLOR, LOADER_SIZE, LoaderDefaults, Responsive, Size},
 };
 
 pub use crate::theme::LoaderVariant;
@@ -151,9 +151,9 @@ base_props! {
         /// Which shape to draw.
         #[props(default, into)]
         variant: Input<LoaderVariant>,
-        /// The square edge.
+        /// The square edge. Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// The ink.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -184,7 +184,7 @@ base_props! {
 pub fn Loader(props: LoaderProps) -> Element {
     let theme = use_theme();
     let variant = props.variant.copied_or(theme.loader.variant);
-    let size = props.size.copied_or(theme.loader.size);
+    let sizes = props.size.copied_or(theme.loader.size.into());
 
     let requested = props
         .color
@@ -198,8 +198,12 @@ pub fn Loader(props: LoaderProps) -> Element {
         .states
         .unwrap_or_default()
         .with(variant.state_name(), true)
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .into();
+    use_range_css(
+        &LOADER_BASE_SX,
+        sizes.range_copies(|size| size.state_name(), LoaderDefaults::size_sx),
+    );
 
     let boxed = use_box()
         .framework_sx(&LOADER_BASE_SX)

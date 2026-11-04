@@ -49,8 +49,8 @@ fn Demo() -> Element {
 | `onclose` | `EventHandler<()>` | - | Called by the close button outside a modal. |
 | `ondismiss` | `Callback<Dismiss, bool>` | all close, an alertdialog's backdrop does not | Inside a modal: asked before Escape, the backdrop, Back, a bottom drawer's swipe or the close button (`Dismiss::CloseButton`) closes it. Return `false` to keep it open, such as a form with unsaved input. Your own `close()` is not asked. |
 | `close_label` | `String` | `"Close"` | The close button's accessible name, such as "Close cart". Unset, the localization's `common.close`. |
-| `radius` | `ThemeAwareValue` | `md` | Corner radius from the radius scale, or any CSS, e.g. `radius: "0"`. |
-| `size` | `ThemeAwareValue` | `md` | Caps the width from the dialog scale. `md` is 510px. A full-screen dialog ignores it, so with `full_screen: "phone"` it does nothing below the `sm` breakpoint. |
+| `radius` | `Responsive<ThemeAwareValue>` | `md` | Corner radius from the radius scale, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
+| `size` | `Responsive<ThemeAwareValue>` | `md` | Caps the width from the dialog scale. `md` is 510px. A full-screen dialog ignores it, so with `full_screen: "phone"` it does nothing below the `sm` breakpoint. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `full_screen` | `DialogFullScreen` | `never` | Inside a modal, fills the screen edge to edge with square corners instead of centring: `"phone"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `"always"` at every width. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`, so one theme line makes every dialog full screen on a phone. The Modal page's demo shows it. |
 | `variables` | `Variables` | - | CSS variables layered onto the dialog's own, as `Drawer` does. |
 | `parts` | `Parts<DialogPart>` | - | Styles for the inner parts in the Style API tab, under `sx`: `Parts::new().part(DialogPart::Title, sx().font_size("lg"))`. |

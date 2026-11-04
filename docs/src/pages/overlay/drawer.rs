@@ -169,7 +169,7 @@ pub fn DrawerPage() -> Element {
             properties: vec![
                 props("DrawerOptions", vec![
                     prop("anchor", "Input<DrawerAnchor>").default("start").doc("The edge the panel docks to. `start` is the right edge under `dir=\"rtl\"`. It is read on every render, so an anchor in a signal moves an open drawer."),
-                    prop("size", "Input<ThemeAwareValue>").default(theme.drawer.size.as_str()).doc("Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: \"24rem\".into()`."),
+                    prop("size", "Input<Responsive<ThemeAwareValue>>").default(theme.drawer.size.as_str()).doc("Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: \"24rem\".into()`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build."),
                     prop("title", "Option<String>").doc("A visible heading at the top of the panel that names it."),

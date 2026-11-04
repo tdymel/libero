@@ -45,7 +45,7 @@ impl TooltipDefaults {
         color: "var(--lsx-surface)",
     };
 
-    fn size_sx(size: Size) -> Sx {
+    pub(crate) fn size_sx(size: Size) -> Sx {
         sx().font_size(TOOLTIP_FONT_SIZE.value(size))
     }
 

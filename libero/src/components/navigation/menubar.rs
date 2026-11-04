@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            COARSE_POINTER, HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, ScaleOrCss, States,
+            COARSE_POINTER, HtmlTag, Input, Part, Parts, ROW_HOVER_TINT, ResponsiveScale, States,
             Variables, base_props, disabled_look_sx, forced_on_sx, has_shortcut_modifier,
             inset_focus_ring_sx, parts_enum, use_label_keys, use_name_warning, variables,
         },
@@ -17,13 +17,13 @@ use crate::{
     },
     hooks::{
         Align, ElementHandle, Side, TYPEAHEAD_RESET, typeahead_match, use_element, use_id,
-        use_theme, use_typeahead,
+        use_range_css, use_theme, use_typeahead,
     },
     platform::{ElementApi, logical_key},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         MENUBAR_GAP, MENUBAR_TRIGGER_FONT, MENUBAR_TRIGGER_PAD_X, MENUBAR_TRIGGER_PAD_Y,
-        MENUBAR_TRIGGER_RADIUS, MenubarDefaults, Size, SizeCss,
+        MENUBAR_TRIGGER_RADIUS, MenubarDefaults, Responsive, Size, SizeCss,
     },
 };
 
@@ -149,11 +149,13 @@ base_props! {
         #[props(default)]
         align: Align,
         /// The triggers' font and padding, and each menu's item size.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// The triggers' and the menus' corner radius: a size word or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Every menu's `parts`: the menus are portaled, out of `parts`' reach.
         #[props(default, into)]
         menu_parts: Input<Parts<MenuPart>>,
@@ -337,14 +339,14 @@ pub fn Menubar(props: MenubarProps) -> Element {
             .collect(),
     );
 
-    let size = props.size.copied_or(theme.menubar.size);
+    let sizes = props.size.copied_or(theme.menubar.size.into());
     // Handed to every `Menu` as the same value, so each menu keeps the bar's own fallback.
     let radius = props
         .radius
         .as_ref()
         .cloned()
-        .unwrap_or(theme.menubar.radius.into());
-    let bar_radius = ScaleOrCss::new(Some(&radius), theme.menubar.radius);
+        .unwrap_or(ThemeAwareValue::from(theme.menubar.radius).into());
+    let bar_radius = ResponsiveScale::new(Some(&radius), theme.menubar.radius, SizeCss::RADIUS);
 
     let columns = props.menus.iter().enumerate().map(|(index, menu)| {
         let state = row.states[index];
@@ -478,7 +480,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 items: menu.items.clone(),
                 side: props.side,
                 align: props.align,
-                size,
+                size: sizes,
                 radius: radius.clone(),
                 loop_focus,
                 disabled,
@@ -508,20 +510,25 @@ pub fn Menubar(props: MenubarProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with(bar_radius.size.radius_state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
+        .responsive(&bar_radius.steps, |size| size.radius_state_name())
         .into();
     let radius_variables: Input<Variables> = variables()
-        .with(
-            SizeCss::RADIUS.override_var(),
-            bar_radius.custom_css(SizeCss::RADIUS),
-        )
+        .with(SizeCss::RADIUS.override_var(), bar_radius.custom_css())
         .into();
+    let mut copies = sizes.range_copies(|size| size.state_name(), MenubarDefaults::size_sx);
+    copies.extend(
+        bar_radius
+            .steps
+            .range_copies(|size| size.radius_state_name(), MenubarDefaults::radius_sx),
+    );
+    use_range_css(&MENUBAR_SX, copies);
+    let own_sx = bar_radius.with_own(&props.sx);
 
     let root = use_box()
         .framework_sx(&MENUBAR_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)
         .variables(&radius_variables)

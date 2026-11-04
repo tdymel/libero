@@ -1,4 +1,7 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Child, Control, Demo, DemoValues, DocPage, a11y, prop, props, responsive_size,
+    responsive_size_code, responsive_switch,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{CircularProgress, CircularProgressPart, Code, Input, Text},
@@ -57,11 +60,13 @@ fn controls(theme: &Theme) -> Vec<Control> {
         // The 12px label spills over a ring below `md`.
         Control::sizes("size")
             .default(theme.circular_progress.size.as_str())
+            .code(responsive_size_code)
             .options_from(|values| {
                 let sizes = ["xs", "sm", "md", "lg", "xl", "xxl"];
                 let from = if shows_label(values) { 2 } else { 0 };
                 sizes[from..].iter().map(ToString::to_string).collect()
             }),
+        responsive_switch(),
         Control::sizes("thickness").default(theme.circular_progress.thickness.as_str()),
         // Not a prop: the centred children.
         Control::switch("label")
@@ -90,9 +95,9 @@ pub fn CircularProgressPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default(defaults.color.as_str())
                     .doc("The arc. A theme color name paints its text shade, as `ProgressBar`'s fill. Any other CSS color paints as given."),
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(defaults.size.as_str())
-                    .doc("The outer edge, 18px at `xs` to 72px at `xxl` at the default text size; it grows with text zoom."),
+                    .doc("The outer edge, 18px at `xs` to 72px at `xxl` at the default text size; it grows with text zoom. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("thickness", "Size")
                     .default(defaults.thickness.as_str())
                     .doc("The ring's width as a share of the edge, 6% at `xs` to 16% at `xxl`, so it grows with `size`."),
@@ -145,7 +150,7 @@ pub fn CircularProgressPage() -> Element {
                                 values.str("value").parse::<f64>().ok()
                             },
                             color: Input::from(values.str("color")),
-                            size: values.str("size"),
+                            size: responsive_size(&values),
                             thickness: values.str("thickness"),
                             if !label.is_empty() { "{label}" }
                         }

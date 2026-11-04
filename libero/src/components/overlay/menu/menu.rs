@@ -8,14 +8,15 @@ use super::{
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, ScaleOrCss, base_props, css_string, has_shortcut_modifier, parts_enum,
+            HtmlTag, Input, ResponsiveScale, base_props, css_string, has_shortcut_modifier,
+            parts_enum,
         },
         layout::use_box,
     },
     hooks::{Align, Side, id_selector, use_element, use_theme},
     platform::mounted_by_selector,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::Size,
+    theme::{Responsive, Size, SizeCss},
 };
 
 // No box of its own, so a trigger sized in percent fills the Menu's parent (minmax 3893).
@@ -59,16 +60,17 @@ base_props! {
         /// Whether the arrow keys wrap from the last item to the first.
         #[props(default)]
         loop_focus: Option<bool>,
-        /// Item height and font size.
+        /// Item height and font size. Per breakpoint too: `responsive(Size::Sm).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Item height and font size on the phone sheet, below the `sm` breakpoint,
         /// e.g. `sheet_size: "lg"` for larger rows. Unset, `theme.menu.sheet_size`, else `size`.
         #[props(default, into)]
         sheet_size: Input<Size>,
         /// The menu's corner radius: a size word or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Lg)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// The trigger opens nothing, and an open menu closes.
         #[props(default)]
         disabled: Option<bool>,
@@ -221,9 +223,9 @@ pub fn Menu(props: MenuProps) -> Element {
             onpointerenter: None,
             side: props.side,
             align: props.align,
-            size: props.size.copied_or(theme.menu.size),
+            size: props.size.copied_or(theme.menu.size.into()),
             sheet_size: props.sheet_size.as_ref().copied().or(theme.menu.sheet_size),
-            radius: ScaleOrCss::new(props.radius.as_ref(), theme.menu.radius),
+            radius: ResponsiveScale::new(props.radius.as_ref(), theme.menu.radius, SizeCss::RADIUS),
             loop_focus: props.loop_focus.unwrap_or(theme.menu.loop_focus),
             close_on_select: props
                 .close_on_select

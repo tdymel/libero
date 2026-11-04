@@ -132,9 +132,9 @@ fn Demo() -> Element {
 | `align` | `Align` | `Start` | Where the menu lines up along that side. |
 | `close_on_select` | `bool` | `true` | Whether choosing an item closes the menu. |
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap from the last item to the first. |
-| `size` | `Size` | `md` | Item height and font size. |
+| `size` | `Responsive<Size>` | `md` | Item height and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `sheet_size` | `Size` | `size` | Item height and font size on the phone sheet, below the `sm` breakpoint, e.g. `sheet_size: "lg"` for larger rows on a phone and compact ones on a desktop. Submenus follow it. |
-| `radius` | `ThemeAwareValue` | `sm` | The menu's corner radius, or any CSS, e.g. `radius: "0"`. The items' corners follow it. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | The menu's corner radius, or any CSS, e.g. `radius: "0"`. The items' corners follow it. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `disabled` | `bool` | `false` | The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. Set it while the trigger is `loading` too: a press on a busy button opens nothing, but the arrow keys still reach the menu. |
 | `onedge` | `Callback<MenuEdge>` | - | Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu. |
 | `parts` | `Parts<MenuPart>` | - | Styles for the inner parts in the Style API tab, on every menu level, submenus too, as `sx` does: `Parts::new().part(MenuPart::Label, sx().font_weight("500"))`. |

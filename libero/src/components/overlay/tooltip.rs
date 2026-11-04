@@ -18,13 +18,13 @@ use crate::{
     hooks::{
         Align, ElementHandle, PopoverOptions, Rect, escape_closes, place, placement_sx, use_css,
         use_element, use_escape_dismiss, use_focus_within, use_popover_on, use_portal_slot,
-        use_press_away, use_press_marker, use_resize_fallback, use_theme,
+        use_press_away, use_press_marker, use_range_css, use_resize_fallback, use_theme,
     },
     platform::{Dimensions, ElementApi, document, keyboard, when_laid_out},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, POPOVER_PADDING, Size, SizeCss, TOOLTIP_DURATION, TOOLTIP_IN, TooltipDefaults,
-        Z_INDEX_POPOVER,
+        CssVar, POPOVER_PADDING, Responsive, Size, SizeCss, TOOLTIP_DURATION, TOOLTIP_IN,
+        TooltipDefaults, Z_INDEX_POPOVER,
     },
     utils::warn,
 };
@@ -219,8 +219,9 @@ base_props! {
         /// `px` or `rem` length, as `gap: "6px"`. Other CSS places by the theme's gap.
         #[props(default, into)]
         gap: Input<ThemeAwareValue>,
+        /// The label's font. Per breakpoint too: `responsive(Size::Xs).md(Size::Sm)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
         /// Milliseconds the pointer must rest before the bubble appears.
@@ -598,7 +599,7 @@ fn TooltipBubble(
 ) -> Element {
     let theme = use_theme();
     let side = tooltip.side.copied_or(theme.tooltip.side);
-    let size = tooltip.size.copied_or(theme.tooltip.size);
+    let sizes = tooltip.size.copied_or(theme.tooltip.size.into());
     let gap = ScaleOrCss::new(tooltip.gap.as_ref(), theme.tooltip.gap);
     let custom = gap.custom_css(SizeCss::SPACING);
     let measured = custom.as_deref().and_then(css_px);
@@ -647,8 +648,12 @@ fn TooltipBubble(
         .states
         .unwrap_or_default()
         .with(popover.placement().side.state_name(), true)
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .into();
+    use_range_css(
+        &TOOLTIP_BUBBLE_SX,
+        sizes.range_copies(|size| size.state_name(), TooltipDefaults::size_sx),
+    );
     let variables: Input<crate::components::common::Variables> = variables()
         .with(
             TOOLTIP_GAP_VAR,

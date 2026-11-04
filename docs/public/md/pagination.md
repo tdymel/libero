@@ -47,8 +47,8 @@ fn Demo() -> Element {
 | `aria_label` | `String` | required | Names the `<nav>` landmark, so two paginations on one page can be told apart. |
 | `siblings` | `u8` | `1` | Pages on each side of the current one. Past `2·siblings + 2·boundaries + 3` pages the row is always that many items wide; fewer pages all show. An ellipsis never stands for a single page. |
 | `boundaries` | `u8` | `1` | Pages pinned at each end. `0` counts as 1. |
-| `size` | `Size` | `md` | Control box and font size. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Control box and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `color` | `ThemeAwareValue` | `primary` | Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white. |
 | `disabled` | `bool` | `false` | Disables every control. |
 | `with_pages` | `bool` | `true` | Shows the page numbers and ellipses. `false` leaves the arrows, for a "Page 3 of 10" of your own between them. |

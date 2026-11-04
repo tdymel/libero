@@ -7,19 +7,20 @@ use crate::{
         common::{
             Glyph, HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
             coarse_hit_area_sx, contrast_color, disabled_look_sx, fill_color, focus_ring_sx,
-            literal_contrast, on_state_sx, parts_enum, use_name_warning, variables,
+            literal_contrast, on_state_sx, parts_enum, responsive_var_sx, use_name_warning,
+            variables, with_own,
         },
         form::use_fieldset_disabled,
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
-    hooks::{ElementHandle, use_element, use_localization, use_silent_focus_out_of},
+    hooks::{ElementHandle, use_element, use_localization, use_range_css, use_silent_focus_out_of},
     localization::fill,
     platform::ElementApi,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, PAGINATION_ACTIVE_BACKGROUND, PAGINATION_ACTIVE_COLOR, PAGINATION_BORDER,
-        PAGINATION_CONTROL_SIZE, PAGINATION_GAP, PaginationDefaults, Size, SizeCss,
+        PAGINATION_CONTROL_SIZE, PAGINATION_GAP, PaginationDefaults, Responsive, Size, SizeCss,
     },
     use_theme,
 };
@@ -39,6 +40,8 @@ pub enum PaginationLabel {
 
 /// Per instance, not on the theme: `radius` is a prop the controls read off the nav.
 const PAGINATION_RADIUS: CssVar = CssVar::new("--lsx-pagination-radius");
+/// The arrows' edge per breakpoint, for a responsive `size`: `ActionIcon` takes one value.
+const PAGINATION_ARROW_SIZE: CssVar = CssVar::new("--lsx-pagination-arrow-size");
 
 /// Flex `<li>`s drop the line box whose descender set the digits 2.5px below the
 /// arrows. Chromium still reports `list` / `listitem`.
@@ -131,11 +134,13 @@ base_props! {
         siblings: Option<u8>,
         #[props(default)]
         boundaries: Option<u8>,
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// A size step on the radius scale, or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Fill of the current page.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -184,8 +189,35 @@ pub fn Pagination(props: PaginationProps) -> Element {
 
     let list = use_element();
 
-    let size = props.size.copied_or(defaults.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius).resolve(SizeCss::RADIUS);
+    let sizes = props.size.copied_or(defaults.size.into());
+    let radii = props.radius.as_ref().filter(|radii| !radii.is_plain());
+    let radius = match radii {
+        // Per breakpoint, the var is declared in the user layer: the arrows read it.
+        Some(_) => PAGINATION_RADIUS.value(),
+        None => ScaleOrCss::new(
+            props.radius.as_ref().map(Responsive::base_ref),
+            defaults.radius,
+        )
+        .resolve(SizeCss::RADIUS),
+    };
+    let arrow_size = match sizes.is_plain() {
+        true => PAGINATION_CONTROL_SIZE.value(sizes.base()),
+        false => PAGINATION_ARROW_SIZE.value(),
+    };
+    let own_sx = [
+        radii.and_then(|radii| responsive_var_sx(radii, PAGINATION_RADIUS, Some(SizeCss::RADIUS))),
+        (!sizes.is_plain())
+            .then(|| {
+                let edges =
+                    sizes.map(|size| ThemeAwareValue::from(PAGINATION_CONTROL_SIZE.value(size)));
+                responsive_var_sx(&edges, PAGINATION_ARROW_SIZE, None)
+            })
+            .flatten(),
+    ]
+    .into_iter()
+    .flatten()
+    .reduce(Sx::and)
+    .map(|extra| with_own(Some(extra), &props.sx));
     let siblings = props.siblings.unwrap_or(defaults.siblings);
     let boundaries = props.boundaries.unwrap_or(defaults.boundaries);
     // A disabled `Fieldset` renders no native `disabled` (todo 3873).
@@ -214,7 +246,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
 
     let variables: Variables = variables()
         .with(PAGINATION_ACTIVE_BACKGROUND, fill_color(&active))
-        .with(PAGINATION_RADIUS, radius.clone())
+        .with(PAGINATION_RADIUS, radii.is_none().then(|| radius.clone()))
         .with(PAGINATION_ACTIVE_COLOR, on_active);
 
     let total = props.total;
@@ -235,12 +267,12 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .into();
 
     let nav = use_box()
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)
         .variables(&variables.into())
@@ -249,11 +281,17 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let list_box = use_box().framework_sx(&PAGINATION_LIST_SX).prepare();
     // Two frames, as `use_box` is a hook and can't run in the loop; a hand-written
     // `data-state` would be a second attribute `when("current")` never sees.
-    let control_states: Input<States> = States::default().with(size.state_name(), true).into();
+    let control_states: Input<States> = States::default()
+        .responsive(&sizes, |size| size.state_name())
+        .into();
     let current_states: Input<States> = States::default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with("current", true)
         .into();
+    use_range_css(
+        &PAGINATION_CONTROL_SX,
+        sizes.range_copies(|size| size.state_name(), PaginationDefaults::size_sx),
+    );
     let control = use_box()
         .framework_sx(&PAGINATION_CONTROL_SX)
         .states(&control_states)
@@ -315,7 +353,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
                     label,
                     name: name(label),
                     states: control_states.clone(),
-                    size,
+                    size: arrow_size.clone(),
                     radius: radius.clone(),
                     disabled: disabled || at_end,
                     onarrow,
@@ -411,7 +449,7 @@ fn PaginationArrow(
     label: PaginationLabel,
     name: String,
     states: Input<States>,
-    size: Size,
+    size: String,
     radius: String,
     disabled: bool,
     onarrow: Callback<PaginationLabel>,
@@ -432,7 +470,7 @@ fn PaginationArrow(
             // The page buttons' style; `size` and `radius` via `ActionIcon`'s props.
             sx: &PAGINATION_CONTROL_SX,
             states,
-            size: PAGINATION_CONTROL_SIZE.value(size),
+            size,
             radius,
             disabled,
             onclick: move |_| {

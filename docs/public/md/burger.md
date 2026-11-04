@@ -47,7 +47,7 @@ fn Demo() -> Element {
 | `open` | `bool` | - | `true` draws the X. Set either way, it makes the button a disclosure with `aria-expanded`. Leave it unset when the burger opens a modal. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. The caller holds the open state and toggles it here. |
 | `label` | `Callback<bool, String>` | - | Replaces the localization's labels. Called with the open state during render, so it can read a live locale. |
-| `size` | `ThemeAwareValue` | `md` | The glyph's width and height. The button is one `spacing.xs` step larger. Below 24px it still takes presses in a 24x24 box. |
+| `size` | `Responsive<ThemeAwareValue>` | `md` | The glyph's width and height. The button is one `spacing.xs` step larger. Below 24px it still takes presses in a 24x24 box. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `color` | `ThemeAwareValue` | `currentColor` | The bars. Unset, they follow the button's `color`. |
 | `disabled` | `bool` | `false` | Disables the button. |
 | `parts` | `Parts<BurgerPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

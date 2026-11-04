@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, prop, props, responsive_size, responsive_size_code,
+    responsive_switch,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Input, ProgressBar, ProgressBarPart, ProgressBarSegment, Text},
@@ -41,10 +44,10 @@ pub fn ProgressBarPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default(theme.progress_bar.color.as_str())
                     .doc("The fill. A theme color name paints its text shade, darker on a light page so the bar stands out from its track. Any other CSS color paints as given."),
-                prop("size", "Size").default(theme.progress_bar.size.as_str()).doc("Track height, 3px at `xs` to 20px at `xxl`."),
-                prop("radius", "ThemeAwareValue")
+                prop("size", "Responsive<Size>").default(theme.progress_bar.size.as_str()).doc("Track height, 3px at `xs` to 20px at `xxl`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.progress_bar.radius.as_str())
-                    .doc("Corner of the track and the fill, or any CSS, e.g. `radius: \"0\"`. On a thin track most steps draw the same pill."),
+                    .doc("Corner of the track and the fill, or any CSS, e.g. `radius: \"0\"`. On a thin track most steps draw the same pill. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("aria_valuetext", "String")
                     .doc("Read instead of the rounded percentage, such as \"4.2 MB of 12 MB\"."),
                 prop("segments", "Vec<ProgressBarSegment>")
@@ -110,7 +113,8 @@ pub fn ProgressBarPage() -> Element {
                     // An unset `color` is `base_color`'s primary shade 6, which
                     // is exactly what a bare `primary` resolves to.
                     Control::color("color").default(theme.progress_bar.color.as_str()),
-                    Control::sizes("size").default(theme.progress_bar.size.as_str()),
+                    Control::sizes("size").default(theme.progress_bar.size.as_str()).code(responsive_size_code),
+                    responsive_switch(),
                     Control::sizes("radius").default(theme.progress_bar.radius.as_str()),
                     Control::switch("segments").default("true").code(|_, values| {
                         match segmented(values) {
@@ -131,7 +135,7 @@ pub fn ProgressBarPage() -> Element {
                             values.str("value").parse::<f64>().ok()
                         },
                         color: Input::from(values.str("color")),
-                        size: values.str("size"),
+                        size: responsive_size(&values),
                         radius: values.str("radius"),
                         segments: segments(&values),
                     }

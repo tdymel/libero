@@ -1,5 +1,6 @@
 use crate::components::{
     Child, Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+    responsive_size, responsive_size_code, responsive_switch,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -94,15 +95,15 @@ pub fn MenuPage() -> Element {
                     prop("loop_focus", "bool")
                         .default(theme.menu.loop_focus.to_string())
                         .doc("Whether the arrow keys wrap from the last item to the first."),
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.menu.size.as_str())
-                        .doc("Item height and font size."),
+                        .doc("Item height and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("sheet_size", "Size")
                         .default(theme.menu.sheet_size.map_or("size", |size| size.as_str()))
                         .doc("Item height and font size on the phone sheet, below the `sm` breakpoint, e.g. `sheet_size: \"lg\"` for larger rows on a phone and compact ones on a desktop. Submenus follow it."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.menu.radius.as_str())
-                        .doc("The menu's corner radius, or any CSS, e.g. `radius: \"0\"`. The items' corners follow it."),
+                        .doc("The menu's corner radius, or any CSS, e.g. `radius: \"0\"`. The items' corners follow it. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. Set it while the trigger is `loading` too: a press on a busy button opens nothing, but the arrow keys still reach the menu."),
@@ -211,7 +212,8 @@ pub fn MenuPage() -> Element {
                     Control::side(["top", "end", "bottom", "start"]),
                     Control::align(),
                     Control::sizes("size")
-                        .default(theme.menu.size.as_str()),
+                        .default(theme.menu.size.as_str()).code(responsive_size_code),
+                    responsive_switch(),
                     Control::sizes("radius")
                         .default(theme.menu.radius.as_str()),
                     Control::switch("close_on_select").default(theme.menu.close_on_select.to_string()),
@@ -227,7 +229,7 @@ pub fn MenuPage() -> Element {
                     MenuDemo {
                         side: values.str("side"),
                         align: values.str("align"),
-                        size: values.str("size"),
+                        size: responsive_size(&values),
                         radius: values.str("radius"),
                         close_on_select: values.str("close_on_select") == "true",
                         loop_focus: values.str("loop_focus") == "true",

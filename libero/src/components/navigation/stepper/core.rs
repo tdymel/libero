@@ -14,12 +14,12 @@ use crate::{
         layout::{Collapse, use_box},
     },
     context::IconSlot,
-    hooks::{id_selector, use_content_changes, use_element, use_resize_fallback},
+    hooks::{id_selector, use_content_changes, use_element, use_range_css, use_resize_fallback},
     platform::{ElementApi, fonts_ready, when_laid_out},
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
-        CssVar, FOCUS_RING_HALO_SPREAD, STEPPER_COLOR, STEPPER_COLOR_CONTRAST,
+        CssVar, FOCUS_RING_HALO_SPREAD, Responsive, STEPPER_COLOR, STEPPER_COLOR_CONTRAST,
         STEPPER_CONNECTOR_COLOR, STEPPER_CONTENT_PADDING, STEPPER_DESCRIPTION_COLOR,
         STEPPER_DESCRIPTION_SIZE, STEPPER_ERROR, STEPPER_ERROR_CONTRAST, STEPPER_FILL, STEPPER_GAP,
         STEPPER_LINE_WIDTH, STEPPER_MARKER, STEPPER_PENDING, STEPPER_SPACING, Size,
@@ -420,7 +420,7 @@ pub(crate) struct StepperView {
     pub orientation: Orientation,
     pub connectors: bool,
     pub label_position: StepLabelPosition,
-    pub size: Size,
+    pub size: Responsive<Size>,
     /// Per-instance override: `(text, fill, foreground on the fill)`.
     pub color: Option<(String, String, Option<String>)>,
     pub completed_label: &'static str,
@@ -505,7 +505,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
 
     let mut states = states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&size, |size| size.state_name())
         .with(orientation.state_name(), true)
         .with(label_position.state_name(), !vertical)
         .with("no-connectors", !connectors);
@@ -513,6 +513,10 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         states = states.with(count, true);
     }
     let states: Input<States> = states.into();
+    use_range_css(
+        &STEPPER_SX,
+        size.range_copies(|size| size.state_name(), StepperDefaults::size_sx),
+    );
 
     let mut root_variables = variables();
     if let Some((color, fill, contrast)) = color {

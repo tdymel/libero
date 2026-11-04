@@ -4,21 +4,22 @@ use crate::{
     CssLayer,
     components::{
         common::{
-            HtmlTag, Input, Part, ScaleOrCss, States, Variables, base_color, base_props,
+            HtmlTag, Input, Part, ResponsiveScale, States, Variables, base_color, base_props,
             label_color, names_itself, parts_enum, print_exact_sx, use_name_warning, variables,
             warning_edge,
         },
         form::{SliderSegment, segment_filled, track_segments},
         layout::use_box,
     },
-    hooks::{use_css, use_formats, use_localization, use_theme},
+    hooks::{use_css, use_formats, use_localization, use_range_css, use_theme},
     localization::fill,
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         Color, ColorShade, ColorValue, CssVar, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION,
         PROGRESS_BAR_ANIMATION_RTL, PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL,
         PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_RADIUS, PROGRESS_BAR_SIZE,
-        PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION, ProgressBarDefaults, Size, SizeCss,
+        PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION, ProgressBarDefaults, Responsive, Size,
+        SizeCss,
     },
     utils::warn,
 };
@@ -251,12 +252,13 @@ base_props! {
         /// the bar stands out from its track; a literal CSS color paints as given.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Track thickness.
+        /// Track thickness. Per breakpoint too: `responsive(Size::Xs).md(Size::Md)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Corner of the track and the fill: a size word or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Xl)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Announced instead of the percentage, e.g. `"4.2 MB of 12 MB"`.
         #[props(default, into)]
         aria_valuetext: Option<String>,
@@ -308,8 +310,12 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .unwrap_or_else(|| ThemeAwareValue::from(theme.progress_bar.color));
     let color = base_color("ProgressBar", Some(&color));
 
-    let size = props.size.copied_or(theme.progress_bar.size);
-    let radius = ScaleOrCss::new(props.radius.as_ref(), theme.progress_bar.radius);
+    let sizes = props.size.copied_or(theme.progress_bar.size.into());
+    let radius = ResponsiveScale::new(
+        props.radius.as_ref(),
+        theme.progress_bar.radius,
+        SizeCss::RADIUS,
+    );
 
     let fraction = props
         .value
@@ -337,8 +343,8 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with(radius.size.radius_state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
+        .responsive(&radius.steps, |size| size.radius_state_name())
         .with(DETERMINATE_STATE, fraction.is_some())
         .with(PROGRESS_BAR_INDETERMINATE_STATE, fraction.is_none())
         .with(SEGMENTED_STATE, segmented)
@@ -346,11 +352,15 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
 
     // On the track, where the radius var and its `per_radius` reset live.
     let vars: Input<Variables> = progress_bar_variables(&color, percentage)
-        .with(
-            SizeCss::RADIUS.override_var(),
-            radius.custom_css(SizeCss::RADIUS),
-        )
+        .with(SizeCss::RADIUS.override_var(), radius.custom_css())
         .into();
+    let mut copies = sizes.range_copies(|size| size.state_name(), ProgressBarDefaults::size_sx);
+    copies.extend(radius.steps.range_copies(
+        |size| size.radius_state_name(),
+        ProgressBarDefaults::radius_sx,
+    ));
+    use_range_css(&PROGRESS_BAR_TRACK_SX, copies);
+    let own_sx = radius.with_own(&props.sx);
 
     // Its own `data-state`: a child inherits vars but not state.
     let fill = use_box()
@@ -382,7 +392,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
     let track = use_box()
         .framework_sx(&PROGRESS_BAR_TRACK_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)
         .variables(&vars)

@@ -73,7 +73,7 @@ fn Demo() -> Element {
 | `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
 | `orientation` | `Responsive<Orientation>` | `horizontal` | `vertical` puts each step's content under the step itself. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. It is laid out in Rust, so it switches after mount when server-rendered. |
 | `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Under 7.5rem a step (22.5rem for three, 360px at a 16px root), `side` draws as `below`. |
-| `size` | `Size` | `md` | Marker, type and spacing. |
+| `size` | `Responsive<Size>` | `md` | Marker, type and spacing. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |
 | `connectors` | `bool` | `true` | The lines between steps. `false` drops them: horizontal steps share the row in even columns, so they never shrink to dashes on a phone, and a vertical stepper keeps its spacing without the rail. |
 | `parts` | `Parts<StepperPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. |

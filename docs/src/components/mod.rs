@@ -6,6 +6,7 @@ mod icon_catalogue;
 mod pictogram_note;
 mod prop_doc;
 mod remount;
+mod responsive_demo;
 
 pub use a11y_doc::{A11yDoc, A11yPanel, a11y};
 #[cfg(test)]
@@ -24,3 +25,4 @@ pub use prop_doc::{
     label_trailing_prop, prop, props, prose, readonly_prop, required_prop, status_prop,
 };
 pub use remount::Remount;
+pub use responsive_demo::{responsive_size, responsive_size_code, responsive_switch};

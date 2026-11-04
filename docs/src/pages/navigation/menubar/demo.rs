@@ -1,13 +1,14 @@
 use crate::components::{align_of, side_of};
 use dioxus::prelude::*;
 use libero::components::{Flex, MenuEntry, MenuItem, Menubar, MenubarMenu, Text};
+use libero::theme::{Responsive, Size};
 
 /// The code block's example as a component, so its signal stays out of `Demo`'s hook slots.
 #[component]
 pub fn MenubarDemo(
     side: String,
     align: String,
-    size: String,
+    size: Responsive<Size>,
     radius: String,
     loop_focus: bool,
 ) -> Element {

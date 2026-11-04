@@ -11,12 +11,12 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_accessibility, use_css, use_formats, use_theme},
+    hooks::{use_accessibility, use_css, use_formats, use_range_css, use_theme},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CIRCULAR_PROGRESS_COLOR, CIRCULAR_PROGRESS_SIZE, CIRCULAR_PROGRESS_THICKNESS,
         CIRCULAR_PROGRESS_TRACK, CIRCULAR_PROGRESS_TRANSITION, CircularProgressDefaults, Color,
-        ColorShade, ColorValue, Size,
+        ColorShade, ColorValue, Responsive, Size,
     },
 };
 
@@ -266,9 +266,9 @@ base_props! {
         /// literal CSS color paints as given.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// The outer edge.
+        /// The outer edge. Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// The ring's width, a share of the edge that grows with the step.
         #[props(default, into)]
         thickness: Input<Size>,
@@ -322,7 +322,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.circular_progress.color));
     let color = base_color("CircularProgress", Some(&color));
-    let size = props.size.copied_or(theme.circular_progress.size);
+    let sizes = props.size.copied_or(theme.circular_progress.size.into());
     let thickness = props.thickness.copied_or(theme.circular_progress.thickness);
     let percent = theme.circular_progress.thicknesses.get(thickness);
     let ring = Ring::new(percent);
@@ -337,7 +337,7 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with(DETERMINATE_STATE, fraction.is_some())
         .with(INDETERMINATE_STATE, fraction.is_none())
         .into();
@@ -348,6 +348,11 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
             Some(format!("{}", ring.width / 100.0)),
         )
         .into();
+
+    use_range_css(
+        &CIRCULAR_PROGRESS_SX,
+        sizes.range_copies(|size| size.state_name(), CircularProgressDefaults::size_sx),
+    );
 
     let arc_class = use_css(Some(&CIRCULAR_PROGRESS_ARC_SX), CssLayer::Framework);
     let edge_class = use_css(Some(&CIRCULAR_PROGRESS_EDGE_SX), CssLayer::Framework);

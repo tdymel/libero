@@ -10,8 +10,8 @@ use crate::{
     components::{
         accessibility::{focus_edge, focus_first_stop, tab_order},
         common::{
-            FOCUSABLE_SELECTOR, HtmlTag, Input, ScaleOrCss, States, Variables, base_props, css_px,
-            input_from_str, inset_focus_ring_sx, variables,
+            FOCUSABLE_SELECTOR, HtmlTag, Input, ResponsiveScale, ScaleOrCss, States, Variables,
+            base_props, css_px, input_from_str, inset_focus_ring_sx, variables,
         },
         layout::{paper_sx, scroll_on_key, use_box},
     },
@@ -19,11 +19,14 @@ use crate::{
     hooks::{
         Align, DismissOptions, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
         owner_link, placement_sx, use_dismiss, use_element, use_focus_within, use_popover_on,
-        use_press_away, use_press_marker, use_resize_fallback, use_theme,
+        use_press_away, use_press_marker, use_range_css, use_resize_fallback, use_theme,
     },
     platform::{ElementApi, PlatformError, is_tab, next_task, scrolls_on_keys},
     sx::{Property, StaticSx, ThemeAwareValue, sx},
-    theme::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{
+        PAPER_BACKGROUND, PAPER_BORDER_COLOR, PaperDefaults, Responsive, Size, SizeCss,
+        Z_INDEX_POPOVER,
+    },
     utils::warn,
 };
 
@@ -104,10 +107,12 @@ base_props! {
         #[props(default)]
         open: Option<bool>,
         /// The card's corner radius: a size word or any CSS, as `radius: "0"`.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
+        /// Per breakpoint too: `responsive(Size::Xs).md(Size::Md)`; the arrow takes the base.
         #[props(default, into)]
-        shadow: Input<Size>,
+        shadow: Input<Responsive<Size>>,
         /// No card; the wrapper stays, so enabling or disabling does not remount the trigger.
         #[props(default)]
         disabled: Option<bool>,
@@ -382,22 +387,23 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         }
     });
 
-    let radius = ScaleOrCss::new(props.radius.as_ref(), defaults.radius);
+    let radius = ResponsiveScale::new(props.radius.as_ref(), defaults.radius, SizeCss::RADIUS);
     let radius_variables: Input<Variables> = variables()
-        .with(
-            SizeCss::RADIUS.override_var(),
-            radius.custom_css(SizeCss::RADIUS),
-        )
+        .with(SizeCss::RADIUS.override_var(), radius.custom_css())
         .into();
+    let shadows = props.shadow.copied_or(defaults.shadow.into());
+    let mut copies = radius
+        .steps
+        .range_copies(|size| size.radius_state_name(), PaperDefaults::radius_sx);
+    copies.extend(shadows.range_copies(|size| size.shadow_state_name(), PaperDefaults::shadow_sx));
+    use_range_css(&HOVER_CARD_SX, copies);
+    let own_sx = radius.with_own(&props.sx);
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(radius.size.radius_state_name(), true)
-        .with(
-            props.shadow.copied_or(defaults.shadow).shadow_state_name(),
-            true,
-        )
+        .responsive(&radius.steps, |size| size.radius_state_name())
+        .responsive(&shadows, |size| size.shadow_state_name())
         .with("text-stop", text_stop)
         .into();
 
@@ -406,7 +412,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     let card = use_box()
         .framework_sx(&HOVER_CARD_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .states(&states)
         .variables(&radius_variables)
         .style(Some(popover.vars()))
@@ -431,11 +437,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             let shadow = caller.and_then(|sx| sx.declared_css(&[Property::BoxShadow]));
             let fill = caller
                 .and_then(|sx| sx.declared_css(&[Property::Background, Property::BackgroundColor]));
-            let style = arrow_style(
-                shadow,
-                SizeCss::SHADOW.value(props.shadow.copied_or(defaults.shadow)),
-                fill,
-            );
+            let style = arrow_style(shadow, SizeCss::SHADOW.value(shadows.base()), fill);
             rsx! {
                 PopoverArrow {
                     sx: &HOVER_CARD_ARROW_SX,

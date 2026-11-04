@@ -4,7 +4,7 @@ use crate::{
     components::{
         common::{
             Input, SAFE_AREA_INLINE_END_VAR, SAFE_AREA_INLINE_START_VAR, ScaleOrCss, base_props,
-            input_from_str, safe_area_padding, safe_inline_padding, with_own,
+            input_from_str, responsive_var_sx, safe_area_padding, safe_inline_padding, with_own,
         },
         layout::{Float, Placement},
         overlay::Dialog,
@@ -15,7 +15,7 @@ use crate::{
     },
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, Variables, sx},
-    theme::{Color, ColorShade, ColorValue, DRAWER_SIZE, Size, SizeCss},
+    theme::{Color, ColorShade, ColorValue, DRAWER_SIZE, Responsive, Size, SizeCss},
 };
 
 // Rides along as an extra class on `Dialog`'s own. Edge-docking is `Float`'s
@@ -159,7 +159,7 @@ base_props! {
         anchor: Input<DrawerAnchor>,
         /// The width (or height, docked top or bottom): a size word or any CSS, as `size: "24rem"`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -184,10 +184,20 @@ base_props! {
 pub(crate) fn Drawer(props: DrawerProps) -> Element {
     let anchor = props.anchor.copied_or_default();
     let theme = use_theme();
-    let size = ScaleOrCss::new(props.size.as_ref(), theme.drawer.size);
+    let size = ScaleOrCss::new(
+        props.size.as_ref().map(Responsive::base_ref),
+        theme.drawer.size,
+    );
+    // Per breakpoint, the override var takes every value; the state word stays the base's.
+    let sizes_sx = props
+        .size
+        .as_ref()
+        .and_then(|sizes| responsive_var_sx(sizes, DRAWER_SIZE.override_var(), Some(DRAWER_SIZE)));
     let sx = with_own(
-        size.custom_css(DRAWER_SIZE)
-            .map(|css| sx().var(DRAWER_SIZE.override_var(), css)),
+        sizes_sx.or_else(|| {
+            size.custom_css(DRAWER_SIZE)
+                .map(|css| sx().var(DRAWER_SIZE.override_var(), css))
+        }),
         &props.sx,
     );
 

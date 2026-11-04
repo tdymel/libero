@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, prop, props, responsive_size, responsive_size_code,
+    responsive_switch,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Pagination, PaginationPart, Text},
@@ -39,8 +42,8 @@ pub fn PaginationPage() -> Element {
                     .doc("Pages on each side of the current one. Past `2·siblings + 2·boundaries + 3` pages the row is always that many items wide; fewer pages all show. An ellipsis never stands for a single page."),
                 prop("boundaries", "u8").default(theme.pagination.boundaries.to_string())
                     .doc("Pages pinned at each end. `0` counts as 1."),
-                prop("size", "Size").default(theme.pagination.size.as_str()).doc("Control box and font size."),
-                prop("radius", "ThemeAwareValue").default(theme.pagination.radius.as_str()).doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`."),
+                prop("size", "Responsive<Size>").default(theme.pagination.size.as_str()).doc("Control box and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                prop("radius", "Responsive<ThemeAwareValue>").default(theme.pagination.radius.as_str()).doc("Corner radius, independent of `size`, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("color", "ThemeAwareValue").default(theme.pagination.color.as_str())
                     .doc("Fill of the current page. A theme color gives its text the matching `-contrast` shade, a literal color black or white."),
                 prop("disabled", "bool").default("false").doc("Disables every control."),
@@ -108,7 +111,8 @@ pub fn PaginationPage() -> Element {
                         .default("1")
                         .code(unquoted),
                     Control::slider("boundaries", ["1", "2", "3"]).default("1").code(unquoted),
-                    Control::sizes("size").default(theme.pagination.size.as_str()),
+                    Control::sizes("size").default(theme.pagination.size.as_str()).code(responsive_size_code),
+                    responsive_switch(),
                     Control::sizes("radius").default(theme.pagination.radius.as_str()),
                     Control::color("color").default(theme.pagination.color.as_str()),
                     // Off, so the preview shows the arrows with a "Page 3 of 10" of its own;
@@ -135,7 +139,7 @@ pub fn PaginationPage() -> Element {
                                 aria_label: "Demo pages",
                                 siblings: values.str("siblings").parse::<u8>().unwrap_or(1),
                                 boundaries: values.str("boundaries").parse::<u8>().unwrap_or(1),
-                                size: values.str("size"),
+                                size: responsive_size(&values),
                                 radius: values.str("radius"),
                                 color: values.str("color"),
                                 with_pages,

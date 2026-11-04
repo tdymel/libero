@@ -95,7 +95,7 @@ behave the same. See [Modal](modal.md).
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `anchor` | `Input<DrawerAnchor>` | `start` | The edge the panel docks to. `start` is the right edge under `dir="rtl"`. It is read on every render, so an anchor in a signal moves an open drawer. |
-| `size` | `Input<ThemeAwareValue>` | `md` | Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: "24rem".into()`. |
+| `size` | `Input<Responsive<ThemeAwareValue>>` | `md` | Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: "24rem".into()`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build. |
 | `title` | `Option<String>` | - | A visible heading at the top of the panel that names it. |

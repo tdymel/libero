@@ -134,6 +134,7 @@ mod refused;
 mod repository;
 mod responsive;
 mod responsive_data;
+mod responsive_feedback;
 mod responsive_form;
 mod responsive_layout;
 mod responsive_orientation;

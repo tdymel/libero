@@ -75,17 +75,17 @@ pub fn SkeletonPage() -> Element {
                 prop("visible", "bool")
                     .default("true")
                     .doc("Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. A grace period hides the region with `opacity`, since `visibility` would not hide the grey."),
-                prop("height", "ThemeAwareValue")
-                    .doc("A CSS length. Unset, the children's height. A standalone shape needs one, or it is zero pixels tall."),
-                prop("width", "ThemeAwareValue")
+                prop("height", "Responsive<ThemeAwareValue>")
+                    .doc("A CSS length. Unset, the children's height. A standalone shape needs one, or it is zero pixels tall. Or one per breakpoint, `height: responsive(ThemeAwareValue::from(\"40px\")).md(\"64px\".into())`. Breakpoints follow the window, not the parent."),
+                prop("width", "Responsive<ThemeAwareValue>")
                     .default("100%")
-                    .doc("A CSS length. Ignored with `circle`."),
+                    .doc("A CSS length. Ignored with `circle`. Or one per breakpoint, `width: responsive(ThemeAwareValue::from(\"8rem\")).md(\"16rem\".into())`. Breakpoints follow the window, not the parent."),
                 prop("circle", "bool")
                     .default("false")
                     .doc("A circle as wide as `height`. Without `height`, a pill around the children."),
-                prop("radius", "ThemeAwareValue")
+                prop("radius", "Responsive<ThemeAwareValue>")
                     .default(theme.skeleton.radius.as_str())
-                    .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Ignored with `circle`."),
+                    .doc("Corner radius, or any CSS, e.g. `radius: \"0\"`. Ignored with `circle`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("animate", "bool")
                     .default(theme.skeleton.animate.to_string())
                     .doc("Runs the pulse. With reduced motion it stops half-way."),

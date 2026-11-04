@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, responsive_size,
+    responsive_size_code, responsive_switch,
+};
 use dioxus::prelude::*;
 use libero::components::{Box, Code, Flex, Input, Loader, Text, VisuallyHidden};
 use libero::use_theme;
@@ -47,9 +50,9 @@ pub fn LoaderPage() -> Element {
                 prop("variant", "LoaderVariant")
                     .default(theme.loader.variant.as_str())
                     .doc("The shape: `oval`, `bars` or `dots`."),
-                prop("size", "Size")
+                prop("size", "Responsive<Size>")
                     .default(theme.loader.size.as_str())
-                    .doc("The edge of the square, 18px at `xs` to 72px at `xxl`."),
+                    .doc("The edge of the square, 18px at `xs` to 72px at `xxl`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("color", "ThemeAwareValue")
                     .default(theme.loader.color.as_str())
                     .doc("A theme color name paints its text shade, so the ink stands out from the page. Any other CSS color paints as given."),
@@ -81,9 +84,10 @@ pub fn LoaderPage() -> Element {
                 controls: vec![
                     Control::toggle("variant", ["oval", "bars", "dots"]).default(theme.loader.variant.as_str())
                         .labels(["Oval", "Bars", "Dots"]),
-                    Control::sizes("size").default(theme.loader.size.as_str()),
+                    Control::sizes("size").default(theme.loader.size.as_str()).code(responsive_size_code),
                     // The theme's colour is what an unset `color` resolves to,
                     // so that swatch prints nothing.
+                    responsive_switch(),
                     Control::color("color").default(theme.loader.color.as_str()),
                     // Neither is a prop: they place the loader beside its
                     // own text, or alone in a busy region.
@@ -98,7 +102,7 @@ pub fn LoaderPage() -> Element {
                     let loader = rsx! {
                         Loader {
                             variant: values.str("variant"),
-                            size: values.str("size"),
+                            size: responsive_size(&values),
                             color: match values.str("color").as_str() {
                                 color if color == theme.loader.color.as_str() => Input::None,
                                 color => Input::from(color),

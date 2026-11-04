@@ -46,7 +46,7 @@ impl PaginationDefaults {
         border: ColorValue::Shade(Color::Muted, ColorShade::S6),
     };
 
-    fn size_sx(size: Size) -> Sx {
+    pub(crate) fn size_sx(size: Size) -> Sx {
         sx().min_width(PAGINATION_CONTROL_SIZE.value(size))
             .height(PAGINATION_CONTROL_SIZE.value(size))
             .font_size(PAGINATION_FONT_SIZE.value(size))

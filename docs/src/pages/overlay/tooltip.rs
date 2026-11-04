@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, Wrap, a11y, delay_of, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, delay_of, indent, prop, props, responsive_size,
+    responsive_size_code, responsive_switch,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -46,7 +47,7 @@ pub fn TooltipPage() -> Element {
                 prop("arrow", "bool")
                     .default("false")
                     .doc("Draws an arrow from the bubble to the trigger's centre, in the bubble's background. It stays on the trigger when the bubble shifts to fit the viewport, and `gap` runs from its tip."),
-                prop("size", "Size").default(theme.tooltip.size.as_str()).doc("Font size of the bubble."),
+                prop("size", "Responsive<Size>").default(theme.tooltip.size.as_str()).doc("Font size of the bubble. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("z_index", "ThemeAwareValue")
                     .default("the popover layer")
                     .doc("Overrides the stacking level, for a bubble hidden by another overlay."),
@@ -116,8 +117,9 @@ pub fn TooltipPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::sizes("size").default(theme.tooltip.size.as_str()),
+                    Control::sizes("size").default(theme.tooltip.size.as_str()).code(responsive_size_code),
                     // `0` is plain CSS, next to the size scale.
+                    responsive_switch(),
                     Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.tooltip.gap.as_str()),
                     Control::delay("open_delay", ["auto", "200", "500", "1000"]),
                     Control::delay("close_delay", ["auto", "200", "500", "1000"]),
@@ -149,7 +151,7 @@ pub fn TooltipPage() -> Element {
                             label_id: "draft-tip",
                             side: values.str("side"),
                             arrow: values.str("arrow") == "true",
-                            size: values.str("size"),
+                            size: responsive_size(&values),
                             gap: values.str("gap"),
                             open_delay: delay_of(&values.str("open_delay")),
                             close_delay: delay_of(&values.str("close_delay")),

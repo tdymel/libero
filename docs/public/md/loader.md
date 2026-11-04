@@ -34,7 +34,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `variant` | `LoaderVariant` | `oval` | The shape: `oval`, `bars` or `dots`. |
-| `size` | `Size` | `md` | The edge of the square, 18px at `xs` to 72px at `xxl`. |
+| `size` | `Responsive<Size>` | `md` | The edge of the square, 18px at `xs` to 72px at `xxl`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `color` | `ThemeAwareValue` | `primary` | A theme color name paints its text shade, so the ink stands out from the page. Any other CSS color paints as given. |
 
 Like every component, `Loader` also takes the shared props `sx`, `class`,

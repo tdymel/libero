@@ -13,15 +13,16 @@ use super::{
 };
 use crate::{
     components::{
-        common::{HtmlTag, Input, Part, Parts, ScaleOrCss, States, Variables, variables},
+        common::{HtmlTag, Input, Part, Parts, ResponsiveScale, States, Variables, variables},
         form::phone_sheet::{narrow_query, use_sheet_room, use_sheet_swipe},
         layout::{Divider, use_box},
     },
     hooks::{
         Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, PressMarker, Side,
-        TYPEAHEAD_RESET, use_dismiss, use_media_query, use_popover_on, use_theme, use_typeahead,
+        TYPEAHEAD_RESET, use_dismiss, use_media_query, use_popover_on, use_range_css, use_theme,
+        use_typeahead,
     },
-    theme::{Size, SizeCss},
+    theme::{MenuDefaults, Responsive, Size, SizeCss},
 };
 
 /// Every ancestor menu's dismissal: a third level is no descendant of the first.
@@ -69,10 +70,10 @@ pub(super) struct MenuLevelProps {
     title: Option<String>,
     side: Side,
     align: Align,
-    size: Size,
+    size: Responsive<Size>,
     /// `size` on the phone sheet, below `sm`.
     sheet_size: Option<Size>,
-    radius: ScaleOrCss,
+    radius: ResponsiveScale,
     loop_focus: bool,
     close_on_select: bool,
     depth: usize,
@@ -323,27 +324,33 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         )
     });
 
-    let size = match (narrow(), props.sheet_size) {
-        (true, Some(sheet_size)) => sheet_size,
+    let sizes = match (narrow(), props.sheet_size) {
+        (true, Some(sheet_size)) => sheet_size.into(),
         _ => props.size,
     };
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with(props.radius.size.radius_state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
+        .responsive(&props.radius.steps, |size| size.radius_state_name())
         .with("bordered", true)
         .into();
     let radius_variables: Input<Variables> = variables()
-        .with(
-            SizeCss::RADIUS.override_var(),
-            props.radius.custom_css(SizeCss::RADIUS),
-        )
+        .with(SizeCss::RADIUS.override_var(), props.radius.custom_css())
         .into();
+    let mut copies = sizes.range_copies(|size| size.state_name(), MenuDefaults::size_sx);
+    copies.extend(
+        props
+            .radius
+            .steps
+            .range_copies(|size| size.radius_state_name(), MenuDefaults::radius_sx),
+    );
+    use_range_css(&MENU_SX, copies);
+    let own_sx = props.radius.with_own(&props.sx);
     let menu = use_box()
         .framework_sx(&MENU_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)
         .variables(&radius_variables)

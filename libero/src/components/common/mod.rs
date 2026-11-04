@@ -26,6 +26,7 @@ mod parts;
 mod polymorphic;
 mod print_exact;
 mod rail;
+mod responsive_scale;
 mod responsive_sx;
 #[cfg(feature = "use-element")]
 mod reveal_inline;
@@ -96,6 +97,7 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use print_exact::print_exact_sx;
 pub(crate) use rail::{Rail, RailInset};
+pub(crate) use responsive_scale::ResponsiveScale;
 pub(crate) use responsive_sx::{
     ScaleOrCss, as_length, css_px, responsive_sx, responsive_var_sx, with_own,
 };

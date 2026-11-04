@@ -49,8 +49,9 @@ pub struct StepperProps<T: Options> {
     /// `side` or `below` the marker; `side` falls back to `below` under 120px a step.
     #[props(default, into)]
     label_position: Input<StepLabelPosition>,
+    /// Per breakpoint too: `responsive(Size::Sm).md(Size::Md)`.
     #[props(default, into)]
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     /// The current and completed markers, and the connectors behind them.
     #[props(default, into)]
     color: Input<ThemeAwareValue>,
@@ -188,7 +189,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
             orientation,
             connectors: props.connectors.unwrap_or(theme.stepper.connectors),
             label_position: props.label_position.copied_or(theme.stepper.label_position),
-            size: props.size.copied_or(theme.stepper.size),
+            size: props.size.copied_or(theme.stepper.size.into()),
             color,
             completed_label: labels.completed,
             error_label: labels.error,

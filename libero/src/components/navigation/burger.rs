@@ -6,7 +6,7 @@ use crate::{
         buttons::{ACTION_ICON_GROWS, ActionIcon, is_compact},
         common::{
             ACTION_ICON_COMPACT, HtmlTag, Input, Part, States, Variables, base_props, parts_enum,
-            parts_under_sx, use_name_warning, variables,
+            parts_under_sx, responsive_var_sx, use_name_warning, variables, with_own,
         },
         layout::use_box,
     },
@@ -15,7 +15,7 @@ use crate::{
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
-        BURGER_TRANSITION_TIMING, Size, SizeCss,
+        BURGER_TRANSITION_TIMING, Responsive, Size, SizeCss,
     },
 };
 
@@ -126,8 +126,10 @@ base_props! {
         #[props(default)]
         label: Option<Callback<bool, String>>,
         /// The glyph's width and height; the button is one spacing step larger.
+        /// Per breakpoint too: `responsive(Size::Sm).md(Size::Md)`; the compact hit area follows
+        /// the base size only.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
         /// The bars. Unset, they are `currentColor`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -176,15 +178,34 @@ pub fn Burger(props: BurgerProps) -> Element {
     );
 
     // The button's size is a `calc`, so `ActionIcon` cannot tell `xs` and `sm` from it.
-    let compact = is_compact(props.size.as_ref());
+    let compact = is_compact(props.size.as_ref().map(Responsive::base_ref));
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(ACTION_ICON_COMPACT, compact)
         .with(ACTION_ICON_GROWS, !compact)
         .into();
-    let glyph_size = props.size.resolve(Some(BURGER_SIZES));
-    let button_size = button_size(glyph_size.as_ref());
+    // Per breakpoint, the override var sits on the button in the user layer; the glyph inherits it.
+    let sizes_sx = props
+        .size
+        .as_ref()
+        .and_then(|sizes| responsive_var_sx(sizes, BURGER_SIZE.override_var(), Some(BURGER_SIZES)));
+    let glyph_size = match sizes_sx {
+        Some(_) => None,
+        None => props
+            .size
+            .as_ref()
+            .and_then(|sizes| sizes.base_ref().resolve(Some(BURGER_SIZES))),
+    };
+    let button_size = match sizes_sx {
+        Some(_) => button_size(Some(&BURGER_SIZE.overridable())),
+        None => button_size(glyph_size.as_ref()),
+    };
+    let button_sx = parts_under_sx(&props.parts, props.sx);
+    let button_sx = match sizes_sx {
+        Some(extra) => with_own(Some(extra), &button_sx),
+        None => button_sx,
+    };
 
     let glyph_variables: Input<Variables> = variables()
         .with(BURGER_SIZE.override_var(), glyph_size)
@@ -215,7 +236,7 @@ pub fn Burger(props: BurgerProps) -> Element {
             disabled: props.disabled,
             size: button_size,
             class: props.class,
-            sx: parts_under_sx(&props.parts, props.sx),
+            sx: button_sx,
             states,
             attributes,
             {glyph}

@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props, responsive_size,
+    responsive_size_code,
+};
 use dioxus::prelude::*;
 use libero::components::{
     Button, Code, Flex, Input, Options, Orientation, StepState, Stepper, StepperPart, Text,
@@ -106,7 +109,7 @@ pub fn StepperPage() -> Element {
                     prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, lets steps not reached yet be picked too."),
                     prop("orientation", "Responsive<Orientation>").default("horizontal").doc("`vertical` puts each step's content under the step itself. Or one per breakpoint, `orientation: responsive(Orientation::Vertical).md(Orientation::Horizontal)`. It is laid out in Rust, so it switches after mount when server-rendered."),
                     prop("label_position", "StepLabelPosition").default(theme.stepper.label_position.as_str()).doc("`side` or `below` the marker. Ignored when vertical. Under 7.5rem a step (22.5rem for three, 360px at a 16px root), `side` draws as `below`."),
-                    prop("size", "Size").default(theme.stepper.size.as_str()).doc("Marker, type and spacing."),
+                    prop("size", "Responsive<Size>").default(theme.stepper.size.as_str()).doc("Marker, type and spacing. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
                     prop("connectors", "bool").default(theme.stepper.connectors.to_string()).doc("The lines between steps. `false` drops them: horizontal steps share the row in even columns, so they never shrink to dashes on a phone, and a vertical stepper keeps its spacing without the rail."),
                     prop("parts", "Parts<StepperPart>")
@@ -172,13 +175,14 @@ pub fn StepperPage() -> Element {
                             (false, orientation) => vec![format!("orientation: {orientation:?}")],
                         }),
                     // On, so the breakpoint switch shows without another switch: resize the window.
+                    // It drives both orientation and size (`responsive_size`).
                     Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle("label_position", ["side", "below"])
                         .labels(["Side", "Below"])
                         .default(theme.stepper.label_position.as_str())
                         .hidden_when(|values| values.str("orientation") == "vertical"),
                     Control::sizes("size")
-                        .default(theme.stepper.size.as_str()),
+                        .default(theme.stepper.size.as_str()).code(responsive_size_code),
                     Control::color("color"),
                     Control::switch("connectors")
                         .default(theme.stepper.connectors.to_string())
@@ -257,7 +261,7 @@ pub fn StepperPage() -> Element {
                                     (false, chosen) => chosen.into(),
                                 },
                                 label_position: values.str("label_position"),
-                                size: values.str("size"),
+                                size: responsive_size(&values),
                                 color: match values.str("color").as_str() {
                                     "primary" => Input::None,
                                     color => Input::from(color),

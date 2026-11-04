@@ -1,9 +1,11 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props, responsive_size,
+    responsive_size_code, responsive_switch,
 };
 use dioxus::prelude::*;
 use libero::components::{Burger, BurgerPart, Code, Flex, Input, Paper, Text};
 use libero::sx::sx;
+use libero::theme::{Responsive, Size};
 use libero::use_theme;
 
 /// The panel `aria-controls` names: with `open` set and no real target, `Burger` warns.
@@ -29,7 +31,7 @@ fn wrap(_values: &DemoValues, source: &str) -> String {
 /// Owns `open`, so the burger is its own control. A component, since `render` can't hold state;
 /// control changes arrive as props without resetting the signal.
 #[component]
-fn BurgerPreview(size: String, color: String, disabled: bool) -> Element {
+fn BurgerPreview(size: Responsive<Size>, color: String, disabled: bool) -> Element {
     let mut open = use_signal(|| false);
 
     rsx! {
@@ -74,9 +76,9 @@ pub fn BurgerPage() -> Element {
                     .doc("Click handler. The caller holds the open state and toggles it here."),
                 prop("label", "Callback<bool, String>")
                     .doc("Replaces the localization's labels. Called with the open state during render, so it can read a live locale."),
-                prop("size", "ThemeAwareValue")
+                prop("size", "Responsive<ThemeAwareValue>")
                     .default(theme.burger.size.as_str())
-                    .doc("The glyph's width and height. The button is one `spacing.xs` step larger. Below 24px it still takes presses in a 24x24 box."),
+                    .doc("The glyph's width and height. The button is one `spacing.xs` step larger. Below 24px it still takes presses in a 24x24 box. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                 prop("color", "ThemeAwareValue")
                     .default("currentColor")
                     .doc("The bars. Unset, they follow the button's `color`."),
@@ -122,8 +124,9 @@ pub fn BurgerPage() -> Element {
                     "onclick: move |_| open.toggle()".to_string(),
                 ],
                 controls: vec![
-                    Control::sizes("size").default(theme.burger.size.as_str()),
+                    Control::sizes("size").default(theme.burger.size.as_str()).code(responsive_size_code),
                     // Unset is `currentColor`, so the swatch is painted (`codebase/docs/demo-controls`).
+                    responsive_switch(),
                     Control::color("color").with_unset()
                     .unset_swatch("currentColor"),
                     Control::switch("disabled"),
@@ -131,7 +134,7 @@ pub fn BurgerPage() -> Element {
                 wrap: Wrap(wrap),
                 render: move |values: DemoValues| rsx! {
                     BurgerPreview {
-                        size: values.str("size"),
+                        size: responsive_size(&values),
                         color: values.str("color"),
                         disabled: values.str("disabled") == "true",
                     }

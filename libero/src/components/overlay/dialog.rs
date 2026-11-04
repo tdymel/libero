@@ -7,7 +7,7 @@ use crate::{
         common::{
             Glyph, HtmlTag, Input, Part, SAFE_AREA_INLINE_END_VAR, SAFE_AREA_INLINE_START_VAR,
             States, Variables, attr, base_props, input_from_str, names_itself, parts_enum,
-            safe_area_padding, use_name_warning, variables,
+            responsive_var_sx, safe_area_padding, use_name_warning, variables, with_own,
         },
         layout::{Box, paper_sx, use_box},
         typography::Title,
@@ -16,7 +16,8 @@ use crate::{
     hooks::{current_localization, use_id, use_theme},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CssVar, DIALOG_DEFAULT_SIZE, DIALOG_SIZE, DialogFullScreen, PAPER_RADIUS, Size, SizeCss,
+        CssVar, DIALOG_DEFAULT_SIZE, DIALOG_SIZE, DialogFullScreen, PAPER_RADIUS, Responsive, Size,
+        SizeCss,
     },
     utils::warn,
 };
@@ -91,21 +92,43 @@ static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
 });
 
+/// A responsive `radius` or `size` leaves its var to [`dialog_sx`].
 fn dialog_variables(props: &DialogProps, default_radius: Option<Size>) -> Variables {
+    fn plain(value: &Input<Responsive<ThemeAwareValue>>) -> Option<&ThemeAwareValue> {
+        value
+            .as_ref()
+            .filter(|value| value.is_plain())
+            .map(Responsive::base_ref)
+    }
+    let radius = match props.radius.as_ref() {
+        Some(_) => plain(&props.radius).cloned(),
+        None => default_radius.map(ThemeAwareValue::from),
+    };
     variables()
         .with(
             DIALOG_RADIUS_VAR,
-            props
-                .radius
-                .as_ref()
-                .cloned()
-                .or(default_radius.map(ThemeAwareValue::from))
-                .and_then(|radius| radius.resolve(Some(SizeCss::RADIUS))),
+            radius.and_then(|radius| radius.resolve(Some(SizeCss::RADIUS))),
         )
         .with(
             DIALOG_SIZE.override_var(),
-            props.size.resolve(Some(DIALOG_SIZE)),
+            plain(&props.size).and_then(|size| size.resolve(Some(DIALOG_SIZE))),
         )
+}
+
+/// `radius` and `size` per breakpoint, in the user layer under the caller's `sx`.
+fn dialog_sx(props: &DialogProps) -> Option<Sx> {
+    [
+        props
+            .radius
+            .as_ref()
+            .and_then(|radius| responsive_var_sx(radius, DIALOG_RADIUS_VAR, Some(SizeCss::RADIUS))),
+        props.size.as_ref().and_then(|size| {
+            responsive_var_sx(size, DIALOG_SIZE.override_var(), Some(DIALOG_SIZE))
+        }),
+    ]
+    .into_iter()
+    .flatten()
+    .reduce(Sx::and)
 }
 
 parts_enum! {
@@ -143,13 +166,13 @@ base_props! {
         #[props(default, into)]
         close_label: Option<String>,
         /// A size step on the radius scale, or any CSS, as `radius: "0"`. Unset,
-        /// `theme.dialog.radius`, else `Paper`'s.
+        /// `theme.dialog.radius`, else `Paper`'s. Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Responsive<ThemeAwareValue>>,
         /// Unset, `theme.dialog.size`. A full-screen dialog ignores it, as does
-        /// `full_screen: "phone"` below `sm`.
+        /// `full_screen: "phone"` below `sm`. Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Responsive<ThemeAwareValue>>,
         /// Inside a modal, fills the screen edge to edge instead of centring: `"phone"`
         /// below the `sm` breakpoint, `"always"` at every width. Unset,
         /// `theme.dialog.full_screen`, else centred.
@@ -263,6 +286,7 @@ pub fn Dialog(props: DialogProps) -> Element {
         }
     });
     let defaults = use_theme().dialog;
+    let own_sx = dialog_sx(&props).map(|extra| with_own(Some(extra), &props.sx));
     let variables: Input<Variables> = dialog_variables(&props, defaults.radius)
         .merge(props.variables.unwrap_or_default())
         .into();
@@ -317,7 +341,7 @@ pub fn Dialog(props: DialogProps) -> Element {
     use_box()
         .framework_sx(&DIALOG_BASE_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(own_sx.as_ref().unwrap_or(&props.sx))
         .parts(&props.parts)
         .states(&states)
         .variables(&variables)

@@ -1,6 +1,10 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, responsive_size,
+    responsive_size_code, responsive_switch,
+};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Dialog, DialogPart, Text};
+use libero::theme::{Responsive, Size};
 use libero::{hooks::use_element, platform::ElementApi, use_theme};
 
 const CONTENT: &str = r#"Text { "notes.md has changes you have not saved." }"#;
@@ -39,7 +43,7 @@ fn wrap_open(values: &DemoValues, code: &str) -> String {
 /// The open state needs a scope of its own: `Demo` calls its `render` closure
 /// from its own.
 #[component]
-fn DialogDemo(titled: bool, close_button: bool, size: String, radius: String) -> Element {
+fn DialogDemo(titled: bool, close_button: bool, size: Responsive<Size>, radius: String) -> Element {
     let mut open = use_signal(|| true);
     let mut moved = use_signal(|| false);
     let (dialog, reopen) = (use_element(), use_element());
@@ -101,10 +105,10 @@ pub fn DialogPage() -> Element {
                         .default("all close, an alertdialog's backdrop does not")
                         .doc("Inside a modal: asked before Escape, the backdrop, Back, a bottom drawer's swipe or the close button (`Dismiss::CloseButton`) closes it. Return `false` to keep it open, such as a form with unsaved input. Your own `close()` is not asked."),
                     prop("close_label", "String").default("\"Close\"").doc("The close button's accessible name, such as \"Close cart\". Unset, the localization's `common.close`."),
-                    prop("radius", "ThemeAwareValue").default(radius.as_str()).doc("Corner radius from the radius scale, or any CSS, e.g. `radius: \"0\"`."),
-                    prop("size", "ThemeAwareValue")
+                    prop("radius", "Responsive<ThemeAwareValue>").default(radius.as_str()).doc("Corner radius from the radius scale, or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
+                    prop("size", "Responsive<ThemeAwareValue>")
                         .default(theme.dialog.size.as_str())
-                        .doc("Caps the width from the dialog scale. `md` is 510px. A full-screen dialog ignores it, so with `full_screen: \"phone\"` it does nothing below the `sm` breakpoint."),
+                        .doc("Caps the width from the dialog scale. `md` is 510px. A full-screen dialog ignores it, so with `full_screen: \"phone\"` it does nothing below the `sm` breakpoint. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("full_screen", "DialogFullScreen")
                         .default(theme.dialog.full_screen.as_str())
                         .doc("Inside a modal, fills the screen edge to edge with square corners instead of centring: `\"phone\"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `\"always\"` at every width. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`, so one theme line makes every dialog full screen on a phone. The Modal page's demo shows it."),
@@ -156,7 +160,8 @@ pub fn DialogPage() -> Element {
                 children_text: "",
                 children_code: CONTENT.to_string(),
                 controls: vec![
-                    Control::sizes("size").default(theme.dialog.size.as_str()),
+                    Control::sizes("size").default(theme.dialog.size.as_str()).code(responsive_size_code),
+                    responsive_switch(),
                     Control::sizes("radius").default(radius.as_str()),
                     // Unnamed, a dialog is announced as just "dialog", so off
                     // names it through `aria_label` instead.
@@ -182,7 +187,7 @@ pub fn DialogPage() -> Element {
                     DialogDemo {
                         titled: values.str("title") == "true",
                         close_button: values.str("close_button") == "true",
-                        size: values.str("size"),
+                        size: responsive_size(&values),
                         radius: values.str("radius"),
                     }
                 },

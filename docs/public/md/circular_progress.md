@@ -41,7 +41,7 @@ fn Demo() -> Element {
 | `min` | `f64` | `0.0` | Range start. |
 | `max` | `f64` | `100.0` | Range end. At or below `min` the ring draws empty. |
 | `color` | `ThemeAwareValue` | `primary` | The arc. A theme color name paints its text shade, as `ProgressBar`'s fill. Any other CSS color paints as given. |
-| `size` | `Size` | `md` | The outer edge, 18px at `xs` to 72px at `xxl` at the default text size; it grows with text zoom. |
+| `size` | `Responsive<Size>` | `md` | The outer edge, 18px at `xs` to 72px at `xxl` at the default text size; it grows with text zoom. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `thickness` | `Size` | `md` | The ring's width as a share of the edge, 6% at `xs` to 16% at `xxl`, so it grows with `size`. |
 | `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "3 of 8 files". |
 | `children` | `Element` | - | Drawn in the middle of the ring, such as the percentage or an icon, at a quarter of the edge, never under 12px. Hidden from screen readers: say the same in `aria_valuetext` when it differs from the percentage. |

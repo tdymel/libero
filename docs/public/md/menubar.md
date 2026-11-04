@@ -87,8 +87,8 @@ fn Demo() -> Element {
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends, along the bar and down each menu. |
 | `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. A phone-width menu is a bottom sheet and ignores it. |
 | `align` | `Align` | `Start` | Where each menu lines up along that side. A phone-width menu is a bottom sheet and ignores it. |
-| `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
-| `radius` | `ThemeAwareValue` | `sm` | The triggers' and the menus' corner radius, or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | The triggers' font and padding, and each menu's item size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | The triggers' and the menus' corner radius, or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Xs).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
 | `menu_parts` | `Parts<MenuPart>` | - | Every menu's `parts`, the `Menu` page's Style API table. The menus open in a portal, out of the bar's `sx` and `parts`. |
 | `parts` | `Parts<MenubarPart>` | - | Styles for the inner parts in the Style API tab, under `sx`. The menus take `menu_parts`. |
 
