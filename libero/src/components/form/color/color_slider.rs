@@ -12,7 +12,7 @@ use crate::{
         COARSE_POINTER, Input, Part, Parts, attr, coarse_hit_area_sx, parts_enum, parts_under_sx,
         shadow_sx,
     },
-    hooks::{use_range_css, use_range_css_merged},
+    hooks::use_range_css_merged,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
         COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, Responsive, SLIDER_THUMB,
@@ -89,10 +89,11 @@ pub(super) fn use_color_slider_ranges(sizes: &Responsive<Size>, sx: &Input<Sx>) 
         |size| size.state_name(),
         |size| COLOR_SLIDER_SX.axis_block(size.state_name()),
     );
-    match sx {
-        Input::Value(merged) => use_range_css_merged(CssLayer::Framework, merged, copies),
-        _ => use_range_css(&COLOR_SLIDER_SX, copies),
-    }
+    let merged = match sx {
+        Input::Value(merged) => Some(merged),
+        _ => None,
+    };
+    use_range_css_merged(CssLayer::Framework, &COLOR_SLIDER_SX, merged, copies);
 }
 
 static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {

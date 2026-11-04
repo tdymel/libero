@@ -478,13 +478,22 @@ pub(crate) fn use_range_css_in(
     });
 }
 
-/// [`use_range_css_in`] for a `merged` sheet built this render (a static with the caller's `sx`
-/// folded in): the copies root at its class, and move with it when the caller's `sx` changes.
-pub(crate) fn use_range_css_merged(layer: CssLayer, merged: &Sx, copies: Vec<RangeCopy<'_>>) {
+/// [`use_range_css_in`] for a `base` that may have the caller's `sx` folded in (`merged`, built
+/// this render): the copies root at the merged sheet's class and move with it. One hook either way.
+pub(crate) fn use_range_css_merged(
+    layer: CssLayer,
+    base: &'static StaticSx,
+    merged: Option<&Sx>,
+    copies: Vec<RangeCopy<'_>>,
+) {
     // The low bit tells a content hash from a static's (aligned) address.
-    let root = merged.content_hash() | 1;
-    use_range_css_at(layer, root, copies, || {
-        Stylesheet::from(merged).class_name().map(str::to_string)
+    let root = match merged {
+        Some(merged) => merged.content_hash() | 1,
+        None => std::ptr::from_ref::<Sx>(base) as u64,
+    };
+    use_range_css_at(layer, root, copies, || match merged {
+        Some(merged) => Stylesheet::from(merged).class_name().map(str::to_string),
+        None => with_static(base, |sheet| sheet.class_name().map(str::to_string)),
     });
 }
 
