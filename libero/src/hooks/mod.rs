@@ -220,6 +220,7 @@ pub(crate) use stylesheet::use_state_ranges;
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{
     SxSource, WordSheet, use_box_css, use_css, use_range_css, use_range_css_in,
+    use_range_css_merged,
 };
 pub(crate) use subscription_slot::{SubscriptionSlot, use_subscription_slot};
 #[cfg(feature = "use-swipe")]

@@ -10,6 +10,7 @@ use crate::{CssLayer, css::Stylesheet};
 pub(crate) use ranges::use_state_ranges;
 pub(crate) use registration::{
     SxSource, WordSheet, use_box_css, use_css, use_range_css, use_range_css_in,
+    use_range_css_merged,
 };
 
 /// Registers anything that converts into a [`Stylesheet`] and returns its

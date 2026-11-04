@@ -8,6 +8,7 @@ use crate::{
             HtmlTag, Input, Parts, ResponsiveScale, ScaleOrCss, aria_label_of, input_from_str,
             names_itself, use_name_warning,
         },
+        form::combobox::use_row_ranges,
         form::{
             Asks, ComboboxState, DropdownPart, PreparedField, PreparedFrame, clear_button,
             field_parts_enum, field_props, use_combobox, use_field, use_field_frame,
@@ -151,6 +152,14 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             .map(crate::theme::Responsive::base_ref),
         theme.cascader.radius,
     );
+    let radii = ResponsiveScale::new(
+        props.radius.as_ref(),
+        theme.cascader.radius,
+        SizeCss::RADIUS,
+    )
+    .steps;
+    // With the field, not the open list, so the row copies render with the page.
+    use_row_ranges(&sizes, &radii);
     let disabled = props.disabled.unwrap_or(false);
     // As `SelectCore`: read-only stays focusable and posting, but never opens.
     let readonly = props.readonly.unwrap_or(false);
@@ -231,12 +240,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         searchable,
         inert: disabled || readonly,
         size: sizes,
-        radius: ResponsiveScale::new(
-            props.radius.as_ref(),
-            theme.cascader.radius,
-            SizeCss::RADIUS,
-        )
-        .steps,
+        radius: radii,
         parts: &props.dropdown_parts,
         class: None,
         sx: None,

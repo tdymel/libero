@@ -442,13 +442,8 @@ pub(crate) struct CheckboxLook {
     dash: SvgData,
 }
 
-/// [`CheckboxLook`] at `size` in the theme's radius and colour; `None`, and no
-/// stylesheet, unless `enabled`.
-pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLook> {
-    use_responsive_checkbox_look(&size.into(), enabled)
-}
-
-/// [`use_checkbox_look`] with a `size` per breakpoint: run words and range copies of the control.
+/// [`CheckboxLook`] at `sizes` (one per breakpoint: run words and range copies of the control)
+/// in the theme's radius and colour; `None`, and no stylesheet, unless `enabled`.
 pub(crate) fn use_responsive_checkbox_look(
     sizes: &Responsive<Size>,
     enabled: bool,

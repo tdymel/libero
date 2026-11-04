@@ -94,8 +94,8 @@ pub(super) fn PickerHueSlider(
 fn hue_slider(props: HueSliderProps, max: f64, slot: &'static str) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size.into());
-    use_color_slider_ranges(&size);
     let sx = color_slider_sx(&props.sx, &props.parts);
+    use_color_slider_ranges(&size, &sx);
     // A blank name names nothing: it neither renders nor counts as one.
     let aria_label = props
         .aria_label

@@ -144,7 +144,9 @@ fn any_word(words: &[&'static str]) -> String {
 /// A responsive group's outlined runs: its children carry the run word, not `outlined`, so the
 /// static seam line covers their rim; their own colour wins it back.
 fn outlined_runs_sx(words: &[&'static str]) -> Sx {
-    let rim = sx().border_color("var(--lsx-button-color, var(--lsx-action-icon-color))");
+    // `currentcolor` for a control without either var: an outlined rim is its text colour.
+    let rim =
+        sx().border_color("var(--lsx-button-color, var(--lsx-action-icon-color, currentcolor))");
     let child = any_word(words);
     ["", " > :first-child"]
         .into_iter()
@@ -390,6 +392,18 @@ pub fn ButtonGroup(props: ButtonGroupProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Todo 5711: a control that sets neither colour var still gets its own rim back.
+    #[test]
+    fn an_outlined_run_restores_the_rim_of_any_control() {
+        let css = crate::css::Stylesheet::from(&outlined_runs_sx(&["md-:variant-outlined"]));
+        assert!(
+            css.as_str()
+                .contains("var(--lsx-action-icon-color, currentcolor)"),
+            "{}",
+            css.as_str()
+        );
+    }
 
     /// Todos 5084, 5087: each prop warning once per mount, not on every render.
     #[test]

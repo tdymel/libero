@@ -29,7 +29,7 @@ use crate::{
         use_theme,
     },
     platform::{eye_dropper, is_tab},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         COLOR_PICKER_SPACING, FIELD_LABEL_FONT_SIZE, Responsive, SLIDER_THUMB, SLIDER_TRACK, Size,
         SizeCss, Z_INDEX_POPOVER,
@@ -490,8 +490,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         style: drag,
     } = use_sheet_swipe(floating, close);
     let dropdown_states: Input<States> = States::new().active("bordered").into();
+    let recent_sx: Input<Sx> = recent_label_sx(&sizes).map_or_else(Input::default, Input::Value);
     let dropdown = use_box()
         .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
+        .sx(&recent_sx)
         .parts(&props.dropdown_parts)
         .states(&dropdown_states)
         .style(Some(format!("{}{room}{drag}", popover.vars())))
@@ -738,7 +740,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             span {
                 "data-slot": "recent-label",
                 "aria-hidden": "true",
-                style: "font-size: {FIELD_LABEL_FONT_SIZE.value(size)}",
+                style: sizes.is_plain().then(|| format!("font-size: {}", FIELD_LABEL_FONT_SIZE.value(size))),
                 "{labels.recent}"
             }
             ColorPicker {
@@ -905,6 +907,26 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     field.render(control)
 }
 
+/// The Recent label's font size per breakpoint, on the dropdown; a plain size keeps its inline style.
+fn recent_label_sx(sizes: &Responsive<Size>) -> Option<Sx> {
+    if sizes.is_plain() {
+        return None;
+    }
+    let label = |size| {
+        sx().selector(
+            "& > [data-slot='recent-label']",
+            sx().font_size(FIELD_LABEL_FONT_SIZE.value(size)),
+        )
+    };
+    Some(
+        sizes
+            .breakpoints()
+            .fold(label(sizes.base()), |base, (at, size)| {
+                base.breakpoint(at, label(size))
+            }),
+    )
+}
+
 /// Recents alone open nothing until one is kept: an empty dialog is no popup (4361).
 fn opens_dropdown(has_palette: bool, recent_cap: usize, recents: usize) -> bool {
     has_palette || recent_cap > 0 && recents > 0
@@ -1001,6 +1023,24 @@ mod tests {
             rsx! { crate::LiberoProvider { ColorField { label: "Accent", disabled: true } } }
         });
         assert!(disabled.is_empty(), "{disabled:?}");
+    }
+
+    /// Todo 5728: the Recent label follows a responsive size; a plain one adds no rule.
+    #[test]
+    fn the_recent_label_follows_a_responsive_size() {
+        use crate::tokens::responsive;
+
+        assert!(recent_label_sx(&Responsive::new(Size::Md)).is_none());
+        let sx = recent_label_sx(&responsive(Size::Sm).md(Size::Xl)).unwrap();
+        let css = Stylesheet::from(&sx);
+        let css = css.as_str();
+        let small = FIELD_LABEL_FONT_SIZE.value(Size::Sm);
+        let large = FIELD_LABEL_FONT_SIZE.value(Size::Xl);
+        assert!(css.contains(&format!("font-size:{small};")), "{css}");
+        assert!(
+            css.contains("@media") && css.contains(&format!("font-size:{large};")),
+            "{css}"
+        );
     }
 
     #[test]

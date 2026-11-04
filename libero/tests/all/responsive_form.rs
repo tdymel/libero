@@ -400,13 +400,18 @@ fn the_pending_loader_follows_a_responsive_field() {
 /// row sheet's copy for a responsive size and a plain field registers nothing.
 #[test]
 fn dropdown_rows_follow_a_responsive_field() {
-    use libero::components::{Autocomplete, MultiSelect, OptionList, PhoneField, Select};
+    use libero::components::{
+        Autocomplete, Cascader, CascaderOption, MultiSelect, OptionList, PhoneField, Select,
+    };
 
     #[derive(Clone, PartialEq, Options)]
     enum Fruit {
         Apple,
     }
 
+    fn cascader(size: libero::theme::Responsive<Size>) -> Element {
+        rsx! { LiberoProvider { Cascader { label: "Place", data: vec![CascaderOption::new("a".to_string(), "A")], value: None, size, onchange: move |_: Option<String>| {} } } }
+    }
     fn cities() -> OptionList<String> {
         OptionList::from(vec!["Berlin".to_string()])
     }
@@ -423,7 +428,8 @@ fn dropdown_rows_follow_a_responsive_field() {
         rsx! { LiberoProvider { PhoneField { label: "Mobile", country: "US", value: "", size, oninput: move |_: String| {} } } }
     }
     type Page = fn(libero::theme::Responsive<Size>) -> Element;
-    let pages: [(&str, Page); 4] = [
+    let pages: [(&str, Page); 5] = [
+        ("Cascader", cascader),
         ("Select", select),
         ("MultiSelect", multi),
         ("Autocomplete", auto),
@@ -478,8 +484,7 @@ fn dropdown_radius_follows_a_responsive_field() {
         ("MultiSelect", multi, true),
         ("Autocomplete", auto, true),
         ("PhoneField", phone, true),
-        // Its rows register their copies when they open, as for `size`.
-        ("Cascader", cascader, false),
+        ("Cascader", cascader, true),
     ];
     for (name, page, rows) in pages {
         let html = render_with(
@@ -536,6 +541,30 @@ fn pickers_follow_a_responsive_size() {
         !render(color_plain).contains("md-:size"),
         "a plain picker adds a run"
     );
+}
+
+/// Todo 5727: a colour slider with its own `sx` rides a merged sheet, which gets the copies too.
+#[test]
+fn a_colour_slider_with_its_own_sx_follows_a_responsive_size() {
+    use libero::{
+        components::{AlphaSlider, ColorCode, HueSlider},
+        sx::sx,
+    };
+
+    fn hue_plain() -> Element {
+        rsx! { LiberoProvider { HueSlider { value: 10.0, size: Size::Lg, sx: sx().margin("0") } } }
+    }
+    fn hue_responsive() -> Element {
+        rsx! { LiberoProvider { HueSlider { value: 10.0, size: responsive(Size::Sm).md(Size::Lg), sx: sx().margin("0") } } }
+    }
+    fn alpha_plain() -> Element {
+        rsx! { LiberoProvider { AlphaSlider { value: 0.5, color: ColorCode::default(), size: Size::Lg, sx: sx().margin("0") } } }
+    }
+    fn alpha_responsive() -> Element {
+        rsx! { LiberoProvider { AlphaSlider { value: 0.5, color: ColorCode::default(), size: responsive(Size::Sm).md(Size::Lg), sx: sx().margin("0") } } }
+    }
+    assert_follows(hue_plain, hue_responsive, "HueSlider with sx");
+    assert_follows(alpha_plain, alpha_responsive, "AlphaSlider with sx");
 }
 
 /// Todo 5666: a rule on two responsive axes' words (`card && size-xl`) gets a copy under both run

@@ -7,10 +7,12 @@ use dioxus::prelude::Attribute;
 
 use super::saturation::THUMB_RING;
 use crate::{
+    CssLayer,
     components::common::{
-        COARSE_POINTER, Input, Part, Parts, States, attr, coarse_hit_area_sx, parts_enum,
-        parts_under_sx, shadow_sx,
+        COARSE_POINTER, Input, Part, Parts, attr, coarse_hit_area_sx, parts_enum, parts_under_sx,
+        shadow_sx,
     },
+    hooks::{use_range_css, use_range_css_merged},
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
         COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, Responsive, SLIDER_THUMB,
@@ -81,9 +83,16 @@ pub(super) fn color_slider_sx(
 }
 
 /// Registers [`COLOR_SLIDER_SX`]'s copies for a size per breakpoint; a plain size adds none.
-pub(super) fn use_color_slider_ranges(sizes: &Responsive<Size>) {
-    let states = States::default().responsive(sizes, |size| size.state_name());
-    crate::hooks::use_state_ranges(&COLOR_SLIDER_SX, Some(&states.into()));
+/// With the caller's `sx` merged in (`sx` is a `Value`), they root at the merged sheet's class.
+pub(super) fn use_color_slider_ranges(sizes: &Responsive<Size>, sx: &Input<Sx>) {
+    let copies = sizes.range_copies(
+        |size| size.state_name(),
+        |size| COLOR_SLIDER_SX.axis_block(size.state_name()),
+    );
+    match sx {
+        Input::Value(merged) => use_range_css_merged(CssLayer::Framework, merged, copies),
+        _ => use_range_css(&COLOR_SLIDER_SX, copies),
+    }
 }
 
 static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {

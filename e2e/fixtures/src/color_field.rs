@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use libero::components::{
     Button, ColorCode, ColorField, ColorFieldVariant, Flex, SliderChangeEvent, Text,
 };
+use libero::theme::{Size, responsive};
 
 use crate::Routes;
 
@@ -13,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/color-field/keep-text", || rsx! { KeepTextFieldPage {} }),
     ("/color-field/recent", || rsx! { RecentFieldPage {} }),
     ("/color-field/recents-only", || rsx! { RecentsOnlyFieldPage {} }),
+    ("/color-field/recents-responsive", || rsx! { RecentsResponsivePage {} }),
     ("/color-field/cleared", || rsx! { ClearedFieldPage {} }),
     ("/color-field/swatch", || rsx! { SwatchVariantPage {} }),
 ];
@@ -123,6 +125,28 @@ fn RecentsOnlyFieldPage() -> Element {
                 with_picker: false,
                 with_eye_dropper: false,
                 recent_colors: 2usize,
+                value: color(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
+
+/// Recents under a size that is small under 62rem and large from it (todo 5728).
+#[component]
+fn RecentsResponsivePage() -> Element {
+    let mut color = use_signal(|| "#1c7ed6".parse::<ColorCode>().unwrap());
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            ColorField {
+                label: "Accent",
+                with_picker: false,
+                with_eye_dropper: false,
+                recent_colors: 2usize,
+                size: responsive(Size::Sm).md(Size::Xl),
                 value: color(),
                 oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
             }

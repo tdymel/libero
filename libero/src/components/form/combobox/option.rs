@@ -271,7 +271,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
 
 /// Registers the row sheet's range copies for a responsive row size and radius. A hook; plain
 /// values register nothing.
-pub(super) fn use_row_ranges(sizes: &Responsive<Size>, radii: &Responsive<Size>) {
+pub(crate) fn use_row_ranges(sizes: &Responsive<Size>, radii: &Responsive<Size>) {
     let states: Input<States> = States::default()
         .responsive(sizes, |size| size.state_name())
         .responsive(radii, |size| size.radius_state_name())

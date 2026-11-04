@@ -908,6 +908,15 @@ fn space_picks_highlight(space_picks: bool, opened: bool, highlighted: bool, typ
 mod tests {
     use super::*;
 
+    /// Todo 5714: a plain custom radius reaches the list whole, not as its fallback step.
+    #[test]
+    fn a_plain_custom_radius_reaches_the_list() {
+        let radius = ScaleOrCss::new(Some(&"0".into()), Size::Md);
+        let plain = Responsive::new(ThemeAwareValue::from("0"));
+        assert_eq!(list_radius(Some(&plain), &radius), plain);
+        assert_eq!(list_radius(None, &radius), plain);
+    }
+
     #[test]
     fn space_mid_query_does_not_pick_the_highlight() {
         assert!(space_picks_highlight(true, true, true, false));

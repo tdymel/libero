@@ -14,7 +14,7 @@ use crate::{
             Variables, attr, coarse_hit_area_sx, inset_focus_ring_sx, inset_ring_sides_sx,
             names_itself, use_name_warning, variables,
         },
-        form::use_checkbox_look,
+        form::use_responsive_checkbox_look,
         layout::{scroll_area_base, use_box},
         overlay::MenuPart,
     },
@@ -1541,7 +1541,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(mut props: TableProps<T>) -> Elemen
         .states(&size_states)
         .prepare();
     let root_box = use_box().framework_sx(&TABLE_ROOT_SX).prepare();
-    let look = use_checkbox_look(size, props.selectable);
+    let look = use_responsive_checkbox_look(&sizes, props.selectable);
     let caches = visible_rows::use_row_caches::<T>();
     let mut row_context = use_hook(|| CopyValue::new((0u64, None::<Rc<RowContext<T>>>)));
     let mut pin_edges = use_signal(|| [None::<f64>; 2]);

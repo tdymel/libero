@@ -2,7 +2,7 @@
 //! registry entry across renders and gives it back when its scope goes.
 
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     collections::{HashMap, hash_map::DefaultHasher},
     hash::{Hash, Hasher},
     rc::Rc,
@@ -441,6 +441,8 @@ fn cross_word(word: &'static str, other: &'static str) -> &'static str {
 struct RangeRegistrations {
     context: RefCell<LiberoContext>,
     held: RefCell<Vec<(&'static str, Option<StylesheetKey>)>>,
+    /// The root the held copies style: a changed root re-registers them even for the same words.
+    root: Cell<u64>,
 }
 
 impl Drop for RangeRegistrations {
@@ -470,22 +472,47 @@ pub(crate) fn use_range_css_in(
     base: &'static StaticSx,
     copies: Vec<RangeCopy<'_>>,
 ) {
+    let root = std::ptr::from_ref::<Sx>(base) as u64;
+    use_range_css_at(layer, root, copies, || {
+        with_static(base, |sheet| sheet.class_name().map(str::to_string))
+    });
+}
+
+/// [`use_range_css_in`] for a `merged` sheet built this render (a static with the caller's `sx`
+/// folded in): the copies root at its class, and move with it when the caller's `sx` changes.
+pub(crate) fn use_range_css_merged(layer: CssLayer, merged: &Sx, copies: Vec<RangeCopy<'_>>) {
+    // The low bit tells a content hash from a static's (aligned) address.
+    let root = merged.content_hash() | 1;
+    use_range_css_at(layer, root, copies, || {
+        Stylesheet::from(merged).class_name().map(str::to_string)
+    });
+}
+
+fn use_range_css_at(
+    layer: CssLayer,
+    root: u64,
+    copies: Vec<RangeCopy<'_>>,
+    class_name: impl FnOnce() -> Option<String>,
+) {
     let state = use_hook(|| {
         Rc::new(RangeRegistrations {
             context: RefCell::new(consume_context::<LiberoContext>()),
             held: RefCell::new(Vec::new()),
+            root: Cell::new(root),
         })
     });
     let held = &mut *state.held.borrow_mut();
-    if held
-        .iter()
-        .map(|(word, _)| *word)
-        .eq(copies.iter().map(|copy| copy.word))
+    if state.root.get() == root
+        && held
+            .iter()
+            .map(|(word, _)| *word)
+            .eq(copies.iter().map(|copy| copy.word))
     {
         return;
     }
+    state.root.set(root);
     let context = &mut *state.context.borrow_mut();
-    let Some(class_name) = with_static(base, |sheet| sheet.class_name().map(str::to_string)) else {
+    let Some(class_name) = class_name() else {
         return;
     };
     // Acquire before release, so a copy kept across the change never leaves.

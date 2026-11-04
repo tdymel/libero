@@ -12,8 +12,9 @@ use crate::{
         },
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, DropdownPart, FormScope, TouchHold,
-            field_control_sx, field_parts_enum, field_props, phone_sheet::narrow_query, use_bound,
-            use_field, use_field_frame, use_prefill, use_touch_hold, with_drawn_placeholder,
+            field_control_sx, field_parts_enum, field_props, list_radius,
+            phone_sheet::narrow_query, use_bound, use_field, use_field_frame, use_prefill,
+            use_touch_hold, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -509,11 +510,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             held,
             home_row,
             size: sizes,
-            // The list takes the step only, as before; a responsive radius whole.
-            radius: match props.radius.as_ref().filter(|radius| !radius.is_plain()) {
-                Some(radius) => radius.clone(),
-                None => Responsive::new(radius.size.into()),
-            },
+            radius: list_radius(props.radius.as_ref(), &radius),
             disabled: disabled || readonly,
             dial: country.dial,
             dial_id: dial_id.clone(),

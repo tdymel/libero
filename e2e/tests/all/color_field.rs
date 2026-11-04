@@ -2,6 +2,7 @@
 //! `fix_on_blur: false` and no dropdown.
 
 use anyhow::{Result, bail};
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
@@ -385,6 +386,50 @@ fn recents_alone_open_a_dropdown_once_one_is_kept() {
         )
         .await;
         fixture.console.assert_clean("recents alone").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 5728: the Recent label follows a responsive field size.
+#[test]
+fn the_recent_label_follows_a_responsive_size() {
+    const LABEL: &str = "parseFloat(getComputedStyle(document.querySelector(\"[role=dialog] [data-slot=recent-label]\")).fontSize)";
+    block_on(async {
+        let fixture = Fixture::open("/color-field/recents-responsive", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        page.evaluate_bounded(format!("document.querySelector({INPUT:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::type_text(page, "#fa5252").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect(
+            page,
+            "!!document.querySelector(\"[role=dialog] [data-slot=recent-label]\")",
+            "the recent label",
+        )
+        .await;
+        let wide: f64 = page
+            .evaluate_bounded(LABEL)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(600, 800, 1.0, false))
+            .await
+            .unwrap();
+        expect(
+            page,
+            &format!("{LABEL} < {wide}"),
+            "the label to shrink under the breakpoint",
+        )
+        .await;
+        fixture.console.assert_clean("recent label").unwrap();
         fixture.close().await.unwrap();
     });
 }

@@ -195,6 +195,45 @@ fn a_responsive_table_size_rides_run_words_and_copies_of_the_table_sheet() {
     );
 }
 
+/// Todo 5709: the selection boxes follow a responsive table size in CSS, from the server.
+#[test]
+fn a_selectable_table_boxes_follow_a_responsive_size() {
+    macro_rules! page {
+        ($selectable:expr, $size:expr) => {
+            render(|| {
+                rsx! {
+                    LiberoProvider {
+                        Table {
+                            id: "table",
+                            caption: "People",
+                            data: rows(),
+                            columns: vec![column("Name").value(|row: &Row| row.name.to_string())],
+                            selectable: $selectable,
+                            size: $size,
+                        }
+                    }
+                }
+            })
+        };
+    }
+    let carrying = |html: &str| {
+        tags_with(&body(html), r#"data-state=""#)
+            .iter()
+            .filter(|tag| tag["data-state"].contains("base-md:size-xs"))
+            .count()
+    };
+    let plain = page!(false, responsive(Size::Xs).md(Size::Lg));
+    let selectable = page!(true, responsive(Size::Xs).md(Size::Lg));
+    assert!(
+        carrying(&selectable) > carrying(&plain),
+        "no box carries the run word"
+    );
+    assert!(
+        !has_run_word(&page!(true, Size::Lg)),
+        "run words on a plain table"
+    );
+}
+
 #[test]
 fn a_responsive_button_group_hands_its_run_words_to_the_buttons_and_copies_their_seams() {
     fn app() -> Element {
