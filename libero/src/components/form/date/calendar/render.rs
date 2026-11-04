@@ -13,7 +13,7 @@ use crate::{
     hooks::{use_formats, use_localization},
     localization::{DateLocale, Formats},
     sx::ThemeAwareValue,
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 use super::super::{date_value::DayGrid, flows::short_day};
@@ -122,7 +122,7 @@ impl View {
             ActionIcon {
                 aria_label: label,
                 variant: Input::Value(Variant::Standard),
-                size: ThemeAwareValue::Size(nav_size(self.size)),
+                size: nav_sizes(self.size),
                 tabindex: if self.focusable { "0" } else { "-1" },
                 disabled: blocked || self.disabled,
                 focusable_when_disabled: true,
@@ -598,7 +598,7 @@ pub(super) struct NavProps {
     disabled: bool,
     targets: CopyValue<[NaiveDate; 2]>,
     forward: bool,
-    size: Size,
+    size: Responsive<Size>,
     focusable: bool,
     paged: Signal<Option<NaiveDate>>,
 }
@@ -612,7 +612,7 @@ pub(super) fn Nav(props: NavProps) -> Element {
             aria_label: props.label,
             sx: &NAV_SX,
             variant: Input::Value(Variant::Standard),
-            size: ThemeAwareValue::Size(nav_size(props.size)),
+            size: nav_sizes(props.size),
             tabindex: if props.focusable { "0" } else { "-1" },
             disabled: props.disabled,
             // Paging to `min` or `max` disables the focused button: focus stays on it.
@@ -640,6 +640,10 @@ pub(super) fn strip_day_name(
 }
 
 /// The nav button size for a picker size: `ActionIcon`'s scale climbs faster, so two share one.
+fn nav_sizes(sizes: Responsive<Size>) -> Responsive<ThemeAwareValue> {
+    sizes.map(|size| ThemeAwareValue::Size(nav_size(size)))
+}
+
 const fn nav_size(size: Size) -> Size {
     match size {
         Size::Xs | Size::Sm => Size::Xs,

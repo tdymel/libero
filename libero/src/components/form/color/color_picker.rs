@@ -15,7 +15,7 @@ use crate::{
             COARSE_POINTER, Glyph, HtmlTag, Input, Part, States, Variables, base_props,
             disabled_look_sx, has_shortcut_modifier, input_from_str, parts_enum, variables,
         },
-        form::{Disabled, SliderChangeEvent},
+        form::{Disabled, SliderChangeEvent, use_state_ranges},
         layout::use_box,
     },
     context::IconSlot,
@@ -24,7 +24,7 @@ use crate::{
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         COLOR_PICKER_PREVIEW, COLOR_PICKER_SPACING, COLOR_PICKER_SWATCH, COLOR_PICKER_THUMB,
-        COLOR_PICKER_WIDTH, ColorPickerDefaults, CssVar, Size,
+        COLOR_PICKER_WIDTH, ColorPickerDefaults, CssVar, Responsive, Size,
     },
     utils::warn,
 };
@@ -186,8 +186,9 @@ base_props! {
         /// Takes the container's width instead of the size step's.
         #[props(default)]
         full_width: Option<bool>,
+        /// One step, or one per breakpoint.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// Emits a hidden input of that name, so the color posts with a form.
         #[props(default, into)]
         name: Option<String>,
@@ -237,7 +238,8 @@ base_props! {
 #[component]
 pub fn ColorPicker(props: ColorPickerProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.color_picker.size);
+    let sizes = props.size.copied_or(theme.color_picker.size.into());
+    let size = sizes.base();
     let with_alpha = props.with_alpha.unwrap_or(false);
     let with_picker = props.with_picker.unwrap_or(true);
     let radius = props
@@ -295,11 +297,12 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&sizes, |size| size.state_name())
         .with("full-width", props.full_width.unwrap_or(false))
         .with("disabled", disabled)
         .with("readonly", readonly && !disabled)
         .into();
+    use_state_ranges(&COLOR_PICKER_SX, Some(&states));
     let root_variables: Input<Variables> = variables()
         .with(
             COLOR_PICKER_SWATCHES_WIDTH,
@@ -368,7 +371,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
             rsx! {
                 PickerAlphaSlider {
                     value: value.alpha(),
-                    size,
+                    size: sizes,
                     aria_label: part_name(props.alpha_label.as_deref(),labels.alpha),
                     focusable,
                     oninput: oninput.is_some().then_some(alpha_input),
@@ -394,7 +397,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                 div { "data-slot": ColorPickerPart::Sliders.slot(),
                     PickerHueSlider {
                         value: value.hue(),
-                        size,
+                        size: sizes,
                         aria_label: part_name(props.hue_label.as_deref(),labels.hue),
                         focusable,
                         // None makes the thumb read-only, as the panel's (todo 4245).

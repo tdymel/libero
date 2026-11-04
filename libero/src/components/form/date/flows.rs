@@ -23,7 +23,7 @@ use crate::{
     localization::DateLocale,
     platform::ElementApi,
     sx::Sx,
-    theme::{Size, TabsPlacement, TimePickerVariant},
+    theme::{Responsive, Size, TabsPlacement, TimePickerVariant},
 };
 
 /// The tabs and the picker under them share this column; `max-width` keeps it inside a centred sheet (5426).
@@ -157,7 +157,7 @@ fn step_tabs(
     tabs: Vec<TabSpec>,
     selected: usize,
     onselect: Callback<usize>,
-    size: Size,
+    size: Responsive<Size>,
     focusable: bool,
     panel: Element,
 ) -> Element {
@@ -177,11 +177,10 @@ fn step_tabs(
             // The picker's first control takes focus.
             panel_stop: false,
             // Slim: never taller than the small strip.
-            size: match size {
+            size: size.map(|size| match size {
                 Size::Xs => Size::Xs,
                 _ => Size::Sm,
-            }
-            .into(),
+            }),
             class: Input::default(),
             sx: Input::default(),
             states: Input::default(),
@@ -253,7 +252,7 @@ pub(super) struct DateTimeFlowProps {
     max: Option<NaiveDateTime>,
     exclude_date: Option<Callback<NaiveDate, bool>>,
     today: Option<NaiveDate>,
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     variant: TimePickerVariant,
     with_seconds: bool,
     step: Option<u8>,
@@ -299,7 +298,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
     let (today, refresh_today) = use_today_with_refresh(props.today);
     // A time picked with no day and no clock waits here for the day pick.
     let mut pending = use_signal(|| None::<NaiveTime>);
-    let size = props.size.copied_or(use_theme().chrono_picker.size);
+    let size = props.size.copied_or(use_theme().chrono_picker.size.into());
     let date = value.map(|value| value.date());
     let time = value.map(|value| value.time()).or(pending());
     let (min_time, max_time) = time_limits(date.or(today), props.min, props.max);
@@ -408,7 +407,7 @@ pub(super) struct DateTimeRangeFlowProps {
     max: Option<NaiveDateTime>,
     exclude_date: Option<Callback<NaiveDate, bool>>,
     today: Option<NaiveDate>,
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     variant: TimePickerVariant,
     with_seconds: bool,
     step: Option<u8>,
@@ -443,7 +442,7 @@ pub(super) struct DateTimeRangeFlowProps {
 pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let theme = use_theme();
     let names = &use_localization().date;
-    let size = props.size.copied_or(theme.chrono_picker.size);
+    let size = props.size.copied_or(theme.chrono_picker.size.into());
     let mut step = use_signal(|| Step::Dates);
     let (root, mut handoff) = use_handoff();
     let tabs_id = use_id();

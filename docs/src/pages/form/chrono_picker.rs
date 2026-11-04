@@ -8,6 +8,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use libero::components::{ChronoPicker, Code, DateLevel, DateRange, Flex, Text};
+use libero::theme::{Size, responsive};
 
 const KINDS: [&str; 7] = [
     "date",
@@ -65,7 +66,7 @@ pub fn ChronoPickerPage() -> Element {
                     prop("hide_outside_days", "bool").default("false").doc("Blanks instead of the neighbouring months' days."),
                     prop("twelve_hour", "bool").default("formats").doc("A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one."),
                     prop("today", "NaiveDate").doc("The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked."),
-                    prop("size", "Size").default(theme.chrono_picker.size.as_str()).doc("Cell, option and font size."),
+                    prop("size", "Responsive<Size>").default(theme.chrono_picker.size.as_str()).doc("Cell, option and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("name", "String").doc("Posts the value as ISO 8601 in a hidden input of that name."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus."),
                     prop("disabled", "bool").default("false").doc("Shows the value but takes no pick: every cell is `aria-disabled` and out of the tab order, presses and keys do nothing, and a focused cell keeps its focus. The hidden `name` input posts nothing. A disabled `Fieldset` sets it too."),
@@ -165,7 +166,14 @@ pub fn ChronoPickerPage() -> Element {
                         code.extend(level.map(|level| format!("level: DateLevel::{level}")));
                         code
                     }),
-                    Control::sizes("size").default(theme.chrono_picker.size.as_str()),
+                    Control::sizes("size").default(theme.chrono_picker.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!("size: responsive(Size::Sm).md(Size::{:?})", Size::from(size.as_str()))],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle("variant", ["analog", "digital"]).labels(["Analog", "Digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
                         match values.str("variant").as_str() {
                             "digital" => vec![r#"variant: "digital""#.to_string()],
@@ -199,6 +207,11 @@ pub fn ChronoPickerPage() -> Element {
 }
 
 /// One signal per value type, so switching types keeps what was picked.
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 fn ChronoPickerDemo(values: DemoValues) -> Element {
     let mut date = use_signal(|| day(14));
@@ -210,7 +223,13 @@ fn ChronoPickerDemo(values: DemoValues) -> Element {
     let mut date_time_range =
         use_signal(|| moment(14, 9).map(|start| DateRange::new(start, moment(16, 17))));
 
-    let size = values.str("size");
+    let size = match (
+        responsive_on(&values),
+        Size::from(values.str("size").as_str()),
+    ) {
+        (true, size) => responsive(Size::Sm).md(size),
+        (false, size) => size.into(),
+    };
     let variant = values.str("variant");
     let disabled = is_on(&values, "disabled");
     let allow_deselect = is_on(&values, "allow_deselect");

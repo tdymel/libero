@@ -7,12 +7,18 @@ use dioxus::prelude::Attribute;
 
 use super::saturation::THUMB_RING;
 use crate::{
-    components::common::{
-        COARSE_POINTER, Input, Part, Parts, attr, coarse_hit_area_sx, parts_enum, parts_under_sx,
-        shadow_sx,
+    components::{
+        common::{
+            COARSE_POINTER, Input, Part, Parts, States, attr, coarse_hit_area_sx, parts_enum,
+            parts_under_sx, shadow_sx,
+        },
+        form::use_state_ranges,
     },
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
-    theme::{COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK},
+    theme::{
+        COLOR_PICKER_THUMB, ColorPickerDefaults, OWN_SHADOW, Responsive, SLIDER_THUMB,
+        SLIDER_TRACK, Size,
+    },
 };
 
 /// Red round the wheel and back to red, at even sixths.
@@ -75,6 +81,12 @@ pub(super) fn color_slider_sx(
         // address instead of walking the style.
         None => Input::Static(&COLOR_SLIDER_SX),
     }
+}
+
+/// Registers [`COLOR_SLIDER_SX`]'s copies for a size per breakpoint; a plain size adds none.
+pub(super) fn use_color_slider_ranges(sizes: &Responsive<Size>) {
+    let states = States::default().responsive(sizes, |size| size.state_name());
+    use_state_ranges(&COLOR_SLIDER_SX, Some(&states.into()));
 }
 
 static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {

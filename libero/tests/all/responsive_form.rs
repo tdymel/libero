@@ -505,3 +505,35 @@ fn dropdown_radius_follows_a_responsive_field() {
         );
     }
 }
+
+/// Todo 5705: the pickers' content follows a size per breakpoint, as the fields' dropdowns do.
+#[test]
+fn pickers_follow_a_responsive_size() {
+    use libero::components::{ColorCode, ColorPicker, DatePicker, TimePicker};
+
+    fn color_plain() -> Element {
+        rsx! { LiberoProvider { ColorPicker { value: ColorCode::default(), size: Size::Lg, oninput: move |_| {} } } }
+    }
+    fn color_responsive() -> Element {
+        rsx! { LiberoProvider { ColorPicker { value: ColorCode::default(), size: responsive(Size::Sm).md(Size::Lg), oninput: move |_| {} } } }
+    }
+    fn date_plain() -> Element {
+        rsx! { LiberoProvider { DatePicker { size: Size::Lg } } }
+    }
+    fn date_responsive() -> Element {
+        rsx! { LiberoProvider { DatePicker { size: responsive(Size::Sm).md(Size::Lg) } } }
+    }
+    fn time_plain() -> Element {
+        rsx! { LiberoProvider { TimePicker { size: Size::Lg, twelve_hour: false } } }
+    }
+    fn time_responsive() -> Element {
+        rsx! { LiberoProvider { TimePicker { size: responsive(Size::Sm).md(Size::Lg), twelve_hour: false } } }
+    }
+    assert_follows(color_plain, color_responsive, "ColorPicker");
+    assert_follows(date_plain, date_responsive, "DatePicker");
+    assert_follows(time_plain, time_responsive, "TimePicker");
+    assert!(
+        !render(color_plain).contains("md-:size"),
+        "a plain picker adds a run"
+    );
+}

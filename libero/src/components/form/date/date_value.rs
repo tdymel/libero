@@ -19,7 +19,7 @@ use crate::{
     },
     hooks::{use_media_query, use_theme},
     sx::Sx,
-    theme::{CalendarVariant, Size, TimePickerVariant},
+    theme::{CalendarVariant, Responsive, Size, TimePickerVariant},
     utils::warn,
 };
 
@@ -152,7 +152,7 @@ pub struct PickerArgs<V: DateValue> {
     pub options: PickerOptions<V::Bound>,
     pub presets: Vec<DatePreset<V>>,
     pub today: Option<NaiveDate>,
-    pub size: Input<Size>,
+    pub size: Input<Responsive<Size>>,
     pub focusable: bool,
     /// Soft: `aria-disabled` cells, presses and keys swallowed, nothing posted.
     pub disabled: bool,
@@ -312,7 +312,7 @@ impl Sealed for NaiveDate {
         let (presets, onpreset) =
             use_calendar_presets(&args.presets, |day| Selection::Single(Some(day)), onchange);
         let level = options.level;
-        let size = args.size.copied_or(use_theme().chrono_picker.size);
+        let size = args.size.copied_or(use_theme().chrono_picker.size.into());
         // A month is held as its first day, a year as its January 1.
         let value = match level {
             DateLevel::Day => args.value,
@@ -517,7 +517,7 @@ impl Sealed for DateRange<NaiveDate> {
             |range| Selection::Range(Some(range)),
             onchange,
         );
-        let size = args.size.copied_or(use_theme().chrono_picker.size);
+        let size = args.size.copied_or(use_theme().chrono_picker.size.into());
         // One identity across renders, as for a single day.
         let onpick = use_callback(move |day: NaiveDate| {
             if let Some(onchange) = &onchange {

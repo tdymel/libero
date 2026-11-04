@@ -7,7 +7,7 @@ use crate::{
     hooks::ElementHandle,
     localization::{DateLocale, Formats},
     platform::{ElementApi, logical_key},
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 use super::{
@@ -62,7 +62,7 @@ pub(super) struct View {
     pub(super) min: Option<NaiveDate>,
     pub(super) max: Option<NaiveDate>,
     pub(super) exclude_date: Option<Callback<NaiveDate, bool>>,
-    pub(super) size: Size,
+    pub(super) size: Responsive<Size>,
     pub(super) focusable: bool,
     /// Every press and key is swallowed; the cells say `aria-disabled`.
     pub(super) disabled: bool,

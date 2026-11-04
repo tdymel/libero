@@ -3,7 +3,9 @@ use dioxus::prelude::*;
 use super::{
     ColorCode,
     color_picker::{ColorPickerPart, MAX_HUE},
-    color_slider::{ColorSliderPart, HUE_GRADIENT, color_slider_sx, ltr_scale},
+    color_slider::{
+        ColorSliderPart, HUE_GRADIENT, color_slider_sx, ltr_scale, use_color_slider_ranges,
+    },
 };
 use crate::{
     components::{
@@ -14,7 +16,7 @@ use crate::{
     },
     hooks::{use_localization, use_theme},
     localization::fill,
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 base_props! {
@@ -26,8 +28,9 @@ base_props! {
         /// `Start`/`End` bracket a drag, `Change` carries every new hue.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent>>,
+        /// One step, or one per breakpoint.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         #[props(default)]
         disabled: Option<bool>,
         /// Names the thumb, which is the `role="slider"` element.
@@ -65,7 +68,7 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
 #[component]
 pub(super) fn PickerHueSlider(
     value: f64,
-    size: Size,
+    size: Responsive<Size>,
     aria_label: Option<String>,
     focusable: bool,
     oninput: Option<EventHandler<SliderChangeEvent>>,
@@ -90,7 +93,8 @@ pub(super) fn PickerHueSlider(
 
 fn hue_slider(props: HueSliderProps, max: f64, slot: &'static str) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.color_picker.size);
+    let size = props.size.copied_or(theme.color_picker.size.into());
+    use_color_slider_ranges(&size);
     let sx = color_slider_sx(&props.sx, &props.parts);
     // A blank name names nothing: it neither renders nor counts as one.
     let aria_label = props
@@ -129,7 +133,7 @@ fn hue_slider(props: HueSliderProps, max: f64, slot: &'static str) -> Element {
             states: props.states,
             hidden_from: props.hidden_from,
             visible_from: props.visible_from,
-            size: Input::Value(size.into()),
+            size: Input::Value(size),
             color: Input::None,
             disabled: Some(disabled),
             readonly,

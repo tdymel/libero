@@ -22,7 +22,7 @@ use crate::{
     hooks::{use_element, use_formats, use_localization, use_theme},
     platform::ElementApi,
     sx::Sx,
-    theme::{Size, TimePickerVariant},
+    theme::{Responsive, Size, TimePickerVariant},
 };
 
 pub(super) use self::styles::TIME_PICKER_SX;
@@ -130,7 +130,7 @@ pub(super) struct ClockProps {
     twelve_hour: bool,
     min: Option<NaiveTime>,
     max: Option<NaiveTime>,
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     focusable: bool,
     /// Soft: `aria-disabled` controls, presses and keys swallowed, nothing posted.
     #[props(default)]
@@ -154,7 +154,7 @@ pub(super) struct ClockProps {
 #[component]
 pub(super) fn Clock(props: ClockProps) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.time_picker.size);
+    let size = props.size.copied_or(theme.time_picker.size.into());
     let value = props.value;
     let base = value.or(props.min).unwrap_or(MIDNIGHT);
     // No native `disabled`, nor `inert`: either would drop a focused column's focus (todo 3881).
@@ -219,8 +219,9 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&size, |size| size.state_name())
         .into();
+    crate::components::form::use_state_ranges(&TIME_PICKER_SX, Some(&states));
     let root_box = use_box()
         .framework_sx(&TIME_PICKER_SX)
         .class(&props.class)

@@ -104,7 +104,7 @@ and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Responsive<Size>` | `md` | Control height, font size and the dropdown's picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open picker keeps the base size. |
+| `size` | `Responsive<Size>` | `md` | Control height, font size and the dropdown's picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open picker follows too. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `value` | `Option<V>` | - | The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`. A `TimeDelta` shows as `1 h 30 min` in the `DateLocale`'s units and is typed so, or as `1h30`, `1:30` or minutes; a fraction such as `1.5 h` is refused, not rounded. Below `sm`, a range shows short, `14–16 Sep`, until the field takes focus. |
 | `onchange` | `EventHandler<Option<V>>` | - | Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`. |

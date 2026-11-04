@@ -748,7 +748,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 swatches: Swatches::from(recents()),
                 swatches_per_row: props.swatches_per_row,
                 full_width: narrow(),
-                size,
+                size: sizes,
                 oninput: picked,
                 onswatchclick: swatch_clicked,
                 role: "group",
@@ -792,7 +792,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                             swatches: props.swatches.clone(),
                             swatches_per_row: props.swatches_per_row,
                             full_width: narrow(),
-                            size,
+                            size: sizes,
                             oninput: picked,
                             onswatchclick: swatch_clicked,
                         }

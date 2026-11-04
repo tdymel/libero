@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, FieldStatus, Fields, Flex, Form, Options, SegmentedControl, Select, TagsField,
+    Button, Checkbox, ColorCode, ColorPicker, DatePicker, FieldStatus, Fields, Flex, Form, Options, SegmentedControl, Select, TagsField,
     TextField, Variant,
 };
 use libero::sx::ThemeAwareValue;
@@ -10,7 +10,10 @@ use libero::theme::{ChoiceVariant, Size, responsive};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/responsive-form", || rsx! { ResponsiveFormPage {} })];
+pub const ROUTES: Routes = &[
+    ("/responsive-form", || rsx! { ResponsiveFormPage {} }),
+    ("/responsive-pickers", || rsx! { ResponsivePickersPage {} }),
+];
 
 #[derive(Clone, PartialEq, Options)]
 enum View {
@@ -84,6 +87,26 @@ fn ResponsiveFormPage() -> Element {
                 div { id: "rspf-late",
                     TextField { label: "Late", size: responsive(Size::Sm).md(Size::Lg) }
                 }
+            }
+        }
+    }
+}
+
+/// A color picker and a calendar small under 62rem and large from it (todo 5705).
+#[component]
+fn ResponsivePickersPage() -> Element {
+    let mut color = use_signal(ColorCode::default);
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            div { id: "rspp-color",
+                ColorPicker {
+                    value: color(),
+                    size: responsive(Size::Sm).md(Size::Lg),
+                    oninput: move |event: libero::components::SliderChangeEvent<ColorCode>| color.set(event.value()),
+                }
+            }
+            div { id: "rspp-date",
+                DatePicker { size: responsive(Size::Sm).md(Size::Lg) }
             }
         }
     }

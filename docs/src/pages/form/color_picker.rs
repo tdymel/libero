@@ -6,6 +6,7 @@ use libero::components::{
     AlphaSlider, Code, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider, SliderChangeEvent,
     Swatches, Text,
 };
+use libero::theme::{Size, responsive};
 use libero::{use_formats, use_theme};
 
 /// The demo swatches and their names.
@@ -104,7 +105,7 @@ pub fn ColorPickerPage() -> Element {
             markdown: "/md/color_picker.md",
             properties: vec![
                 props("ColorPicker", vec![
-                    prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker."),
+                    prop("size", "Responsive<Size>").default(theme.color_picker.size.as_str()).doc("Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("radius", "ThemeAwareValue").default(theme.color_picker.radius.as_str()).doc("Corner radius of the swatches and the preview, or any CSS, e.g. `radius: \"0\"`. `xs` makes them square."),
                     prop("value", "ColorCode").default("required")
                         .doc("The color. Pair it with `oninput`."),
@@ -146,7 +147,7 @@ pub fn ColorPickerPage() -> Element {
                 props("HueSlider", vec![
                     prop("value", "f64").default("required").doc("The hue in degrees, 0 to 360. Pair it with `oninput`. A `ColorPicker`'s own hue slider stops at 359: 360 is the same hue as 0."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new hue."),
-                    prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Track height and thumb."),
+                    prop("size", "Responsive<Size>").default(theme.color_picker.size.as_str()).doc("Track height and thumb. Or one per breakpoint."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the thumb out of the tab order."),
                     prop("aria_label", "String").doc("Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization."),
@@ -159,7 +160,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("value", "f64").default("required").doc("The alpha, 0.0 to 1.0. Pair it with `oninput`."),
                     prop("color", "ColorCode").default("required").doc("The color the track fades in. Its own alpha is ignored."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new alpha."),
-                    prop("size", "Size").default(theme.color_picker.size.as_str()).doc("Track height and thumb."),
+                    prop("size", "Responsive<Size>").default(theme.color_picker.size.as_str()).doc("Track height and thumb. Or one per breakpoint."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the thumb out of the tab order."),
                     prop("aria_label", "String").doc("Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization."),
@@ -245,7 +246,14 @@ pub fn ColorPickerPage() -> Element {
                     Control::toggle("component", ["picker", "hue", "alpha", "swatch"])
                         .labels(["ColorPicker", "HueSlider", "AlphaSlider", "ColorSwatch"])
                         .code(|_, _| vec![]),
-                    Control::sizes("size").default(theme.color_picker.size.as_str()).hidden_when(|values| !picker(values)),
+                    Control::sizes("size").default(theme.color_picker.size.as_str()).hidden_when(|values| !picker(values))
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!("size: responsive(Size::Sm).md(Size::{:?})", Size::from(size.as_str()))],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").hidden_when(|values| !picker(values)).code(|_, _| vec![]),
                     Control::sizes("radius").default(theme.color_picker.radius.as_str()).hidden_when(|values| !picker(values)),
                     Control::switch("with_alpha").hidden_when(|values| !picker(values) || !with_picker(values)),
                     Control::switch("swatches").hidden_when(|values| !picker(values)).code(|_, values| match is_on(values, "swatches") {
@@ -282,6 +290,11 @@ pub fn ColorPickerPage() -> Element {
     }
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 /// Its own component so the color survives a control change.
 #[component]
 fn ColorPickerDemo(values: DemoValues) -> Element {
@@ -298,7 +311,10 @@ fn ColorPickerDemo(values: DemoValues) -> Element {
             ColorPicker {
                 value: color(),
                 oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
-                size: values.str("size"),
+                size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                    (true, size) => responsive(Size::Sm).md(size),
+                    (false, size) => size.into(),
+                },
                 radius: values.str("radius"),
                 with_picker: with_picker(&values),
                 with_alpha: is_on(&values, "with_alpha") && with_picker(&values),

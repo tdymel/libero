@@ -213,3 +213,47 @@ fn an_open_list_rounds_by_the_responsive_field_radius() {
         fixture.close().await.unwrap();
     });
 }
+
+const PICKERS: &str = "(() => { const px = el => el ? getComputedStyle(el).width : '-'; \
+    return [px(document.querySelector('#rspp-color > *')), \
+    px(document.querySelector('#rspp-date [data-slot=day]'))].join('|'); })()";
+
+#[test]
+fn picker_content_follows_the_responsive_size() {
+    block_on(async {
+        let fixture = Fixture::open("/responsive-pickers", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#rspp-date [data-slot=day]")
+            .await
+            .unwrap();
+        let read = || async {
+            let text: String = page
+                .evaluate_bounded(PICKERS)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            text
+        };
+        let px = |v: &str| v.trim_end_matches("px").parse::<f64>().unwrap();
+        let wide = read().await;
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(600, 800, 1.0, false))
+            .await
+            .unwrap();
+        let every = format!(
+            "(() => {{ const was = '{wide}'.split('|'); return {PICKERS}.split('|').every((v, i) => v !== was[i]); }})()"
+        );
+        let switched = wait::for_js_true(page, &every, "both pickers switched").await;
+        assert!(switched.is_ok(), "{wide} {}", read().await);
+        let narrow = read().await;
+        for (wide, narrow) in wide.split('|').zip(narrow.split('|')) {
+            assert!(px(narrow) < px(wide), "{wide:?} {narrow:?}");
+        }
+
+        fixture.console.assert_clean("responsive pickers").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

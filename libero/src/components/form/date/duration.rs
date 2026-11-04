@@ -21,7 +21,7 @@ use crate::{
     hooks::{use_element, use_localization, use_theme},
     platform::ElementApi,
     sx::Sx,
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 /// The top of the hours column without a `max`: 99 h 59 min 59 s.
@@ -87,7 +87,7 @@ pub(super) struct DurationClockProps {
     step: Option<u8>,
     min: Option<TimeDelta>,
     max: Option<TimeDelta>,
-    size: Input<Size>,
+    size: Input<Responsive<Size>>,
     focusable: bool,
     /// Soft: `aria-disabled` columns, presses and keys swallowed, nothing posted.
     #[props(default)]
@@ -137,7 +137,7 @@ impl DurationView {
 pub(super) fn DurationClock(props: DurationClockProps) -> Element {
     let theme = use_theme();
     let names = &use_localization().date;
-    let size = props.size.copied_or(theme.time_picker.size);
+    let size = props.size.copied_or(theme.time_picker.size.into());
     // No native `disabled`, nor `inert`: either would drop a focused column's focus (todo 3881).
     let in_disabled_group = use_fieldset_disabled();
     let disabled = props.disabled || in_disabled_group;
@@ -273,8 +273,9 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true)
+        .responsive(&size, |size| size.state_name())
         .into();
+    crate::components::form::use_state_ranges(&TIME_PICKER_SX, Some(&states));
     let root_box = use_box()
         .framework_sx(&TIME_PICKER_SX)
         .class(&props.class)

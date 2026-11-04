@@ -64,7 +64,7 @@ fn Demo() -> Element {
 | `hide_outside_days` | `bool` | `false` | Blanks instead of the neighbouring months' days. |
 | `twelve_hour` | `bool` | `formats` | A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one. |
 | `today` | `NaiveDate` | - | The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked. |
-| `size` | `Size` | `md` | Cell, option and font size. |
+| `size` | `Responsive<Size>` | `md` | Cell, option and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `name` | `String` | - | Posts the value as ISO 8601 in a hidden input of that name. |
 | `focusable` | `bool` | `true` | `false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus. |
 | `disabled` | `bool` | `false` | Shows the value but takes no pick: every cell is `aria-disabled` and out of the tab order, presses and keys do nothing, and a focused cell keeps its focus. The hidden `name` input posts nothing. A disabled `Fieldset` sets it too. |

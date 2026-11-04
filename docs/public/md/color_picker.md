@@ -50,7 +50,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker. |
+| `size` | `Responsive<Size>` | `md` | Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `radius` | `ThemeAwareValue` | `xxl` | Corner radius of the swatches and the preview, or any CSS, e.g. `radius: "0"`. `xs` makes them square. |
 | `value` | `ColorCode` | required | The color. Pair it with `oninput`. |
 | `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | - | `Start` and `End` bracket a drag on the panel or a slider. A key press or a swatch click sends `Change`, then `End`, so saving on `End` is enough. |
@@ -75,7 +75,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `value` | `f64` | required | The hue in degrees, 0 to 360. Pair it with `oninput`. A `ColorPicker`'s own hue slider stops at 359: 360 is the same hue as 0. |
 | `oninput` | `EventHandler<SliderChangeEvent>` | - | Every new hue. |
-| `size` | `Size` | `md` | Track height and thumb. |
+| `size` | `Responsive<Size>` | `md` | Track height and thumb. Or one per breakpoint. |
 | `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
 | `focusable` | `bool` | `true` | `false` keeps the thumb out of the tab order. |
 | `aria_label` | `String` | - | Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization. |
@@ -87,7 +87,7 @@ fn Demo() -> Element {
 | `value` | `f64` | required | The alpha, 0.0 to 1.0. Pair it with `oninput`. |
 | `color` | `ColorCode` | required | The color the track fades in. Its own alpha is ignored. |
 | `oninput` | `EventHandler<SliderChangeEvent>` | - | Every new alpha. |
-| `size` | `Size` | `md` | Track height and thumb. |
+| `size` | `Responsive<Size>` | `md` | Track height and thumb. Or one per breakpoint. |
 | `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
 | `focusable` | `bool` | `true` | `false` keeps the thumb out of the tab order. |
 | `aria_label` | `String` | - | Names the thumb. Unset, the thumb has no name: unlike `ColorPicker`, the standalone slider falls back to no localization. |

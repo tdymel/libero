@@ -226,8 +226,9 @@ macro_rules! date_props {
                 #[props(default)]
                 onchange: Option<EventHandler<Option<$v>>>,
                 $($acc)*
+                /// One step, or one per breakpoint.
                 #[props(default, into)]
-                size: $crate::components::common::Input<$crate::theme::Size>,
+                size: $crate::components::common::Input<$crate::theme::Responsive<$crate::theme::Size>>,
                 /// Emits a hidden input of that name, posting the value as ISO
                 /// 8601.
                 #[props(default, into)]

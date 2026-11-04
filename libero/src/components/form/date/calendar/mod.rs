@@ -27,7 +27,7 @@ use crate::{
     },
     platform::ElementApi,
     sx::Sx,
-    theme::{CalendarVariant, Size},
+    theme::{CalendarVariant, Responsive, Size},
 };
 
 use self::{
@@ -235,7 +235,7 @@ pub(super) struct CalendarProps {
     exclude_date: DayRule,
     #[props(default)]
     today: Option<NaiveDate>,
-    size: Size,
+    size: Responsive<Size>,
     #[props(default = true)]
     focusable: bool,
     /// Soft: `aria-disabled` cells, presses and keys swallowed, nothing posted.
@@ -581,11 +581,12 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(props.size.state_name(), true)
+        .responsive(&props.size, |size| size.state_name())
         .with("scroll", scroll)
         .with("measuring", fit.measuring)
         .with("presets", has_presets)
         .into();
+    crate::components::form::use_state_ranges(&CALENDAR_SX, Some(&states));
     let root_box = use_box()
         .framework_sx(&CALENDAR_SX)
         .class(&props.class)

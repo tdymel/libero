@@ -4,7 +4,10 @@ use super::{
     ColorCode,
     color_code::round_alpha,
     color_picker::ColorPickerPart,
-    color_slider::{CHECKERBOARD, ColorSliderPart, color_slider_sx, ltr_scale, scale_gradient},
+    color_slider::{
+        CHECKERBOARD, ColorSliderPart, color_slider_sx, ltr_scale, scale_gradient,
+        use_color_slider_ranges,
+    },
 };
 use crate::{
     components::{
@@ -15,7 +18,7 @@ use crate::{
     },
     hooks::{use_formats, use_localization, use_theme},
     localization::fill,
-    theme::{CssVar, Size},
+    theme::{CssVar, Responsive, Size},
 };
 
 base_props! {
@@ -28,8 +31,9 @@ base_props! {
         /// `Start`/`End` bracket a drag, `Change` carries every new alpha.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent>>,
+        /// One step, or one per breakpoint.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         #[props(default)]
         disabled: Option<bool>,
         /// Names the thumb, which is the `role="slider"` element.
@@ -84,7 +88,7 @@ pub(super) const COLOR_PICKER_RGB: CssVar = CssVar::new("--lsx-color-picker-rgb"
 #[component]
 pub(super) fn PickerAlphaSlider(
     value: f64,
-    size: Size,
+    size: Responsive<Size>,
     aria_label: Option<String>,
     focusable: bool,
     oninput: Option<EventHandler<SliderChangeEvent>>,
@@ -125,7 +129,8 @@ fn alpha_slider(
     slot: &'static str,
 ) -> Element {
     let theme = use_theme();
-    let size = props.size.copied_or(theme.color_picker.size);
+    let size = props.size.copied_or(theme.color_picker.size.into());
+    use_color_slider_ranges(&size);
     let sx = color_slider_sx(&props.sx, &props.parts);
     // A blank name names nothing: it neither renders nor counts as one.
     let aria_label = props
@@ -168,7 +173,7 @@ fn alpha_slider(
             states: props.states,
             hidden_from: props.hidden_from,
             visible_from: props.visible_from,
-            size: Input::Value(size.into()),
+            size: Input::Value(size),
             color: Input::None,
             disabled: Some(disabled),
             readonly,

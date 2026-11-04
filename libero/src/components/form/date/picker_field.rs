@@ -133,7 +133,7 @@ pub(super) struct PickerField<'a, V: 'static> {
 pub struct DropdownArgs<V: 'static> {
     pub value: Option<V>,
     pub today: Option<NaiveDate>,
-    pub size: Size,
+    pub size: Responsive<Size>,
     /// Emits a picked value, closing the dropdown when the field's close rule says so.
     pub pick: Callback<Option<V>>,
     /// The picker's last unit is picked: closes the dropdown when the field's rule says so (5355).
@@ -193,7 +193,6 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let names = &use_localization().date;
     let defaults = &theme.chrono_field;
     let sizes = field.size.copied_or(defaults.size.into());
-    let size = sizes.base();
     let radius = ScaleOrCss::new(
         field.radius.as_ref().map(Responsive::base_ref),
         defaults.radius,
@@ -678,7 +677,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                     {dropdown(DropdownArgs {
                         value: pending().or(value),
                         today,
-                        size,
+                        size: sizes,
                         pick,
                         complete,
                     })}
