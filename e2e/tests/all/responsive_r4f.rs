@@ -40,6 +40,11 @@ fn apart(family: &str) -> String {
 const LABEL: &str = "(() => { const s = document.querySelector('#r4-stepper').dataset.state; \
     return s.includes('label-below') ? 'below' : s.includes('label-side') ? 'side' : s; })()";
 
+/// Todo 5721: the second step's line, and the first step's flex basis (`0px` in even columns).
+const LINES: &str = "(() => { const li = document.querySelectorAll('#r4-stepper-lines li'); \
+    const line = getComputedStyle(li[1], '::before').display === 'none' ? 'none' : 'line'; \
+    return `${line}/${getComputedStyle(li[0]).flexBasis}`; })()";
+
 async fn reads(page: &Page, probe: &str, want: &str) {
     let reached = wait::for_js_true(page, &format!("{probe} === '{want}'"), want).await;
     let now: String = page
@@ -70,12 +75,14 @@ fn responsive_gaps_thickness_size_and_label_position_follow_the_window() {
             reads(page, &against(family, "wide"), "same").await;
         }
         reads(page, LABEL, "side").await;
+        reads(page, LINES, "line/auto").await;
 
         narrow(page).await;
         for family in families {
             reads(page, &against(family, "narrow"), "same").await;
         }
         reads(page, LABEL, "below").await;
+        reads(page, LINES, "none/0px").await;
         fixture.console.assert_clean("responsive r4f").unwrap();
         fixture.close().await.unwrap();
     });

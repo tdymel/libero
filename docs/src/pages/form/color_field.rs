@@ -6,7 +6,8 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{
-    Code, ColorCode, ColorField, ColorFieldVariant, Flex, Input, SliderChangeEvent, Swatches, Text,
+    Code, ColorCode, ColorField, ColorFieldVariant, ColorSwatch, Flex, Icon, Input,
+    SliderChangeEvent, Swatches, Text,
 };
 use libero::theme::{Size, responsive};
 use libero::use_theme;
@@ -93,6 +94,8 @@ pub fn ColorFieldPage() -> Element {
                         .doc("`Swatch` leaves the text, the preview and the eyedropper: a swatch button opens the same dropdown, `Escape` and a picked swatch bring focus back to it, and the label names it. A swatch holding no dropdown is a plain image."),
                     prop("swatch_background", "String")
                         .doc("With `variant: Swatch`, any CSS `background` for the swatch, such as a conic gradient for a hue wheel, in place of the color. The dropdown still edits `value`."),
+                    prop("swatch_selected", "bool").default("false")
+                        .doc("With `variant: Swatch`, draws a check on the swatch and marks it `aria-current=\"true\"`, for a row of presets you build around it: set it while the field's colour is none of them. The row and its other swatches are yours."),
                     prop("size", "Responsive<Size>").default(theme.color_field.size.as_str()).doc("Control height, font size and the dropdown's picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open picker follows too."),
                     prop("radius", "Responsive<ThemeAwareValue>").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("label", "Caption").doc("The field's caption."),
@@ -258,6 +261,40 @@ pub fn ColorFieldPage() -> Element {
     }
 }
 
+/// Presets and a hue wheel in one row: the wheel is checked while the colour is none of them.
+#[component]
+fn SwatchRow(wheel: Signal<ColorCode>) -> Element {
+    let presets: Vec<ColorCode> = SWATCHES[..3]
+        .iter()
+        .map(|(hex, _)| hex.parse().unwrap())
+        .collect();
+    let custom = !presets.contains(&wheel());
+    rsx! {
+        Flex { direction: "row", gap: "xs", align: "flex-end", role: "group", aria_label: "Accent",
+            for (color, (_, name)) in presets.into_iter().zip(SWATCHES) {
+                ColorSwatch {
+                    color,
+                    aria_label: name,
+                    aria_pressed: (wheel() == color).to_string(),
+                    onclick: move |_| wheel.set(color),
+                    if wheel() == color {
+                        Icon { svg: pictogram_icons_lucide::check::outlined }
+                    }
+                }
+            }
+            ColorField {
+                label: "As a swatch",
+                variant: ColorFieldVariant::Swatch,
+                swatch_background: HUE_WHEEL,
+                swatch_selected: custom,
+                swatches: Swatches::labelled(SWATCHES),
+                value: wheel(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| wheel.set(event.value()),
+            }
+        }
+    }
+}
+
 /// Its own component so the color survives a control change.
 #[component]
 fn ColorFieldDemo(values: DemoValues) -> Element {
@@ -269,7 +306,7 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
         _ => ColorFieldVariant::Field,
     };
     // The field's own swatch is the variant's demo while the control is on `field`.
-    let mut wheel = use_signal(|| ColorCode::hex(0x40c057));
+    let wheel = use_signal(|| ColorCode::hex(0x40c057));
 
     let swatches = match is_on(&values, "swatches") {
         true => Swatches::labelled(SWATCHES),
@@ -315,14 +352,7 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
             }
             Text { size: "sm", "value: {color().to_hexa()}" }
             if swatch_variant == ColorFieldVariant::Field {
-                ColorField {
-                    label: "As a swatch",
-                    variant: ColorFieldVariant::Swatch,
-                    swatch_background: HUE_WHEEL,
-                    swatches: Swatches::labelled(SWATCHES),
-                    value: wheel(),
-                    oninput: move |event: SliderChangeEvent<ColorCode>| wheel.set(event.value()),
-                }
+                SwatchRow { wheel }
             }
         }
     }

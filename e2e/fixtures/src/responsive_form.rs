@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, ColorCode, ColorPicker, DatePicker, FieldStatus, Fields, Flex, Form, Options, SegmentedControl, Select, TagsField,
+    Button, Checkbox, ColorCode, ColorField, ColorPicker, DatePicker, FieldStatus, Fields, Flex, Form, Options, SegmentedControl, Select, TagsField,
     TextField, Variant,
 };
 use libero::sx::ThemeAwareValue;
@@ -103,7 +103,7 @@ fn ResponsiveFormPage() -> Element {
     }
 }
 
-/// A color picker and a calendar small under 62rem and large from it (todo 5705).
+/// A color picker, a calendar and a color field small under 62rem and large from it (todo 5705).
 #[component]
 fn ResponsivePickersPage() -> Element {
     let mut color = use_signal(ColorCode::default);
@@ -112,12 +112,23 @@ fn ResponsivePickersPage() -> Element {
             div { id: "rspp-color",
                 ColorPicker {
                     value: color(),
+                    with_alpha: true,
+                    swatches: ["#fa5252"],
                     size: responsive(Size::Sm).md(Size::Lg),
                     oninput: move |event: libero::components::SliderChangeEvent<ColorCode>| color.set(event.value()),
                 }
             }
             div { id: "rspp-date",
                 DatePicker { size: responsive(Size::Sm).md(Size::Lg) }
+            }
+            div { id: "rspp-color-field",
+                ColorField {
+                    label: "Accent",
+                    value: ColorCode::default(),
+                    swatches: ["#fa5252"],
+                    size: responsive(Size::Sm).md(Size::Lg),
+                    oninput: move |_| {},
+                }
             }
         }
     }

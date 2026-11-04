@@ -110,5 +110,14 @@ fn R4fPage() -> Element {
                 label_position: responsive(StepLabelPosition::Below).md(StepLabelPosition::Side),
             }
         }
+        // Todo 5721: even columns without lines below `md`.
+        div { style: "padding: 24px",
+            Stepper::<Stage> {
+                id: "r4-stepper-lines",
+                aria_label: "Lines",
+                value: Some(Stage::Account),
+                connectors: responsive(false).md(true),
+            }
+        }
     }
 }

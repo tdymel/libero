@@ -17,6 +17,7 @@ pub const ROUTES: Routes = &[
     ("/color-field/recents-responsive", || rsx! { RecentsResponsivePage {} }),
     ("/color-field/cleared", || rsx! { ClearedFieldPage {} }),
     ("/color-field/swatch", || rsx! { SwatchVariantPage {} }),
+    ("/color-field/swatch-selected", || rsx! { SelectedSwatchPage {} }),
 ];
 
 const SWATCHES: [&str; 3] = ["#fa5252", "#40c057", "#228be6"];
@@ -197,6 +198,24 @@ fn SwatchVariantPage() -> Element {
             }
             Button { id: "after", "After" }
             Text { id: "readout", "{color().to_hex()}" }
+        }
+    }
+}
+
+/// A checked hue-wheel swatch, as in a row of presets whose colour it holds (5723).
+#[component]
+fn SelectedSwatchPage() -> Element {
+    rsx! {
+        div { id: "selected", style: "padding: 24px",
+            ColorField {
+                label: "Background",
+                variant: ColorFieldVariant::Swatch,
+                swatch_background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+                swatch_selected: true,
+                swatches: SWATCHES,
+                value: "#7048e8".parse::<ColorCode>().unwrap(),
+                oninput: move |_| {},
+            }
         }
     }
 }

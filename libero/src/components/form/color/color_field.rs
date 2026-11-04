@@ -98,6 +98,10 @@ const DROPDOWN_ENTRY: &str = "[tabindex='0'], button:not([tabindex='-1'])";
 static COLOR_FIELD_PREVIEW_SX: StaticSx =
     StaticSx::new(|| sx().width("1.25em").height("1.25em").min_width("1.25em"));
 
+/// A `swatch_selected` swatch's check, as large as a picker's pressed swatch draws it.
+static SELECTED_SWATCH_SX: StaticSx =
+    StaticSx::new(|| sx().selector("& > svg", sx().width("60%").height("60%")));
+
 /// What a [`ColorField`] shows to open its dropdown.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ColorFieldVariant {
@@ -190,6 +194,10 @@ field_props! {
         /// With `variant: Swatch`, any CSS `background` for the swatch, such as a hue wheel.
         #[props(default, into)]
         swatch_background: Option<String>,
+        /// With `variant: Swatch`, `true` checks the swatch and marks it `aria-current`, for a
+        /// row of presets the caller builds and owns, where the field's colour is the picked one.
+        #[props(default)]
+        swatch_selected: Option<bool>,
     }
 }
 
@@ -819,6 +827,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     });
     let swatch_trigger = swatch.then(|| {
         let interactive = has_dropdown && !readonly;
+        let selected = props.swatch_selected.unwrap_or(false);
         let label_id = field.label_id();
         let unnamed = label_id.is_none() && !names_itself(&props.attributes);
         let own = |name: &'static str, value: Option<String>| {
@@ -838,6 +847,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                     showing.then(|| format!("{}-dialog", field.id())),
                 ),
                 own("role", (!interactive).then(|| "img".to_string())),
+                own("aria-current", selected.then(|| "true".to_string())),
             ]
             .into_iter()
             .flatten(),
@@ -845,15 +855,19 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         let radius = props.radius.as_ref().map_or_else(Input::default, |radius| {
             Input::Value(crate::theme::Responsive::base_ref(radius).clone())
         });
-        rsx! {
-            ColorSwatch {
-                color: preview,
-                background: props.swatch_background.clone(),
-                size,
-                radius,
-                attributes,
-                onclick: interactive.then_some(toggle),
-            }
+        let background = props.swatch_background.clone();
+        let onclick = interactive.then_some(toggle);
+        // Two arms, so an unchecked swatch renders no placeholder child.
+        match selected {
+            true => rsx! {
+                ColorSwatch { color: preview, background, size, radius, attributes, onclick,
+                    sx: Input::Static(&*SELECTED_SWATCH_SX),
+                    Glyph { slot: IconSlot::Check, icon: lucide::check::outlined }
+                }
+            },
+            false => rsx! {
+                ColorSwatch { color: preview, background, size, radius, attributes, onclick }
+            },
         }
     });
     let mut focused_in = focus.focusin(0);

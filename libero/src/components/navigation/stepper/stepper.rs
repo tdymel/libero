@@ -59,9 +59,10 @@ pub struct StepperProps<T: Options> {
     #[props(default, into)]
     color: Input<ThemeAwareValue>,
     /// The lines between steps; `theme.stepper.connectors` (`true`) by default. `false`
-    /// spreads horizontal steps over the row in even columns.
-    #[props(default)]
-    connectors: Option<bool>,
+    /// spreads horizontal steps over the row in even columns. Per breakpoint too:
+    /// `responsive(false).md(true)`, in CSS.
+    #[props(default, into)]
+    connectors: Input<Responsive<bool>>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -201,7 +202,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
             onstepclick: interactive.then_some(pick),
             allow_next_steps: props.allow_next_steps.unwrap_or(false),
             orientation,
-            connectors: props.connectors.unwrap_or(theme.stepper.connectors),
+            connectors: props.connectors.copied_or(theme.stepper.connectors.into()),
             label_position,
             size: props.size.copied_or(theme.stepper.size.into()),
             color,

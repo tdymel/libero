@@ -185,6 +185,7 @@ macro_rules! input_from_responsive {
 pub(crate) use input_from_responsive;
 
 input_from_responsive!(str Size);
+input_from_responsive!(bool);
 
 input_from!(Sx, f32, f64, usize, States, Variables);
 

@@ -354,3 +354,34 @@ fn a_swatch_color_field_is_always_named() {
     assert!(html.contains(r#"aria-label="Fill""#), "{html}");
     assert_eq!(html.matches("aria-label=").count(), 2, "{html}");
 }
+
+/// Todo 5723: `swatch_selected` checks the swatch and marks it `aria-current`; unset or `false`
+/// renders the same markup as before.
+#[test]
+fn a_selected_swatch_color_field_is_checked_and_current() {
+    fn field(selected: Option<bool>) -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorField {
+                    label: "Accent",
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    variant: ColorFieldVariant::Swatch,
+                    swatch_selected: selected,
+                }
+            }
+        }
+    }
+    let html = |selected| body(&crate::common::render_with(field, selected));
+    let checked = html(Some(true));
+    let button = attributes_of(&checked, "button");
+    assert_eq!(button["aria-current"], "true", "{checked}");
+    let inner = &checked[checked.find("<button").unwrap()..checked.find("</button>").unwrap()];
+    assert!(inner.contains("<svg"), "{checked}");
+
+    let unset = html(None);
+    assert_eq!(unset, html(Some(false)));
+    assert!(!unset.contains("aria-current"), "{unset}");
+    let inner = &unset[unset.find("<button").unwrap()..unset.find("</button>").unwrap()];
+    assert!(!inner.contains("<svg"), "{unset}");
+}

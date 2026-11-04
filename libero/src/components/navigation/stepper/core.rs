@@ -394,6 +394,14 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+/// A `connectors` run's state word; only `no-connectors` keys a block.
+fn connector_word(on: bool) -> &'static str {
+    match on {
+        true => "connectors",
+        false => "no-connectors",
+    }
+}
+
 /// One step, with `T` already gone.
 pub(crate) struct StepSpec {
     /// The accessible name, and the drawn label unless `rich` is set.
@@ -418,7 +426,7 @@ pub(crate) struct StepperView {
     pub onstepclick: Option<Callback<usize>>,
     pub allow_next_steps: bool,
     pub orientation: Orientation,
-    pub connectors: bool,
+    pub connectors: Responsive<bool>,
     pub label_position: StepLabelPosition,
     pub size: Responsive<Size>,
     /// Per-instance override: `(text, fill, foreground on the fill)`.
@@ -512,15 +520,23 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         .responsive(&size, |size| size.state_name())
         .with(orientation.state_name(), true)
         .with(label_position.state_name(), !vertical)
-        .with("no-connectors", !connectors);
+        .with(
+            "no-connectors",
+            connectors.is_plain() && !connectors.base_ref(),
+        );
+    if !connectors.is_plain() {
+        states = states.responsive(&connectors, connector_word);
+    }
     if let Some(count) = step_count_state(steps.len()) {
         states = states.with(count, true);
     }
     let states: Input<States> = states.into();
-    use_range_css(
-        &STEPPER_SX,
-        size.range_copies(|size| size.state_name(), StepperDefaults::size_sx),
-    );
+    let mut copies = size.range_copies(|size| size.state_name(), StepperDefaults::size_sx);
+    copies.extend(connectors.range_copies(connector_word, |on| match on {
+        true => sx(),
+        false => STEPPER_SX.axis_block("no-connectors"),
+    }));
+    use_range_css(&STEPPER_SX, copies);
 
     let mut root_variables = variables();
     if let Some((color, fill, contrast)) = color {

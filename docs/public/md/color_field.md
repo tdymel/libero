@@ -73,6 +73,7 @@ fn Demo() -> Element {
 | `placeholder` | `String` | - | Shown while the text is empty. |
 | `variant` | `ColorFieldVariant` | `Field` | `Swatch` leaves the text, the preview and the eyedropper: a swatch button opens the same dropdown, `Escape` and a picked swatch bring focus back to it, and the label names it. A swatch holding no dropdown is a plain image. |
 | `swatch_background` | `String` | - | With `variant: Swatch`, any CSS `background` for the swatch, such as a conic gradient for a hue wheel, in place of the color. The dropdown still edits `value`. |
+| `swatch_selected` | `bool` | `false` | With `variant: Swatch`, draws a check on the swatch and marks it `aria-current="true"`, for a row of presets you build around it: set it while the field's colour is none of them. The row and its other swatches are yours. |
 | `size` | `Responsive<Size>` | `md` | Control height, font size and the dropdown's picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open picker follows too. |
 | `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the frame. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `label` | `Caption` | - | The field's caption. |

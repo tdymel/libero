@@ -309,3 +309,66 @@ fn a_card_takes_the_padding_of_its_responsive_size() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 5705: the picker's width, hue track, preview and swatch, then the open ColorField's hue
+/// track and swatch.
+const PICKER: &str = "(() => { const q = s => document.querySelector(s); \
+    const w = el => el ? getComputedStyle(el).width : '-'; const h = el => el ? getComputedStyle(el).height : '-'; \
+    return [w(q('#rspp-color > *')), h(q('#rspp-color [data-slot=hue] [data-slot=track]')), \
+    w(q('#rspp-color [data-slot=preview] > *')), w(q('#rspp-color [data-slot=swatch]')), \
+    h(q('[role=dialog] [data-slot=hue] [data-slot=track]')), w(q('[role=dialog] [data-slot=swatch]'))].join('|'); })()";
+
+/// A narrow window turns the ColorField's dropdown into a finger-sized sheet, so its picker is
+/// compared with the standalone one at the wide size only.
+#[test]
+fn a_color_picker_and_an_open_color_field_follow_the_viewport_width() {
+    block_on(async {
+        let fixture = Fixture::open("/responsive-pickers", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#rspp-color [data-slot=swatch]")
+            .await
+            .unwrap();
+        page.evaluate_bounded(
+            "document.querySelector('#rspp-color-field input[data-controlled]').click()",
+        )
+        .await
+        .unwrap();
+        wait::for_visible(page, "[role=dialog] [data-slot=swatch]")
+            .await
+            .unwrap();
+        let read = || async {
+            let text: String = page
+                .evaluate_bounded(PICKER)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            text.split('|').map(str::to_string).collect::<Vec<_>>()
+        };
+        let px = |v: &str| v.trim_end_matches("px").parse::<f64>().unwrap();
+        let wide = read().await;
+        assert_eq!((&wide[4], &wide[5]), (&wide[1], &wide[3]), "{wide:?}");
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(600, 800, 1.0, false))
+            .await
+            .unwrap();
+        let every = format!(
+            "(() => {{ const was = '{}'.split('|'); return {PICKER}.split('|').slice(0, 4).every((v, i) => v !== was[i]); }})()",
+            wide.join("|")
+        );
+        let switched = wait::for_js_true(page, &every, "every picker part switched").await;
+        assert!(switched.is_ok(), "{wide:?} {:?}", read().await);
+        let narrow = read().await;
+        for (a, b) in wide.iter().zip(&narrow).take(4) {
+            assert!(px(b) < px(a), "{wide:?} {narrow:?}");
+        }
+
+        fixture
+            .console
+            .assert_clean("responsive color picker")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

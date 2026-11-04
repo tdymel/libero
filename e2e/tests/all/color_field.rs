@@ -670,3 +670,56 @@ e2e::scenario!(
     desktop: skip("958: element identity on the WebView"),
     ios: skip("958: element identity on the WebView")
 );
+
+/// The check's stroke, its box against the swatch's, and the swatch's `aria-current`.
+const CHECK: &str = "(() => { const b = document.querySelector('#selected button'); \
+    const svg = b.querySelector('svg'); if (!svg) return 'no check'; \
+    const s = svg.getBoundingClientRect(), o = b.getBoundingClientRect(); \
+    const inside = s.width > 4 && s.left >= o.left && s.right <= o.right; \
+    return [getComputedStyle(svg).color, inside, b.getAttribute('aria-current')].join('|'); })()";
+
+/// Todo 5723: `swatch_selected` draws a black or white check on the swatch, and forced colours
+/// keep it, as they keep the swatch's own colour.
+#[test]
+fn a_selected_swatch_shows_its_check_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/color-field/swatch-selected", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#selected button svg")
+            .await
+            .unwrap();
+        let read = || async {
+            let text: String = page
+                .evaluate_bounded(CHECK)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            text
+        };
+        let plain = read().await;
+        let marks = ["rgb(0, 0, 0)|true|true", "rgb(255, 255, 255)|true|true"];
+        assert!(marks.contains(&plain.as_str()), "{plain}");
+
+        page.execute_bounded(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        assert_eq!(read().await, plain, "forced colours repaint the check");
+        fixture.console.assert_clean("selected swatch").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

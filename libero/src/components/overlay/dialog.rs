@@ -77,7 +77,6 @@ fn full_screen_sx() -> Sx {
 }
 
 input_from_str!(DialogFullScreen);
-crate::sx::input::input_from_responsive!(bool);
 
 /// `Phone` is `responsive(true).sm(false)`.
 impl From<DialogFullScreen> for Responsive<bool> {

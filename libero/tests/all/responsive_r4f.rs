@@ -122,3 +122,61 @@ fn a_responsive_tree_size_writes_run_words_and_copies_for_the_rows_the_groups_an
     );
     assert!(html.contains("padding-block-start"), "group gap copy");
 }
+
+macro_rules! stepper_page {
+    ($($connectors:tt)*) => {{
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Stepper::<Stage> { aria_label: "Steps", value: Some(Stage::Account), $($connectors)* }
+                }
+            }
+        }
+        render(app)
+    }};
+}
+
+/// The root's `data-state` words: the one that holds the orientation.
+fn stepper_words(html: &str) -> Vec<String> {
+    body(html)
+        .split("data-state=\"")
+        .skip(1)
+        .map(|rest| {
+            rest[..rest.find('"').unwrap_or(0)]
+                .split(' ')
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .find(|words| words.iter().any(|w| w == "horizontal"))
+        .unwrap_or_else(|| panic!("no stepper root in {html}"))
+}
+
+/// Todo 5721: `connectors` per breakpoint writes run words and copies the no-connectors blocks,
+/// the horizontal even columns included; a plain value keeps its one word.
+#[test]
+fn stepper_connectors_follow_the_viewport() {
+    let ranged = stepper_page!(connectors: responsive(false).md(true));
+    let words = stepper_words(&ranged);
+    for word in ["base-md:no-connectors", "md-:connectors"] {
+        assert!(words.iter().any(|w| w == word), "{words:?}");
+    }
+    assert!(!words.iter().any(|w| w == "no-connectors"), "{words:?}");
+    // The hidden line and the even columns, each keyed on the run word.
+    let key = r#"[data-state~="base-md:no-connectors"]"#;
+    assert!(ranged.matches(key).count() >= 2, "{ranged}");
+    assert!(
+        !ranged.contains(r#"[data-state~="md-:connectors"]"#),
+        "{ranged}"
+    );
+
+    let off = stepper_page!(connectors: false);
+    let on = stepper_page!();
+    assert!(stepper_words(&off).iter().any(|w| w == "no-connectors"));
+    for html in [&off, &on] {
+        assert!(!html.contains(":no-connectors"), "{html}");
+        assert!(
+            !stepper_words(html).iter().any(|w| w.contains(':')),
+            "{html}"
+        );
+    }
+}
