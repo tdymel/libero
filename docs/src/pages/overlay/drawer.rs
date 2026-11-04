@@ -1,12 +1,13 @@
 use crate::components::{
     Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, responsive_switch,
+    responsive_value, responsive_value_expr,
 };
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, DrawerAnchor, Flex, Options, Tabs, Text},
     hooks::{DrawerOptions, ModalScope, use_drawer},
-    sx::sx,
-    theme::{Responsive, responsive},
+    sx::{ThemeAwareValue, sx},
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
 
@@ -107,7 +108,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
         "{items}{state}let nav = use_drawer(\n    \
              DrawerOptions {{\n        \
                  anchor: {},\n        \
-                 size: {:?}.into(),\n        \
+                 size: {}.into(),\n        \
                  title: Some(\"Temporary drawer\".into()),{}{}\n        \
                  ..Default::default()\n    \
              }},\n    \
@@ -116,7 +117,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
              Button {{ variant: \"outlined\", onclick: move |_| {{ nav.open(); }}, \"Open drawer\" }}\n\
          }}",
         anchor_code(values),
-        values.str("size"),
+        responsive_value_expr(values, "size", Size::Xs),
         close_button,
         handle,
         indent(&indent(content)),
@@ -128,7 +129,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
 #[component]
 fn DrawerDemo(
     anchor: Responsive<DrawerAnchor>,
-    size: String,
+    size: Responsive<ThemeAwareValue>,
     handle: bool,
     close_button: bool,
     tabs: bool,
@@ -251,7 +252,7 @@ pub fn DrawerPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     DrawerDemo {
                         anchor: responsive_anchor(&values),
-                        size: values.str("size"),
+                        size: responsive_value(&values, "size", Size::Xs),
                         handle: values.str("handle") == "true",
                         close_button: values.str("close_button") == "true",
                         tabs: values.str("tabs") == "true",

@@ -11,7 +11,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_accessibility, use_css, use_formats, use_range_css, use_theme},
+    hooks::{use_accessibility, use_css, use_formats, use_range_css, use_responsive, use_theme},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CIRCULAR_PROGRESS_COLOR, CIRCULAR_PROGRESS_SIZE, CIRCULAR_PROGRESS_THICKNESS,
@@ -269,9 +269,11 @@ base_props! {
         /// The outer edge. Per breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
         size: Input<Responsive<Size>>,
-        /// The ring's width, a share of the edge that grows with the step.
+        /// The ring's width, a share of the edge that grows with the step. Per breakpoint too:
+        /// `responsive(Size::Sm).md(Size::Lg)`. The ring is drawn in Rust, so a server-rendered
+        /// page shows the base step and switches after mount.
         #[props(default, into)]
-        thickness: Input<Size>,
+        thickness: Input<Responsive<Size>>,
         /// Announced instead of the percentage, e.g. `"3 of 8 files"`.
         #[props(default, into)]
         aria_valuetext: Option<String>,
@@ -323,9 +325,12 @@ pub fn CircularProgress(props: CircularProgressProps) -> Element {
         .unwrap_or_else(|| ThemeAwareValue::from(theme.circular_progress.color));
     let color = base_color("CircularProgress", Some(&color));
     let sizes = props.size.copied_or(theme.circular_progress.size.into());
-    let thickness = props.thickness.copied_or(theme.circular_progress.thickness);
-    let percent = theme.circular_progress.thicknesses.get(thickness);
-    let ring = Ring::new(percent);
+    let steps = theme.circular_progress.thicknesses;
+    let thicknesses = props
+        .thickness
+        .copied_or(theme.circular_progress.thickness.into())
+        .map(|step| steps.get(step));
+    let ring = Ring::new(use_responsive(&thicknesses)());
 
     let fraction = props
         .value

@@ -121,7 +121,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`. |
+| `size` | `Responsive<Size>` | `md` | Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the checkboxes follow it too. Breakpoints follow the window, not the parent. |
 | `guides` | `bool` | `false` | Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. The lines use logical properties, so they move to the right under `dir="rtl"`. Theme default `TreeDefaults::guides`. |
 | `aria_label` | `String` | required | The tree's accessible name. |
 | `data` | `Vec<TreeNode<T>>` | required | The nodes, over your own data type. |

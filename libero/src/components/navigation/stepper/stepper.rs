@@ -13,6 +13,7 @@ use crate::{
 };
 
 input_from_str!(StepLabelPosition);
+crate::sx::input::input_from_responsive!(str StepLabelPosition);
 
 // Hand-written: `base_props!` is not generic.
 #[derive(Props, Clone, PartialEq)]
@@ -46,9 +47,11 @@ pub struct StepperProps<T: Options> {
     /// in Rust, so it switches after mount when server-rendered.
     #[props(default, into)]
     orientation: Input<Responsive<Orientation>>,
-    /// `side` or `below` the marker; `side` falls back to `below` under 120px a step.
+    /// `side` or `below` the marker; `side` falls back to `below` under 120px a step. Per
+    /// breakpoint too: `responsive(StepLabelPosition::Below).md(StepLabelPosition::Side)`; the
+    /// steps are laid out in Rust, so it switches after mount when server-rendered.
     #[props(default, into)]
-    label_position: Input<StepLabelPosition>,
+    label_position: Input<Responsive<StepLabelPosition>>,
     /// Per breakpoint too: `responsive(Size::Sm).md(Size::Md)`.
     #[props(default, into)]
     size: Input<Responsive<Size>>,
@@ -114,6 +117,11 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
     let orientation =
         use_responsive(&props.orientation.copied_or(Orientation::Horizontal.into()))();
     let vertical = orientation == Orientation::Vertical;
+    let label_position = use_responsive(
+        &props
+            .label_position
+            .copied_or(theme.stepper.label_position.into()),
+    )();
 
     let values = props
         .options
@@ -194,7 +202,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
             allow_next_steps: props.allow_next_steps.unwrap_or(false),
             orientation,
             connectors: props.connectors.unwrap_or(theme.stepper.connectors),
-            label_position: props.label_position.copied_or(theme.stepper.label_position),
+            label_position,
             size: props.size.copied_or(theme.stepper.size.into()),
             color,
             completed_label: labels.completed,

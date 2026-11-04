@@ -25,4 +25,7 @@ pub use prop_doc::{
     label_trailing_prop, prop, props, prose, readonly_prop, required_prop, status_prop,
 };
 pub use remount::Remount;
-pub use responsive_demo::{responsive_size, responsive_size_code, responsive_switch};
+pub use responsive_demo::{
+    responsive_on, responsive_size, responsive_size_code, responsive_step, responsive_step_code,
+    responsive_switch, responsive_value, responsive_value_code, responsive_value_expr,
+};

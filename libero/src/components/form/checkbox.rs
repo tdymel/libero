@@ -18,11 +18,12 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     context::IconSlot,
-    hooks::{ElementHandle, use_cache, use_css, use_element, use_icon, use_theme},
+    hooks::{ElementHandle, use_cache, use_css, use_element, use_icon, use_range_css, use_theme},
     platform::{self, ElementApi, mounted_by_selector, sets_indeterminate},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
-        CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Size, SizeCss,
+        CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar, Responsive, Size,
+        SizeCss,
     },
     utils::warn,
 };
@@ -444,10 +445,18 @@ pub(crate) struct CheckboxLook {
 /// [`CheckboxLook`] at `size` in the theme's radius and colour; `None`, and no
 /// stylesheet, unless `enabled`.
 pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLook> {
+    use_responsive_checkbox_look(&size.into(), enabled)
+}
+
+/// [`use_checkbox_look`] with a `size` per breakpoint: run words and range copies of the control.
+pub(crate) fn use_responsive_checkbox_look(
+    sizes: &Responsive<Size>,
+    enabled: bool,
+) -> Option<CheckboxLook> {
     let theme = use_theme();
     let color = base_color_or("Checkbox", None, theme.checkbox.color);
     let base = States::new()
-        .with(size.state_name(), true)
+        .responsive(sizes, |size| size.state_name())
         .with(theme.checkbox.radius.radius_state_name(), true);
     let states = |state: &'static str| -> Input<States> { base.clone().with(state, true).into() };
     let style = use_cache(color, light_variables);
@@ -461,6 +470,11 @@ pub(crate) fn use_checkbox_look(size: Size, enabled: bool) -> Option<CheckboxLoo
         .style(Some(style.clone()))
         .prepare()
     };
+    let copies = match enabled {
+        true => sizes.range_copies(|size| size.state_name(), CheckboxDefaults::size_sx),
+        false => Vec::new(),
+    };
+    use_range_css(&LIGHT_CONTROL_SX, copies);
     let on = framework(&LIGHT_CONTROL_SX, states("checked"));
     let mixed = framework(&LIGHT_CONTROL_SX, states("mixed"));
     let off = framework(&LIGHT_CONTROL_SX, base.clone().into());

@@ -12,7 +12,7 @@ use crate::{
             Input, base_props, css_string, has_shortcut_modifier, parts_enum, parts_under_sx,
         },
         data_display::List,
-        form::{CheckboxLook, Disabled, use_checkbox_look},
+        form::{CheckboxLook, Disabled, use_responsive_checkbox_look},
     },
     hooks::{
         ElementHandle, TYPEAHEAD_RESET, listener, typeahead_match, use_element, use_theme,
@@ -22,7 +22,7 @@ use crate::{
         ElementApi, PlatformError, click_selector, focus_closest_of_focused, focus_selector,
         logical_key, meta_held, when_free,
     },
-    theme::Size,
+    theme::{Responsive, Size},
     utils::warn,
 };
 
@@ -33,7 +33,7 @@ use super::{
     tree_node::{
         ErasedRenderNode, TreeNode, TreeNodeErased, TreeNodeRenderArgs, TreeValue, erase_nodes,
     },
-    tree_row::{TreeRow, child_active, open_key},
+    tree_row::{TreeRow, child_active, open_key, use_size_copies},
 };
 
 /// Borrows from `data`: rebuilt on every keystroke, owning meant two `String`s per node.
@@ -540,9 +540,10 @@ parts_enum! {
 base_props! {
     parts(TreePart);
     pub struct TreeProps<T: TreeValue> {
-        /// Row gap and per-level indent, on `List`'s scale; set them apart through `sx`.
+        /// Row gap and per-level indent, on `List`'s scale; set them apart through `sx`. Per
+        /// breakpoint too: `responsive(Size::Sm).md(Size::Lg)`.
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         /// A line down each open branch, the `current` row's segment marked.
         #[props(default)]
         guides: Option<bool>,
@@ -692,7 +693,7 @@ fn warn_on_repeated_id(nodes: &[TreeNodeErased]) {
 base_props! {
     struct TreeCoreProps {
         #[props(default, into)]
-        size: Input<Size>,
+        size: Input<Responsive<Size>>,
         #[props(default)]
         guides: Option<bool>,
         #[props(into)]
@@ -728,7 +729,7 @@ fn use_marks(
     props: &TreeCoreProps,
     open: Signal<HashSet<String>>,
     off: bool,
-    size: Size,
+    sizes: &Responsive<Size>,
 ) -> TreeMarks {
     if props.selected.is_some() && props.onselectedchange.is_none() {
         warn("Tree: a controlled `selected` without `onselectedchange` never changes.");
@@ -748,7 +749,7 @@ fn use_marks(
     if *checks.peek() != checks_now {
         checks.set(checks_now);
     }
-    let look_now = use_checkbox_look(size, props.checked.is_some());
+    let look_now = use_responsive_checkbox_look(sizes, props.checked.is_some());
     let mut look = use_signal(|| look_now.clone());
     if *look.peek() != look_now {
         look.set(look_now);
@@ -831,13 +832,14 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         onchange: props.onexpandedchange,
     };
 
-    let size = props.size.copied_or(theme.tree.size);
+    let sizes = props.size.copied_or(theme.tree.size.into());
+    use_size_copies(&sizes);
     let guides = props.guides.unwrap_or(theme.tree.guides);
 
     // A disabled `Fieldset` cannot reach a span row the way it does a button.
     let group_disabled = try_use_context::<Disabled>().is_some_and(|Disabled(group)| group());
     let order = visible_order(&props.data, &expanded.read(), group_disabled);
-    let marks = use_marks(&props, expansion.open, group_disabled, size);
+    let marks = use_marks(&props, expansion.open, group_disabled, &sizes);
     let selectable = props.selected.is_some();
     let checkable = props.checked.is_some();
     let multiple = selectable && props.multiple;
@@ -1152,7 +1154,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             onmounted: root.mount(),
             sx: root_sx,
             states: props.states,
-            size,
+            size: sizes,
             "role": "tree",
             "aria-label": Some(props.aria_label).filter(|label| !label.trim().is_empty()),
             "aria-multiselectable": multiple.then_some("true"),
@@ -1164,7 +1166,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 TreeRow {
                     key: "{node.id}",
                     node: node.clone(),
-                    size,
+                    size: sizes,
                     depth: 0,
                     expansion,
                     open_key: open_keys[index],

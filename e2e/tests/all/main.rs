@@ -142,6 +142,7 @@ mod responsive_layout;
 mod responsive_orientation;
 mod responsive_overlay;
 mod responsive_placement;
+mod responsive_r4f;
 mod rich_text_editor;
 mod rich_text_editor_blocks;
 mod rich_text_editor_input;

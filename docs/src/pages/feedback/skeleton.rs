@@ -1,9 +1,11 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, responsive_switch,
+    responsive_value, responsive_value_code,
 };
 use dioxus::prelude::*;
 use libero::components::{Box, Button, Code, Flex, Input, Skeleton, Text};
 use libero::sx::sx;
+use libero::theme::Size;
 use libero::use_theme;
 
 /// What the wrapper covers. A button in it, so the preview shows that covered
@@ -134,7 +136,9 @@ pub fn SkeletonPage() -> Element {
                     Control::switch("busy_region").default("true").code(|_, _| vec![]),
                     Control::sizes("radius")
                         .default(theme.skeleton.radius.as_str())
+                        .code(|control, values| responsive_value_code("radius", Size::Xl, control, values))
                         .hidden_when(|values| values.str("circle") == "true"),
+                    responsive_switch().hidden_when(|values| values.str("circle") == "true"),
                     // Two controls for one prop: a shape with no content needs a height.
                     Control::toggle("height", ["auto", "12px", "40px"])
                         .labels(["Auto", "12px", "40px"])
@@ -160,7 +164,7 @@ pub fn SkeletonPage() -> Element {
                             visible,
                             animate: values.str("animate") == "true",
                             circle,
-                            radius: values.str("radius"),
+                            radius: responsive_value(&values, "radius", Size::Xl),
                             height,
                             width: length(values.str("width"), "100%"),
                             if content {

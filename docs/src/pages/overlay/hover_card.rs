@@ -1,12 +1,13 @@
 use super::tooltip::{responsive_side, responsive_side_enum_code};
 use crate::components::{
     Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, align_of, delay_of, indent, prop, props,
-    responsive_switch,
+    responsive_on, responsive_switch, responsive_value, responsive_value_expr,
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Button, Code, Flex, HoverCard, Kbd, Text},
-    sx::sx,
+    components::{Anchor, Button, Code, Flex, HoverCard, Input, Kbd, Text},
+    sx::{ThemeAwareValue, sx},
+    theme::{Responsive, Size, Theme, responsive},
     use_theme,
 };
 
@@ -26,6 +27,15 @@ content: rsx! {
 
 const TRIGGER: &str = r#"Button { variant: "outlined", "Ada Lovelace" }"#;
 
+/// The theme's popover gap from `md` and a wide one below it, for a gap left on `auto`.
+fn auto_gap(popover_gap: f64) -> Responsive<ThemeAwareValue> {
+    responsive(ThemeAwareValue::from(Size::Xl)).md(format!("{popover_gap}px").into())
+}
+
+fn auto_gap_expr(popover_gap: f64) -> String {
+    format!("responsive(ThemeAwareValue::from(Size::Xl)).md(\"{popover_gap}px\".into())")
+}
+
 fn wrap(_: &DemoValues, source: &str) -> String {
     format!("rsx! {{\n{}}}", indent(source))
 }
@@ -33,6 +43,7 @@ fn wrap(_: &DemoValues, source: &str) -> String {
 #[component]
 pub fn HoverCardPage() -> Element {
     let theme = use_theme();
+    let popover_gap = theme.popover.gap;
 
     rsx! {
         DocPage {
@@ -52,9 +63,9 @@ pub fn HoverCardPage() -> Element {
                 prop("align", "Responsive<Align>")
                     .default(theme.hover_card.align.as_str())
                     .doc("Where the card lines up along that side. Or one per breakpoint, `align: responsive(Align::Start).md(Align::Center)`."),
-                prop("gap", "ThemeAwareValue")
+                prop("gap", "Responsive<ThemeAwareValue>")
                     .default(format!("{}px", theme.popover.gap))
-                    .doc("Distance to the trigger, from the arrow's tip with `arrow`: a size word, or a `px` or `rem` length, e.g. `gap: \"12px\"`. Other CSS places the card by the theme's popover gap."),
+                    .doc("Distance to the trigger, from the arrow's tip with `arrow`: a size word, or a `px` or `rem` length, e.g. `gap: \"12px\"`. Other CSS places the card by the theme's popover gap. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Md)`: read in Rust when the card opens, so a card open while the page is server-rendered switches after mount. Breakpoints follow the window, not the parent."),
                 prop("arrow", "bool")
                     .default("false")
                     .doc("Draws an arrow from the card to the trigger's centre, in the theme's paper background, or in `sx`'s own `background` and `box_shadow`. It stays on the trigger when the card shifts to fit the viewport, and `gap` runs from its tip."),
@@ -131,9 +142,10 @@ pub fn HoverCardPage() -> Element {
                         }
                     }),
                     Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl"]).code(
-                        |_, values| match values.str("gap").as_str() {
-                            "auto" => vec![],
-                            gap => vec![format!("gap: {gap:?}")],
+                        |_, values| match (values.str("gap").as_str(), responsive_on(values)) {
+                            ("auto", false) => vec![],
+                            ("auto", true) => vec![format!("gap: {}", auto_gap_expr(Theme::DEFAULT.popover.gap))],
+                            _ => vec![format!("gap: {}", responsive_value_expr(values, "gap", Size::Xl))],
                         },
                     ),
                     Control::delay("open_delay", ["auto", "200", "500", "1000"]),
@@ -153,9 +165,10 @@ pub fn HoverCardPage() -> Element {
                         side: responsive_side(&values),
                         align: align_of(&values.str("align")),
                         arrow: values.str("arrow") == "true",
-                        gap: match values.str("gap").as_str() {
-                            "auto" => None,
-                            gap => Some(gap.to_string()),
+                        gap: match (values.str("gap").as_str(), responsive_on(&values)) {
+                            ("auto", false) => Input::None,
+                            ("auto", true) => Input::from(auto_gap(popover_gap)),
+                            _ => Input::from(responsive_value(&values, "gap", Size::Xl)),
                         },
                         open_delay: delay_of(&values.str("open_delay")),
                         close_delay: delay_of(&values.str("close_delay")),

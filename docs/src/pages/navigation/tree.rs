@@ -2,7 +2,8 @@ use pictogram_icons_lucide as lucide;
 use std::collections::HashSet;
 
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, or_unset, prop, props,
+    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props, responsive_size,
+    responsive_size_code, responsive_switch,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -329,9 +330,9 @@ pub fn TreePage() -> Element {
             markdown: "/md/tree.md",
             properties: vec![
                 props("Tree", vec![
-                    prop("size", "Size")
+                    prop("size", "Responsive<Size>")
                         .default(theme.tree.size.as_str())
-                        .doc("Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`."),
+                        .doc("Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the checkboxes follow it too. Breakpoints follow the window, not the parent."),
                     prop("guides", "bool")
                         .default("false")
                         .doc("Draws a line down each open branch, under its chevron, and marks the `current` row's part of it. The lines use logical properties, so they move to the right under `dir=\"rtl\"`. Theme default `TreeDefaults::guides`."),
@@ -479,7 +480,9 @@ pub fn TreePage() -> Element {
                 controls: vec![
                     Control::switch("guides"),
                     Control::sizes("size")
-                        .default(theme.tree.size.as_str()),
+                        .default(theme.tree.size.as_str())
+                        .code(responsive_size_code),
+                    responsive_switch(),
                     Control::toggle("selection", ["none", "single", "multiple"])
                         .default("multiple")
                         .code(selection_code),
@@ -521,7 +524,7 @@ pub fn TreePage() -> Element {
                                 false => expanded.set(next),
                             },
                             guides: values.str("guides") == "true",
-                            size: or_unset(values.str("size")),
+                            size: responsive_size(&values),
                             selected: (values.str("selection") != "none").then(|| picked.read().clone()),
                             multiple: values.str("selection") == "multiple",
                             onselectedchange: move |next| picked.set(next),

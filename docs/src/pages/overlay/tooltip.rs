@@ -1,13 +1,13 @@
 use crate::components::{
     Control, Demo, DemoValues, DocPage, Wrap, a11y, delay_of, indent, prop, props, responsive_size,
-    responsive_size_code, responsive_switch,
+    responsive_size_code, responsive_switch, responsive_value, responsive_value_code,
 };
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, Input, Text, Tooltip},
     hooks::Side,
     sx::sx,
-    theme::{Responsive, responsive},
+    theme::{Responsive, Size, responsive},
     use_theme,
 };
 
@@ -82,9 +82,9 @@ pub fn TooltipPage() -> Element {
                 prop("side", "Responsive<Side>")
                     .default(theme.tooltip.side.as_str())
                     .doc("The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`. Or one per breakpoint, `side: responsive(Side::Bottom).md(Side::Top)`, read when the bubble opens and on a resize. Breakpoints follow the window, not the parent."),
-                prop("gap", "ThemeAwareValue")
+                prop("gap", "Responsive<ThemeAwareValue>")
                     .default(theme.tooltip.gap.as_str())
-                    .doc("Distance to the trigger, or a `px` or `rem` length, e.g. `gap: \"6px\"`. The pointer can cross it without closing the bubble. Other CSS places the bubble by the theme's gap."),
+                    .doc("Distance to the trigger, or a `px` or `rem` length, e.g. `gap: \"6px\"`. The pointer can cross it without closing the bubble. Other CSS places the bubble by the theme's gap. Or one per breakpoint, `gap: responsive(Size::Xs).md(Size::Md)`: read in Rust when the bubble opens. Breakpoints follow the window, not the parent."),
                 prop("arrow", "bool")
                     .default("false")
                     .doc("Draws an arrow from the bubble to the trigger's centre, in the bubble's background. It stays on the trigger when the bubble shifts to fit the viewport, and `gap` runs from its tip."),
@@ -162,7 +162,9 @@ pub fn TooltipPage() -> Element {
                     Control::sizes("size").default(theme.tooltip.size.as_str()).code(responsive_size_code),
                     // `0` is plain CSS, next to the size scale.
                     responsive_switch(),
-                    Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.tooltip.gap.as_str()),
+                    Control::slider("gap", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default(theme.tooltip.gap.as_str())
+                        .code(|control, values| responsive_value_code("gap", Size::Xl, control, values)),
                     Control::delay("open_delay", ["auto", "200", "500", "1000"]),
                     Control::delay("close_delay", ["auto", "200", "500", "1000"]),
                     Control::delay("touch_open_delay", ["auto", "0", "250", "1000"]),
@@ -194,7 +196,7 @@ pub fn TooltipPage() -> Element {
                             side: responsive_side(&values),
                             arrow: values.str("arrow") == "true",
                             size: responsive_size(&values),
-                            gap: values.str("gap"),
+                            gap: responsive_value(&values, "gap", Size::Xl),
                             open_delay: delay_of(&values.str("open_delay")),
                             close_delay: delay_of(&values.str("close_delay")),
                             touch_open_delay: delay_of(&values.str("touch_open_delay")),

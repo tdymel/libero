@@ -15,9 +15,10 @@ use crate::{
         data_display::List,
         layout::use_box,
     },
+    hooks::use_range_css,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        Color, ColorShade, ColorValue, CssVar, ICON_SIZE, LIST_GAP, LIST_INDENT, Size,
+        Color, ColorShade, ColorValue, CssVar, ICON_SIZE, LIST_GAP, LIST_INDENT, Responsive, Size,
         TREE_GUIDE_ACTIVE_COLOR, TREE_GUIDE_ACTIVE_WIDTH, TREE_GUIDE_COLOR, TREE_GUIDE_WIDTH,
     },
 };
@@ -117,6 +118,24 @@ fn guide_offset() -> String {
     )
 }
 
+/// A responsive tree's range copies: the guide's padding on the row, the first child's gap under it.
+pub(super) fn use_size_copies(sizes: &Responsive<Size>) {
+    use_range_css(
+        &TREE_ROW_SX,
+        sizes.range_copies(
+            |size| size.state_name(),
+            |size| sx().var(TREE_GUIDE_PADDING, guide_padding(size)),
+        ),
+    );
+    use_range_css(
+        &TREE_GROUP_SX,
+        sizes.range_copies(
+            |size| size.state_name(),
+            |size| sx().padding_block_start(LIST_GAP.value(size)),
+        ),
+    );
+}
+
 fn guide_padding(size: Size) -> String {
     format!(
         "max(0px, calc({} - {} - {}))",
@@ -194,7 +213,7 @@ fn current_look_sx() -> crate::sx::Sx {
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct TreeRowProps {
     pub node: TreeNodeErased,
-    pub size: Size,
+    pub size: Responsive<Size>,
     pub depth: usize,
     pub expansion: Expansion,
     /// [`open_key`] of this row, from the parent, so a toggle re-renders only the
@@ -352,9 +371,12 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     // The node's own flag, unless an ancestor's opacity already covers this row.
     let row_states = states()
         .with("disabled", own_disabled && !props.ancestor_disabled)
-        .with("guides", props.guides)
-        .with(props.size.state_name(), props.guides)
-        .into();
+        .with("guides", props.guides);
+    let row_states = match props.guides {
+        true => row_states.responsive(&props.size, |size| size.state_name()),
+        false => row_states,
+    }
+    .into();
     let row = use_box()
         .framework_sx(&TREE_ROW_SX)
         .states(&row_states)

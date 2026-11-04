@@ -109,7 +109,9 @@ pub use check_group::{SwitchGroup, SwitchGroupPart, SwitchGroupProps};
 #[cfg(feature = "checkbox")]
 pub use checkbox::{Checkbox, CheckboxPart, CheckboxProps};
 #[cfg(feature = "checkbox")]
-pub(crate) use checkbox::{CheckboxLook, LightState, use_checkbox_look};
+pub(crate) use checkbox::{
+    CheckboxLook, LightState, use_checkbox_look, use_responsive_checkbox_look,
+};
 #[cfg(feature = "chip")]
 pub use chip::{Chip, ChipPart, ChipProps};
 #[cfg(feature = "action-icon")]

@@ -215,9 +215,10 @@ base_props! {
         #[props(default, into)]
         side: Input<Responsive<Side>>,
         /// Distance to the trigger, bridged so the pointer can cross it: a size word or a
-        /// `px` or `rem` length, as `gap: "6px"`. Other CSS places by the theme's gap.
+        /// `px` or `rem` length, as `gap: "6px"`. Other CSS places by the theme's gap. Per
+        /// breakpoint too: `responsive(Size::Xs).md(Size::Md)`, read when the bubble opens.
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         /// The label's font. Per breakpoint too: `responsive(Size::Xs).md(Size::Sm)`.
         #[props(default, into)]
         size: Input<Responsive<Size>>,
@@ -599,15 +600,22 @@ fn TooltipBubble(
     let theme = use_theme();
     let side = use_responsive(&tooltip.side.copied_or(theme.tooltip.side.into()))();
     let sizes = tooltip.size.copied_or(theme.tooltip.size.into());
-    let gap = ScaleOrCss::new(tooltip.gap.as_ref(), theme.tooltip.gap);
+    let gaps = match tooltip.gap.as_ref() {
+        Some(values) => values.map(|value| ScaleOrCss::new(Some(&value), theme.tooltip.gap)),
+        None => ScaleOrCss::new(None, theme.tooltip.gap).into(),
+    };
+    let gap = use_responsive(&gaps)();
     let custom = gap.custom_css(SizeCss::SPACING);
     let measured = custom.as_deref().and_then(css_px);
     use_hook(|| {
-        if let Some(css) = custom.as_deref().filter(|_| measured.is_none()) {
-            warn(&format!(
-                "Tooltip: gap `{css}` is not a px or rem length, so the bubble is placed by the theme's gap."
-            ));
-        }
+        gaps.map(|gap| {
+            let custom = gap.custom_css(SizeCss::SPACING);
+            if let Some(css) = custom.filter(|css| css_px(css).is_none()) {
+                warn(&format!(
+                    "Tooltip: gap `{css}` is not a px or rem length, so the bubble is placed by the theme's gap."
+                ));
+            }
+        });
     });
     let reach = if tooltip.arrow {
         arrow_reach(ARROW_SIZE)

@@ -1,6 +1,6 @@
 use crate::components::{
     Child, Control, Demo, DemoValues, DocPage, a11y, prop, props, responsive_size,
-    responsive_size_code, responsive_switch,
+    responsive_size_code, responsive_step, responsive_step_code, responsive_switch,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -67,7 +67,9 @@ fn controls(theme: &Theme) -> Vec<Control> {
                 sizes[from..].iter().map(ToString::to_string).collect()
             }),
         responsive_switch(),
-        Control::sizes("thickness").default(theme.circular_progress.thickness.as_str()),
+        Control::sizes("thickness")
+            .default(theme.circular_progress.thickness.as_str())
+            .code(|control, values| responsive_step_code("thickness", control, values)),
         // Not a prop: the centred children.
         Control::switch("label")
             .default("true")
@@ -98,9 +100,9 @@ pub fn CircularProgressPage() -> Element {
                 prop("size", "Responsive<Size>")
                     .default(defaults.size.as_str())
                     .doc("The outer edge, 18px at `xs` to 72px at `xxl` at the default text size; it grows with text zoom. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
-                prop("thickness", "Size")
+                prop("thickness", "Responsive<Size>")
                     .default(defaults.thickness.as_str())
-                    .doc("The ring's width as a share of the edge, 6% at `xs` to 16% at `xxl`, so it grows with `size`."),
+                    .doc("The ring's width as a share of the edge, 6% at `xs` to 16% at `xxl`, so it grows with `size`. Or one per breakpoint, `thickness: responsive(Size::Sm).md(Size::Lg)`. The ring is drawn in Rust, so a server-rendered page shows the base step and switches after mount."),
                 prop("aria_valuetext", "String")
                     .doc("Read instead of the rounded percentage, such as \"3 of 8 files\"."),
                 prop("children", "Element")
@@ -151,7 +153,7 @@ pub fn CircularProgressPage() -> Element {
                             },
                             color: Input::from(values.str("color")),
                             size: responsive_size(&values),
-                            thickness: values.str("thickness"),
+                            thickness: responsive_step(&values, "thickness"),
                             if !label.is_empty() { "{label}" }
                         }
                     }

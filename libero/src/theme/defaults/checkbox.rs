@@ -32,7 +32,7 @@ impl CheckboxDefaults {
         sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),
     };
 
-    fn size_sx(size: Size) -> Sx {
+    pub(crate) fn size_sx(size: Size) -> Sx {
         sx().var(CHECKBOX_BOX, CHECKBOX_BOX_SIZE.value(size))
     }
 

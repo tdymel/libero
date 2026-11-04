@@ -90,9 +90,10 @@ base_props! {
         #[props(default, into)]
         align: Input<Responsive<Align>>,
         /// Distance to the trigger: a size word or a `px` or `rem` length, as `gap: "12px"`.
-        /// Unset, or other CSS, the theme's popover gap.
+        /// Unset, or other CSS, the theme's popover gap. Per breakpoint too:
+        /// `responsive(Size::Xs).md(Size::Md)`, read when the card opens.
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         /// Draws an arrow from the card to the trigger's centre, in the theme's paper background,
         /// or in `sx`'s own `background` and `box_shadow`; a `class` or `when` state is not followed.
         /// `gap` then runs from its tip.
@@ -152,10 +153,10 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let open = !disabled && props.open.unwrap_or(hovered.get() || focused());
 
-    let gap = match props.gap.as_ref() {
-        None => theme.popover.gap,
-        Some(value) => {
-            let gap = ScaleOrCss::new(Some(value), Size::Md);
+    let gaps = match props.gap.as_ref() {
+        None => Responsive::new(theme.popover.gap),
+        Some(values) => values.map(|value| {
+            let gap = ScaleOrCss::new(Some(&value), Size::Md);
             match gap.custom_css(SizeCss::SPACING) {
                 None => theme.spacing.get(gap.size).into(),
                 Some(css) => css_px(&css).map_or_else(
@@ -168,8 +169,9 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                     f64::from,
                 ),
             }
-        }
+        }),
     };
+    let gap = use_responsive(&gaps)();
     let side = use_responsive(&props.side.copied_or(defaults.side.into()))();
     let align = use_responsive(&props.align.copied_or(defaults.align.into()))();
     let anchor = use_element();
