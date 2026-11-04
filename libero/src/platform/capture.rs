@@ -326,12 +326,12 @@ pub(crate) const DEVICES_SCRIPT: &str = "const devices = navigator.mediaDevices;
         removeEventListener('lsx-capture-granted', list);
     };";
 
-/// `bytes` as a file a form can post, `None` where no page holds files (a server render, Blitz).
+/// `bytes` as a file a form can post, `None` only when the browser cannot make one.
 ///
 /// ```rust
 /// # use libero::platform::image::file_from_bytes;
 /// let file = file_from_bytes("logo.png", "image/png", vec![0x89, b'P', b'N', b'G']);
-/// // A browser or WebView returns a file; a server render has none.
+/// // Held in memory off the web, a page `File` in a browser.
 /// # let _ = file;
 /// ```
 pub fn file_from_bytes(name: &str, content_type: &str, bytes: Vec<u8>) -> Option<FileData> {
@@ -341,7 +341,7 @@ pub fn file_from_bytes(name: &str, content_type: &str, bytes: Vec<u8>) -> Option
         content_type,
         &js_sys::Uint8Array::from(bytes.as_slice()),
     );
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    #[cfg(not(target_arch = "wasm32"))]
     return Some(super::file_dialog::held_file(
         name.to_string(),
         content_type.to_string(),
@@ -350,11 +350,6 @@ pub fn file_from_bytes(name: &str, content_type: &str, bytes: Vec<u8>) -> Option
             .map_or(0, |since| since.as_millis() as u64),
         bytes,
     ));
-    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-    {
-        let _ = (name, content_type, bytes);
-        None
-    }
 }
 
 /// `blob` as a file, read only when asked: the bytes stay in the page.

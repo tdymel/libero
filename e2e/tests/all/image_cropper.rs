@@ -559,7 +559,8 @@ async fn an_overhang_lets_the_box_leave_the_picture<D: Driver>(
 e2e::scenario!(
     an_overhang_lets_the_box_leave_the_picture,
     "/image-cropper/overhang",
-    an_overhang_lets_the_box_leave_the_picture
+    an_overhang_lets_the_box_leave_the_picture,
+    native: skip("upstream: Blitz sizes the picture's grid row 217.67 px for a 200 px image under percentage padding, so the backdrop misses 1.5x")
 );
 
 /// `platform::image`: a file from bytes, a see-through probe, a square pad and a cut past the edge.
