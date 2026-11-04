@@ -121,11 +121,15 @@ impl Front {
     }
 }
 
-/// Brings `page` to front once no test holds [`keep_fullscreen`], within the wait budget
-/// (todo 1755); a wait past 100 ms goes to the journal.
+/// The wait for [`FOREGROUND`] is a queue behind other tests' whole runs, not a step of this
+/// one: it gets this many wait budgets (todo 5693; 15 s starved on a loaded CI runner).
+const QUEUE_SHARE: u32 = 4;
+
+/// Brings `page` to front once no test holds [`keep_fullscreen`], within [`QUEUE_SHARE`] wait
+/// budgets (todo 1755); a wait past 100 ms goes to the journal.
 pub async fn bring_to_front(page: &Page) -> Result<Front> {
     let started = Instant::now();
-    let alone = tokio::time::timeout(crate::wait::timeout(), FOREGROUND.write())
+    let alone = tokio::time::timeout(crate::wait::timeout() * QUEUE_SHARE, FOREGROUND.write())
         .await
         .map_err(|_| {
             anyhow::anyhow!(
