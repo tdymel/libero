@@ -42,8 +42,8 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Responsive<Size>` | `md` | Height, padding and font size. |
-| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius, independent of `size`. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `value` | `Option<T>` | - | The number in the field, strictly controlled. `None` is the empty field. A signal that starts at `None` needs its type, such as `None::<i32>`. |
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the number the caller should hold next, `None` once the field is emptied. Half-typed text such as `-` never reaches it; a float `1.` already parses, so it arrives as `1`. Leaving the field clamps a number out of range. Text that never parsed stays, with the error `number_field.invalid_number` ("Enter a number."), and holds a form's submit. |
 | `validate` | `Validators<Option<T>>` | - | Rules over the number, shown once the field loses focus or its form is submitted. |

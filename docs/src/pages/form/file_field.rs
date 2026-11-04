@@ -8,6 +8,7 @@ use libero::components::{
     Avatar, Button, Code, CropOptions, FileField, FileRejection, FileTriggerArgs, Files, Flex,
     Menu, MenuItem, MenuState, Text, use_menu,
 };
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 struct AttachmentCopy;
@@ -167,6 +168,11 @@ fn menu_trigger(t: FileTriggerArgs, menu: MenuState, mut files: Signal<Files>) -
     }
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn FileFieldPage() -> Element {
     let theme = use_theme();
@@ -221,8 +227,8 @@ pub fn FileFieldPage() -> Element {
                         .doc("Rules over the files, shown once the field loses focus or its form is submitted."),
                     prop("children", "Element")
                         .doc("The dropzone's prompt. The `input` variant shows `placeholder` instead."),
-                    prop("size", "Responsive<Size>").default(theme.file_field.size.as_str()).doc("Control height, font size and the chips' size."),
-                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.file_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
+                    prop("size", "Responsive<Size>").default(theme.file_field.size.as_str()).doc("Control height, font size and the chips' size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the file chips keep the base size."),
+                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.file_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("label", "Caption")
                         .doc("The field's caption. It names the field and its Browse button."),
                     prop("description", "Caption").doc("Between the label and the control. Which files are wanted."),
@@ -338,7 +344,17 @@ pub fn FileFieldPage() -> Element {
                         .labels(["Input", "Dropzone"])
                         .default(theme.file_field.variant.as_str())
                         .code(variant_code),
-                    Control::sizes("size").default(theme.file_field.size.as_str()),
+                    Control::sizes("size").default(theme.file_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.file_field.radius.as_str()),
                     Control::toggle("accept", ["any", "image/*", ".pdf"])
@@ -411,7 +427,10 @@ fn FileFieldDemo(values: DemoValues) -> Element {
     rsx! {
         Flex { direction: "column", gap: "sm", sx: libero::sx::sx().width("100%"),
             FileField {
-                size: values.str("size"),
+                size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                    (true, size) => responsive(Size::Sm).md(size),
+                    (false, size) => size.into(),
+                },
                 radius: values.str("radius"),
                 variant: values.str("variant"),
                 multiple: is_on(&values, "multiple"),

@@ -6,6 +6,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, NativeSelect, OptionList, Options, Text};
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 struct SizeCopy;
@@ -43,6 +44,11 @@ enum FontSize {
     Xl,
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn NativeSelectPage() -> Element {
     let value = use_signal(|| Some(FontSize::Small));
@@ -59,10 +65,10 @@ pub fn NativeSelectPage() -> Element {
                 props("NativeSelect", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.native_select.size.as_str())
-                        .doc("Height, padding and font size."),
+                        .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.native_select.radius.as_str())
-                        .doc("Corner radius. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Option<T>")
                         .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing. The selected option is found with `PartialEq`, so compare identity, not content."),
                     prop("onchange", "EventHandler<T>")
@@ -139,7 +145,17 @@ pub fn NativeSelectPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default(theme.native_select.size.as_str()),
+                        .default(theme.native_select.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.native_select.radius.as_str()),
@@ -168,7 +184,10 @@ pub fn NativeSelectPage() -> Element {
                     rsx! {
                         NativeSelect {
                             placeholder: placeholder.then(|| "Pick a size".to_string()),
-                            size: values.str("size"),
+                            size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                (true, size) => responsive(Size::Sm).md(size),
+                                (false, size) => size.into(),
+                            },
                             radius: values.str("radius"),
                             label: field.label,
                             aria_label: field.aria_label,

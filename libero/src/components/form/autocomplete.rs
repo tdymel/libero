@@ -277,7 +277,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let clear_input = oninput.clone();
     let clear = clear_button(
         props.clearable.unwrap_or(false) && !text.is_empty() && !disabled && !readonly,
-        size,
+        sizes,
         input_element,
         Some(&field),
         move |_| {

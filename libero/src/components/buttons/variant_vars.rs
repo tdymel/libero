@@ -1,4 +1,4 @@
-//! Not behind a feature: `ActionIcon` and `Chip` name these without `button` (todo 5670).
+//! Not behind a feature: `ActionIcon`, `Chip` and `SegmentedControl` name these without `button` (todo 5670).
 
 use crate::{
     components::common::{

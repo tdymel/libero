@@ -6,16 +6,16 @@ use super::core::{
 };
 use crate::{
     components::{
-        buttons::button_variables,
+        buttons::{button_variables, responsive_button_variables},
         common::{
             Input, OptionLabel, OptionSource, Options, Orientation, ScaleOrCss, Variant,
-            base_color_or, names_itself, use_name_warning, use_toolbar_item,
+            base_color_or, names_itself, responsive_var_sx, use_name_warning, use_toolbar_item,
         },
         form::{Asks, Bound, Parse, field_props, use_bound, use_field, use_form_context},
     },
     hooks::{use_cache, use_element, use_form_owner, use_theme},
     sx::ThemeAwareValue,
-    theme::Size,
+    theme::{Responsive, Size, SizeCss},
     utils::warn,
 };
 
@@ -47,13 +47,13 @@ field_props! {
         orientation: Input<Orientation>,
         /// The *unselected* look, shared by every segment.
         #[props(default, into)]
-        variant: Input<Variant>,
+        variant: Input<Responsive<Variant>>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Space between the segments; set, each keeps its own border and radius.
-        /// A size word or any CSS, as `gap: "0"`.
+        /// A size word or any CSS, as `gap: "0"`, or one per breakpoint.
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
+        gap: Input<Responsive<ThemeAwareValue>>,
         /// Segments share the width evenly instead of sizing to their label.
         #[props(default)]
         full_width: Option<bool>,
@@ -98,7 +98,6 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     let element = use_element();
 
     let sizes = props.size.copied_or(theme.button.size.into());
-    let size = sizes.base();
     let radius = ScaleOrCss::new(
         props
             .radius
@@ -214,7 +213,9 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         }
     });
 
-    let variant = props.variant.copied_or(theme.segmented_control.variant);
+    let variants = props
+        .variant
+        .copied_or(theme.segmented_control.variant.into());
     let color = base_color_or(
         "SegmentedControl",
         props.color.as_ref(),
@@ -222,9 +223,19 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     );
     // Colour resolution plus rendering is ~790 ns, and `(variant, color, disabled)` is
     // the same on almost every render.
-    let style = use_cache((variant, color, disabled), |(variant, color, disabled)| {
-        button_variables(unselected_look(*variant), color, false, *disabled)
-    });
+    let style = use_cache(
+        (variants, color, disabled),
+        |(variants, color, disabled)| match variants.is_plain() {
+            true => button_variables(unselected_look(variants.base()), color, false, *disabled),
+            false => {
+                responsive_button_variables(&variants.map(unselected_look), color, false, *disabled)
+            }
+        },
+    );
+    let radius_steps = match props.radius.as_ref().filter(|radii| !radii.is_plain()) {
+        Some(radii) => radii.map(|value| ScaleOrCss::new(Some(&value), theme.button.radius).size),
+        None => radius.size.into(),
+    };
 
     let control = render_segmented_control(
         SegmentedControlView {
@@ -232,15 +243,22 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             selected,
             onselect: pick,
             orientation: props.orientation.copied_or(Orientation::Horizontal),
-            variant,
+            variant: variants,
             full_width,
-            size,
-            radius: radius.size,
+            size: sizes,
+            radius: radius_steps,
             // Only the state a custom gap rides: its override replaces the value.
             gap: props
                 .gap
                 .as_ref()
-                .map(|gap| ScaleOrCss::new(Some(gap), Size::Md)),
+                .map(|gap| ScaleOrCss::new(Some(gap.base_ref()), Size::Md)),
+            gap_sx: props
+                .gap
+                .as_ref()
+                .and_then(|gap| {
+                    responsive_var_sx(gap, SizeCss::SPACING.override_var(), Some(SizeCss::SPACING))
+                })
+                .into(),
             check: props
                 .selected_check
                 .unwrap_or(theme.segmented_control.selected_check),

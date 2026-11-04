@@ -5,6 +5,7 @@ use crate::components::{
     required_prop, status_prop,
 };
 use dioxus::prelude::*;
+use libero::theme::{Size, responsive};
 
 struct ToppingsCopy;
 
@@ -200,6 +201,11 @@ fn topping_selection(words: &'static Localization, s: SelectionArgs<Topping>) ->
 /// The printed twin of the page's `value` signal below.
 const VALUE_SIGNAL: &str = "let mut value = use_signal(|| vec![Topping::Cheese, Topping::Olives]);";
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn MultiSelectPage() -> Element {
     let theme = use_theme();
@@ -213,10 +219,10 @@ pub fn MultiSelectPage() -> Element {
             markdown: "/md/multi_select.md",
             properties: vec![
                 props("MultiSelect", vec![
-                    prop("size", "Responsive<Size>").default(theme.multi_select.size.as_str()).doc("Height, padding and font size of the field and its rows."),
+                    prop("size", "Responsive<Size>").default(theme.multi_select.size.as_str()).doc("Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips and the open list keep the base size."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.multi_select.radius.as_str())
-                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Vec<T>")
                         .doc("The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`."),
                     prop("onchange", "EventHandler<Vec<T>>")
@@ -352,7 +358,17 @@ pub fn MultiSelectPage() -> Element {
                     "placeholder: \"Pick toppings\"".to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default(theme.multi_select.size.as_str()),
+                    Control::sizes("size").default(theme.multi_select.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.multi_select.radius.as_str()),
                 ], field_controls::<ToppingsCopy>(), vec![
@@ -415,7 +431,10 @@ pub fn MultiSelectPage() -> Element {
                     rsx! {
                     MultiSelect {
                         sx: sx().width("280px").max_width("100%"),
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, size) => responsive(Size::Sm).md(size),
+                            (false, size) => size.into(),
+                        },
                         radius: values.str("radius"),
                         label: field.label,
                         aria_label: field.aria_label,

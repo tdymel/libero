@@ -5,6 +5,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::PhoneFieldPart;
+use libero::theme::{Size, responsive};
 use libero::{
     components::{Code, Flex, PhoneField, Text},
     sx::sx,
@@ -29,6 +30,11 @@ fn flag_emoji(iso: &str) -> String {
             char::from_u32(0x1F1E6 + u32::from(letter.to_ascii_uppercase() - b'A'))
         })
         .collect()
+}
+
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
 }
 
 /// A flag emoji for every country; the library ships no flags. None natively:
@@ -57,10 +63,10 @@ pub fn PhoneFieldPage() -> Element {
                 props("PhoneField", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.phone_field.size.as_str())
-                        .doc("Height, padding and font size."),
+                        .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the country list keeps the base size."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.phone_field.radius.as_str())
-                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Option<String>")
                         .doc("The number in E.164, such as `\"+12133734253\"`. Leave it out and the field keeps its own text."),
                     prop("oninput", "EventHandler<String>")
@@ -166,7 +172,17 @@ pub fn PhoneFieldPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default(theme.phone_field.size.as_str()),
+                        .default(theme.phone_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.phone_field.radius.as_str()),
@@ -207,7 +223,10 @@ pub fn PhoneFieldPage() -> Element {
                         Flex { direction: "column", gap: "sm", align: "stretch",
                             sx: sx().width("100%").max_width("320px"),
                             PhoneField {
-                                size: values.str("size"),
+                                size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                    (true, size) => responsive(Size::Sm).md(size),
+                                    (false, size) => size.into(),
+                                },
                                 radius: values.str("radius"),
                                 country: values.str("country").to_uppercase(),
                                 label: field.label,

@@ -579,7 +579,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let onclear = props.onclear;
     let clear = clear_button(
         props.clearable && has_selection && !disabled && !readonly,
-        size,
+        sizes,
         trigger_element,
         Some(&field),
         move |_| onclear.call(()),

@@ -8,6 +8,7 @@ use libero::components::FieldPart;
 use libero::components::{
     Code, ColorCode, ColorField, Flex, Input, SliderChangeEvent, Swatches, Text,
 };
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 struct BrandCopy;
@@ -33,6 +34,11 @@ const SWATCHES: [(&str, &str); 7] = [
 
 fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
+}
+
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
 }
 
 #[component]
@@ -80,8 +86,8 @@ pub fn ColorFieldPage() -> Element {
                     prop("name", "FieldName<ColorCode>")
                         .doc("What the field posts as: its color in `format`, from a hidden input as `ColorPicker` posts it, never the text being typed. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
-                    prop("size", "Responsive<Size>").default(theme.color_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
-                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
+                    prop("size", "Responsive<Size>").default(theme.color_field.size.as_str()).doc("Control height, font size and the dropdown's picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open picker keeps the base size."),
+                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.color_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("label", "Caption").doc("The field's caption."),
                     prop("description", "Caption").doc("Between the label and the control."),
                     label_trailing_prop(),
@@ -162,7 +168,17 @@ pub fn ColorFieldPage() -> Element {
                         .to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default(theme.color_field.size.as_str()),
+                    Control::sizes("size").default(theme.color_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.color_field.radius.as_str()),
                     // Unset by default, so "With alpha" shows its hexa default (todo 4248).
@@ -239,7 +255,10 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
             ColorField {
                 value: color(),
                 oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
-                size: values.str("size"),
+                size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                    (true, size) => responsive(Size::Sm).md(size),
+                    (false, size) => size.into(),
+                },
                 radius: values.str("radius"),
                 format: match values.str("format").as_str() {
                     "default" => Input::None,

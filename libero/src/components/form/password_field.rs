@@ -13,6 +13,7 @@ use crate::{
     context::IconSlot,
     hooks::{listener, use_element, use_form_settles, use_localization, use_theme},
     sx::ThemeAwareValue,
+    theme::Responsive,
 };
 
 field_props! {
@@ -104,10 +105,11 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
         .clone()
         .unwrap_or_else(|| labels.show.to_string());
     // Sized off the field's own size, theme default included, as the clear button is.
-    let size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(
-        props.size.copied_or(theme.text_field.size.into()).base(),
-    ))
-    .into();
+    let size: Input<Responsive<ThemeAwareValue>> = props
+        .size
+        .copied_or(theme.text_field.size.into())
+        .map(|size| ThemeAwareValue::Size(slot_icon_size(size)))
+        .into();
 
     rsx! {
         TextField {

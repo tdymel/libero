@@ -35,8 +35,8 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Responsive<Size>` | `md` | The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size. |
-| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of each cell, independent of `size`. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of each cell, independent of `size`. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `length` | `usize` | `4` | How many cells, clamped to 1 through 32. |
 | `kind` | `PinKind` | `numeric` | `numeric` takes the digits 0-9, `alphanumeric` the ASCII letters and digits. Any other character, an accented letter too, is ignored as it is typed. |
 | `value` | `Option<String>` | - | The pin so far, one character per filled cell. Leave it out and the field keeps its own pin. |

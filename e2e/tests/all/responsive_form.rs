@@ -54,3 +54,56 @@ fn form_props_follow_the_viewport_width() {
         fixture.close().await.unwrap();
     });
 }
+
+/// The segment height, the strip's gap and an unselected segment's background.
+const SEGMENTS: &str = "(() => { const s = document.querySelectorAll('#rspf-seg label[data-slot=segment]'); \
+    const strip = document.querySelector('#rspf-seg [data-slot=control]'); \
+    return [getComputedStyle(s[0]).height, getComputedStyle(strip).columnGap, \
+    getComputedStyle(s[1]).backgroundColor].join('|'); })()";
+
+#[test]
+fn a_segmented_control_follows_the_viewport_width() {
+    block_on(async {
+        let fixture = Fixture::open("/responsive-form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#rspf-seg").await.unwrap();
+        let read = || async {
+            let text: String = page
+                .evaluate_bounded(SEGMENTS)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            text.split('|').map(str::to_string).collect::<Vec<_>>()
+        };
+        let wide = read().await;
+        assert_eq!(
+            (&wide[1][..], &wide[2][..]),
+            ("10px", "rgba(0, 0, 0, 0)"),
+            "{wide:?}"
+        );
+
+        page.execute_bounded(SetDeviceMetricsOverrideParams::new(600, 800, 1.0, false))
+            .await
+            .unwrap();
+        let narrow = wait::for_js_true(
+            page,
+            &format!("{SEGMENTS}.split('|')[1] === '2px'"),
+            "the narrow gap",
+        )
+        .await;
+        assert!(narrow.is_ok(), "{:?}", read().await);
+        let narrow = read().await;
+        let px = |v: &str| v.trim_end_matches("px").parse::<f64>().unwrap();
+        assert!(px(&narrow[0]) < px(&wide[0]), "{wide:?} {narrow:?}");
+        assert_ne!(narrow[2], "rgba(0, 0, 0, 0)", "{narrow:?}");
+
+        fixture
+            .console
+            .assert_clean("responsive segmented control")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

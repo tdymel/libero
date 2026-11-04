@@ -17,7 +17,7 @@ use crate::{
     hooks::{ElementHandle, LocalState, current_localization},
     localization::fill,
     platform::nested_interactive,
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 use super::file_field::{FileFieldPart, FileTriggerArgs};
@@ -506,7 +506,7 @@ fn browse_content(id: &str, placeholder: &str, empty: bool) -> Element {
 pub(super) fn trailing_slot(
     loader: Option<Size>,
     clearable: bool,
-    size: Size,
+    size: Responsive<Size>,
     browse_element: ElementHandle,
     single_file: Option<String>,
     emit: Callback<Files>,

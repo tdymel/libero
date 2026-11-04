@@ -6,6 +6,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::{Code, OptionList, Options, RadioGroup, Text};
 use libero::components::{RadioGroupPart, RadioPart};
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 struct PlanCopy;
@@ -76,6 +77,11 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn RadioGroupPage() -> Element {
     let mut plan = use_signal(|| Some(Plan::Pro));
@@ -115,7 +121,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Ring and dot color of the selected option; `theme.radio.color` when unset."),
                     prop("size", "Responsive<Size>")
                         .default(theme.radio.size.as_str())
-                        .doc("Size of the circles and their labels."),
+                        .doc("Size of the circles and their labels. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("label", "Caption")
                         .doc("The question, and the group's name."),
                     prop("description", "Caption")
@@ -163,7 +169,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Ring and dot color when selected; `theme.radio.color` when unset."),
                     prop("size", "Responsive<Size>")
                         .default(theme.radio.size.as_str())
-                        .doc("Size of the circle and its label."),
+                        .doc("Size of the circle and its label. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("label", "Caption").doc("The text beside the circle, and the radio's name."),
                     prop("description", "Caption").doc("A second line under the label."),
                     label_trailing_prop(),
@@ -244,7 +250,17 @@ pub fn RadioGroupPage() -> Element {
                         }),
                     Control::color("color").default(theme.radio.color.as_str()),
                     Control::sizes("size")
-                        .default(theme.radio.size.as_str()),
+                        .default(theme.radio.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
                         .default("vertical")
@@ -273,7 +289,10 @@ pub fn RadioGroupPage() -> Element {
                             option_description: (values.str("variant") == "card")
                                 .then(|| Callback::new(plan_description)),
                             color: values.str("color"),
-                            size: values.str("size"),
+                            size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                (true, size) => responsive(Size::Sm).md(size),
+                                (false, size) => size.into(),
+                            },
                             orientation: values.str("orientation"),
                             label: field.label,
                             "aria-label": field.aria_label,

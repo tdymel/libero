@@ -69,7 +69,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Responsive<Size>` | `md` | Track, thumb and font size. |
+| `size` | `Responsive<Size>` | `md` | Track, thumb and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. A theme color name paints its text shade, darker on a light page so the fill stands out. |
 | `value` | `Option<V>` | - | The value. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
 | `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`, so saving on `End` catches keyboard edits too. |

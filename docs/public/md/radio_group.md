@@ -57,7 +57,7 @@ fn Demo() -> Element {
 | `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. |
 | `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
 | `color` | `ThemeAwareValue` | `primary` | Ring and dot color of the selected option; `theme.radio.color` when unset. |
-| `size` | `Responsive<Size>` | `md` | Size of the circles and their labels. |
+| `size` | `Responsive<Size>` | `md` | Size of the circles and their labels. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `label` | `Caption` | - | The question, and the group's name. |
 | `description` | `Caption` | - | Between the question and the options. How to choose. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |
@@ -83,7 +83,7 @@ fn Demo() -> Element {
 | `name` | `String` | - | Shared by every radio in one group, which makes them exclusive. `RadioGroup` sets it. |
 | `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
 | `color` | `ThemeAwareValue` | `primary` | Ring and dot color when selected; `theme.radio.color` when unset. |
-| `size` | `Responsive<Size>` | `md` | Size of the circle and its label. |
+| `size` | `Responsive<Size>` | `md` | Size of the circle and its label. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `label` | `Caption` | - | The text beside the circle, and the radio's name. |
 | `description` | `Caption` | - | A second line under the label. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |

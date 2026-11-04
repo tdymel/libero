@@ -6,6 +6,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::CascaderPart;
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 use libero::{
     components::{
@@ -215,6 +216,11 @@ fn stock(value: &str) -> (u32, u32) {
     }
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 /// The `CascaderDropdown` state, as `ORE_PICKER` prints it.
 #[component]
 fn OrePicker() -> Element {
@@ -287,8 +293,8 @@ pub fn CascaderPage() -> Element {
             markdown: "/md/cascader.md",
             properties: vec![
                 props("Cascader", vec![
-                    prop("size", "Responsive<Size>").default(theme.cascader.size.as_str()).doc("Height, padding and font size of the frame and its rows."),
-                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.cascader.radius.as_str()).doc("Corner radius of the frame and the list. Any CSS, e.g. `radius: \"0\"`, rounds the frame; the list keeps the theme's step."),
+                    prop("size", "Responsive<Size>").default(theme.cascader.size.as_str()).doc("Height, padding and font size of the frame and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list keeps the base size."),
+                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.cascader.radius.as_str()).doc("Corner radius of the frame and the list. Any CSS, e.g. `radius: \"0\"`, rounds the frame; the list keeps the theme's step. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("data", "Vec<CascaderOption<T>>").default("required")
                         .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree. A disabled option disables its whole branch, and `new` takes anything `Into<T>`, so a `&str` for a `String` tree."),
                     prop("value", "Option<T>")
@@ -465,7 +471,17 @@ pub fn CascaderPage() -> Element {
                         .default("cascader")
                         .code(|_, _| vec![]),
                 ], [vec![
-                    Control::sizes("size").default(theme.cascader.size.as_str()),
+                    Control::sizes("size").default(theme.cascader.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.cascader.radius.as_str()),
                     Control::toggle("layout", ["columns", "paths"])
@@ -512,7 +528,10 @@ pub fn CascaderPage() -> Element {
                             sx: sx().width("100%").max_width("320px"),
                             Cascader {
                                 sx: sx().width("100%").max_width("320px"),
-                                size: values.str("size"),
+                                size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                    (true, size) => responsive(Size::Sm).md(size),
+                                    (false, size) => size.into(),
+                                },
                                 radius: values.str("radius"),
                                 layout: values.str("layout"),
                                 label: field.label,

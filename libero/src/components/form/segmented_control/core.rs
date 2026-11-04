@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use pictogram_icons_lucide as lucide;
 
 use crate::{
+    components::buttons::{VARIANT_VARS, variant_var},
     components::{
         common::Part,
         common::{
@@ -15,10 +16,10 @@ use crate::{
         layout::use_box,
     },
     context::IconSlot,
-    hooks::{ElementHandle, id_selector},
+    hooks::{ElementHandle, id_selector, use_range_css},
     platform::{ElementApi, focus_selector, logical_key, next_task},
-    sx::{StaticSx, sx},
-    theme::{BUTTON_HEIGHT, ButtonDefaults, Size, SizeCss},
+    sx::{StaticSx, Sx, sx},
+    theme::{BUTTON_HEIGHT, ButtonDefaults, Responsive, Size, SizeCss},
 };
 
 /// The segment itself. A `<label>`, because the radio it wraps is what
@@ -69,38 +70,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 .margin("0")
                 .pointer_events("none"),
         )
-        .selector(
-            SEGMENT,
-            ButtonDefaults::theme_vars()
-                // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
-                .var(SizeCss::RADIUS.override_var(), "inherit")
-                .position("relative")
-                .display("inline-flex")
-                .align_items("center")
-                .justify_content("center")
-                // Separates a rich label's two children.
-                .gap(SizeCss::SPACING.value(Size::Xs))
-                .border_style("solid")
-                .border_width("1px")
-                .font_weight("600")
-                .cursor("pointer")
-                .user_select("none")
-                .white_space("nowrap")
-                // One line that never outgrows the strip (todo 481): a long
-                // label ends in an ellipsis, and `title` shows the whole.
-                .max_width("100%")
-                .min_width("0")
-                .overflow("hidden")
-                // As `Button`: the line outgrows the step at 200% text zoom (todo 2338).
-                .per_size(|size| {
-                    sx().height(format!(
-                        "max({}, calc(1.5em + 2px))",
-                        BUTTON_HEIGHT.value(size)
-                    ))
-                })
-                // The box itself grows, not a `::before`: wrapped or vertical segments would overlap.
-                .media(COARSE_POINTER, sx().min_height(COARSE_TARGET)),
-        )
+        .selector(SEGMENT, segment_sx())
         .selector(
             "& > label > span",
             sx().min_width("0")
@@ -219,6 +189,57 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
+/// One segment's own rules, its size and radius blocks included.
+fn segment_sx() -> Sx {
+    ButtonDefaults::theme_vars()
+        // Past `per_radius`'s reset: the field's custom radius, set on its wrapper.
+        .var(SizeCss::RADIUS.override_var(), "inherit")
+        .position("relative")
+        .display("inline-flex")
+        .align_items("center")
+        .justify_content("center")
+        // Separates a rich label's two children.
+        .gap(SizeCss::SPACING.value(Size::Xs))
+        .border_style("solid")
+        .border_width("1px")
+        .font_weight("600")
+        .cursor("pointer")
+        .user_select("none")
+        .white_space("nowrap")
+        // One line that never outgrows the strip (todo 481): a long
+        // label ends in an ellipsis, and `title` shows the whole.
+        .max_width("100%")
+        .min_width("0")
+        .overflow("hidden")
+        // As `Button`: the line outgrows the step at 200% text zoom (todo 2338).
+        .per_size(|size| {
+            sx().height(format!(
+                "max({}, calc(1.5em + 2px))",
+                BUTTON_HEIGHT.value(size)
+            ))
+        })
+        // The box itself grows, not a `::before`: wrapped or vertical segments would overlap.
+        .media(COARSE_POINTER, sx().min_height(COARSE_TARGET))
+}
+
+/// A range copy of one segment size or radius word: keyed on the strip, as the segments
+/// carry no word of a responsive axis.
+fn segment_copy_sx(token: &'static str) -> Sx {
+    sx().selector(SEGMENT, segment_sx().axis_block(token))
+}
+
+/// A range copy of one variant: the strip's block, reading the instance's vars for its look.
+fn variant_copy_sx(variant: Variant) -> Sx {
+    let look = unselected_look(variant);
+    VARIANT_VARS.into_iter().fold(
+        SEGMENTED_CONTROL_SX.axis_block(variant.state_name()),
+        |sx, var| {
+            let value = variant_var(&var, look).value();
+            sx.var(var, value)
+        },
+    )
+}
+
 /// What an unselected segment draws: the filled variant goes tonal, so the solid pick differs
 /// from it by more than a shade.
 pub(crate) fn unselected_look(variant: Variant) -> Variant {
@@ -260,11 +281,14 @@ pub(crate) struct SegmentedControlView {
     pub selected: Option<usize>,
     pub onselect: Callback<usize>,
     pub orientation: Orientation,
-    pub variant: Variant,
+    pub variant: Responsive<Variant>,
     pub full_width: bool,
-    pub size: Size,
-    pub radius: Size,
+    pub size: Responsive<Size>,
+    pub radius: Responsive<Size>,
+    /// The base gap's state; a responsive one also rides `gap_sx`.
     pub gap: Option<ScaleOrCss>,
+    /// A responsive gap's override var per breakpoint, for the user layer.
+    pub gap_sx: Input<Sx>,
     /// Draws a check in the selected segment, `SegmentedControlDefaults::selected_check`.
     pub check: bool,
     /// `false` keeps the radios out of the tab order and stops a label click
@@ -342,6 +366,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         size,
         radius,
         gap,
+        gap_sx,
         check,
         focusable,
         readonly,
@@ -370,23 +395,51 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
 
     let mut own = States::default()
         .with(orientation.state_name(), true)
-        .with(variant.state_name(), true)
+        .responsive(&variant, Variant::state_name)
         .with("full-width", full_width)
         .with("collapsed", gap.is_none());
     if let Some(gap) = &gap {
         own = own.with(gap.size.state_name(), true);
     }
+    // A responsive segment axis keys on the strip: its copies reach the segments from there.
+    if !size.is_plain() {
+        own = own.responsive(&size, |size| size.state_name());
+    }
+    if !radius.is_plain() {
+        own = own.responsive(&radius, |radius| radius.radius_state_name());
+    }
     let states = own.into();
-    let gap_variables: Input<Variables> = variables()
-        .with(
-            SizeCss::SPACING.override_var(),
-            gap.as_ref()
-                .and_then(|gap| gap.custom_css(SizeCss::SPACING)),
-        )
-        .into();
+    let mut copies = size.range_copies(
+        |size| size.state_name(),
+        |size| segment_copy_sx(size.state_name()),
+    );
+    copies.extend(radius.range_copies(
+        |radius| radius.radius_state_name(),
+        |radius| segment_copy_sx(radius.radius_state_name()),
+    ));
+    copies.extend(variant.range_copies(Variant::state_name, variant_copy_sx));
+    use_range_css(&SEGMENTED_CONTROL_SX, copies);
+    // A responsive gap's var is in `gap_sx`; an inline one would beat its breakpoints.
+    let gap_variables: Input<Variables> = match gap_sx.as_ref().is_none() {
+        true => variables()
+            .with(
+                SizeCss::SPACING.override_var(),
+                gap.as_ref()
+                    .and_then(|gap| gap.custom_css(SizeCss::SPACING)),
+            )
+            .into(),
+        false => Input::None,
+    };
 
     // Shared by every segment, so built once.
-    let segment_states = format!("{} {}", size.state_name(), radius.radius_state_name());
+    let segment_states = [
+        size.is_plain().then(|| size.base().state_name()),
+        radius.is_plain().then(|| radius.base().radius_state_name()),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(" ");
 
     let items = segments.iter().enumerate().map(|(index, segment)| {
         // Every activation goes through `Activation`, never the native radio
@@ -534,6 +587,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
     };
     use_box()
         .framework_sx(&SEGMENTED_CONTROL_SX)
+        .sx(&gap_sx)
         .states(&states)
         .variables(&gap_variables)
         .style(Some(style).filter(|style| !style.is_empty()))

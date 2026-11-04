@@ -6,6 +6,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::SelectPart;
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 use libero::{
     choices,
@@ -291,6 +292,11 @@ fn fruit_selection(fruit: Fruit) -> Element {
     }
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn SelectPage() -> Element {
     let theme = use_theme();
@@ -304,10 +310,10 @@ pub fn SelectPage() -> Element {
             markdown: "/md/select.md",
             properties: vec![
                 props("Select", vec![
-                    prop("size", "Responsive<Size>").default(theme.select.size.as_str()).doc("Height, padding and font size of the field and its rows."),
+                    prop("size", "Responsive<Size>").default(theme.select.size.as_str()).doc("Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list keeps the base size."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.select.radius.as_str())
-                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Option<T>")
                         .doc("The selected option. Pair it with `onchange`. `None`, or a value no option matches, shows `placeholder`. A bare `None` names no `T`: write `None::<T>`."),
                     prop("onchange", "EventHandler<Option<T>>")
@@ -447,7 +453,17 @@ pub fn SelectPage() -> Element {
                     "placeholder: \"Pick a fruit\"".to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default(theme.select.size.as_str()),
+                    Control::sizes("size").default(theme.select.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.select.radius.as_str()),
                 ], field_controls::<FruitCopy>(), vec![
@@ -521,7 +537,10 @@ pub fn SelectPage() -> Element {
                         return rsx! {
                             Select {
                                 sx: sx().width("280px").max_width("100%"),
-                                size: values.str("size"),
+                                size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                    (true, size) => responsive(Size::Sm).md(size),
+                                    (false, size) => size.into(),
+                                },
                                 radius: values.str("radius"),
                                 label: field.label,
                                 aria_label: field.aria_label,
@@ -546,7 +565,10 @@ pub fn SelectPage() -> Element {
                     rsx! {
                     Select {
                         sx: sx().width("280px").max_width("100%"),
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, size) => responsive(Size::Sm).md(size),
+                            (false, size) => size.into(),
+                        },
                         radius: values.str("radius"),
                         label: field.label,
                         aria_label: field.aria_label,

@@ -46,7 +46,7 @@ fn Demo() -> Element {
 | `clearable` | `bool` | `false` | Picking the current value again resets it to 0, and Home or the arrows can go below the first step. Without it, the first step is the lowest a user can pick. |
 | `icon` | `SvgData` | `IconSlot::Star` | The symbol, drawn empty and filled in `currentColor`. A stroked glyph turns solid when filled; a solid one only changes colour. Unset, `IconSlot::Star` of the nearest `IconProvider`, so one swap restyles a subtree. |
 | `color` | `ThemeAwareValue` | `warning` | The filled stars' colour; `theme.rating.color` when unset. Empty stars are `muted`. |
-| `size` | `Responsive<Size>` | `md` | Star size and the gap between stars. |
+| `size` | `Responsive<Size>` | `md` | Star size and the gap between stars. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `format` | `Callback<f64, String>` | - | What a screen reader says for the value. Runs during render, so it can translate. The localization's `rating.value` ("3.5 of 5") when unset. |
 | `focusable` | `bool` | `true` | `false` only shows a value: an image named by the label and the value, with no tab stop, no pointer input and nothing posted. |
 | `name` | `FieldName<f64>` | - | What the rating posts as. A path such as `Review::FIELDS.stars()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |

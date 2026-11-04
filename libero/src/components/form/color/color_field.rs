@@ -31,8 +31,8 @@ use crate::{
     platform::{eye_dropper, is_tab},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        COLOR_PICKER_SPACING, FIELD_LABEL_FONT_SIZE, SLIDER_THUMB, SLIDER_TRACK, Size, SizeCss,
-        Z_INDEX_POPOVER,
+        COLOR_PICKER_SPACING, FIELD_LABEL_FONT_SIZE, Responsive, SLIDER_THUMB, SLIDER_TRACK, Size,
+        SizeCss, Z_INDEX_POPOVER,
     },
     utils::warn,
 };
@@ -357,7 +357,9 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
     });
 
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(size)).into();
+    let icon_size: Input<Responsive<ThemeAwareValue>> = sizes
+        .map(|size| ThemeAwareValue::Size(slot_icon_size(size)))
+        .into();
     let trailing = (with_eye_dropper && has_eye_dropper() && !disabled && !readonly).then(|| {
         rsx! {
             ActionIcon {

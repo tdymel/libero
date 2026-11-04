@@ -6,6 +6,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::CheckboxPart;
 use libero::components::{Checkbox, Code, Text};
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 struct TermsCopy;
@@ -20,6 +21,11 @@ impl FieldCopy for TermsCopy {
 
 fn describes(values: &DemoValues) -> bool {
     values.str("description") == "true" || values.str("variant") == "card"
+}
+
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
 }
 
 #[component]
@@ -37,10 +43,10 @@ pub fn CheckboxPage() -> Element {
                         .doc("The box's color when checked. A theme color name or any CSS color; `theme.checkbox.color` when unset."),
                     prop("size", "Responsive<Size>")
                         .default(theme.checkbox.size.as_str())
-                        .doc("Size of the box, the label and the captions."),
+                        .doc("Size of the box, the label and the captions. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.checkbox.radius.as_str())
-                        .doc("Corner radius of the box. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius of the box. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("checked", "bool")
                         .doc("Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it."),
                     prop("indeterminate", "bool")
@@ -118,7 +124,17 @@ pub fn CheckboxPage() -> Element {
                         }),
                     Control::color("color").default(theme.checkbox.color.as_str()),
                     Control::sizes("size")
-                        .default(theme.checkbox.size.as_str()),
+                        .default(theme.checkbox.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.checkbox.radius.as_str()),
@@ -142,7 +158,10 @@ pub fn CheckboxPage() -> Element {
                         Checkbox {
                             variant: values.str("variant"),
                             color: values.str("color"),
-                            size: values.str("size"),
+                            size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                (true, size) => responsive(Size::Sm).md(size),
+                                (false, size) => size.into(),
+                            },
                             radius: values.str("radius"),
                             // Both or neither: `checked` alone can never change.
                             checked: match values.str("checked").as_str() {

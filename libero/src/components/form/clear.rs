@@ -11,7 +11,7 @@ use crate::{
     hooks::{ElementHandle, current_localization, id_selector},
     platform::{ElementApi, focus_selector},
     sx::ThemeAwareValue,
-    theme::Size,
+    theme::{Responsive, Size},
 };
 
 /// A clearable field's x, or `None` with nothing to clear. It hands the focus
@@ -19,7 +19,7 @@ use crate::{
 /// `field`'s label, if drawn, joins its name: "Clear Fruit" (todo 1498).
 pub(crate) fn clear_button(
     show: bool,
-    size: Size,
+    size: Responsive<Size>,
     target: ElementHandle,
     field: Option<&PreparedField>,
     onclear: impl FnMut(MouseEvent) + 'static,
@@ -30,14 +30,17 @@ pub(crate) fn clear_button(
 /// [`clear_button`] with its own accessible `name` in place of "Clear".
 pub(crate) fn clear_button_named(
     show: bool,
-    size: Size,
+    size: Responsive<Size>,
     target: ElementHandle,
     field: Option<&PreparedField>,
     name: Option<String>,
     mut onclear: impl FnMut(MouseEvent) + 'static,
 ) -> Option<Element> {
     let name = name.unwrap_or_else(|| current_localization().common.clear.to_string());
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(size)).into();
+    // One step per breakpoint, as the field's own.
+    let icon_size: Input<Responsive<ThemeAwareValue>> = size
+        .map(|size| ThemeAwareValue::Size(slot_icon_size(size)))
+        .into();
     let id = field.map(|field| format!("{}-clear", field.id()));
     let labelledby = field
         .and_then(PreparedField::label_id)

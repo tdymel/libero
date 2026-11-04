@@ -400,7 +400,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let clearable = props.clearable.unwrap_or(false);
     let clear = clear_button(
         clearable && !(held.is_empty() && text().is_empty()) && !disabled && !readonly,
-        size,
+        sizes,
         input_element,
         Some(&field),
         move |_| {

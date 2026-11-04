@@ -10,6 +10,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::{SliderPart, SliderValue};
+use libero::theme::{Size, responsive};
 use libero::{
     components::{Code, Flex, RangeSlider, SliderChangeEvent, Text},
     sx::sx,
@@ -105,6 +106,11 @@ fn wrap_readout(values: &DemoValues, code: &str) -> String {
     )
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn RangeSliderPage() -> Element {
     let theme = use_theme();
@@ -120,7 +126,7 @@ pub fn RangeSliderPage() -> Element {
             markdown: "/md/range_slider.md",
             properties: vec![
                 props("RangeSlider", vec![
-                    prop("size", "Responsive<Size>").default(theme.slider.size.as_str()).doc("Track, thumb and font size."),
+                    prop("size", "Responsive<Size>").default(theme.slider.size.as_str()).doc("Track, thumb and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.slider.color.as_str())
                         .doc("Accent color. A theme color name or any CSS color. A theme color name paints its text shade, darker on a light page so the fill stands out."),
@@ -246,7 +252,17 @@ pub fn RangeSliderPage() -> Element {
                         .default("continuous")
                         .labels(["Discrete", "Continuous"])
                         .code(mode_code),
-                    Control::sizes("size").default(theme.slider.size.as_str()),
+                    Control::sizes("size").default(theme.slider.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::color("color").default(theme.slider.color.as_str()),
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
@@ -305,7 +321,10 @@ pub fn RangeSliderPage() -> Element {
                                 RangeSlider {
                                     aria_label: field.aria_label.map(String::from),
                                     value: quality(),
-                                    size: values.str("size"),
+                                    size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                        (true, size) => responsive(Size::Sm).md(size),
+                                        (false, size) => size.into(),
+                                    },
                                     color: values.str("color"),
                                     orientation: values.str("orientation"),
                                     min: quality_of(&values, "min"),
@@ -341,7 +360,10 @@ pub fn RangeSliderPage() -> Element {
                                 RangeSlider {
                                     aria_label: field.aria_label.map(String::from),
                                     value: price(),
-                                    size: values.str("size"),
+                                    size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                        (true, size) => responsive(Size::Sm).md(size),
+                                        (false, size) => size.into(),
+                                    },
                                     color: values.str("color"),
                                     orientation: values.str("orientation"),
                                     min: number(&values, "min_value"),

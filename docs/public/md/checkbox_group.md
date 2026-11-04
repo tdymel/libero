@@ -58,7 +58,7 @@ fn Demo() -> Element {
 | `variant` | `Responsive<ChoiceVariant>` | `plain` | `card` draws every option as a bordered surface you can click anywhere. |
 | `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
 | `color` | `ThemeAwareValue` | `primary` | Box color of the checked options; `theme.checkbox.color` when unset. |
-| `size` | `Responsive<Size>` | `md` | Size of the boxes and their labels. |
+| `size` | `Responsive<Size>` | `md` | Size of the boxes and their labels. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
 | `label` | `Caption` | - | The question, and the group's name. |
 | `description` | `Caption` | - | Between the question and the options. How to choose. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |

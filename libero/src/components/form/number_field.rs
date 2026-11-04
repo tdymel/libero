@@ -31,7 +31,7 @@ use crate::{
     localization::{Formats, Localization},
     platform::{ElementApi, next_task},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::Size,
+    theme::{Responsive, Size},
     utils::{ascii_digit, ungrouped, warn},
 };
 
@@ -648,7 +648,7 @@ fn NumberFieldShell<T: NumberValue>(
     let steppers = props.steppers.then(|| {
         rsx! {
             Steppers {
-                size,
+                size: sizes,
                 disabled: disabled || readonly,
                 reach,
                 increment_label: props.increment_label.clone(),
@@ -1134,7 +1134,7 @@ struct Reach {
 /// while the value moves, so a press redraws the field and not the buttons.
 #[component]
 fn Steppers(
-    size: Size,
+    size: Responsive<Size>,
     disabled: bool,
     reach: Memo<Reach>,
     increment_label: Option<String>,
@@ -1157,7 +1157,7 @@ fn Steppers(
         rsx! {
             ActionIcon {
                 aria_label: decrement_label.unwrap_or_else(|| labels.decrease.to_string()),
-                size: ThemeAwareValue::Size(slot_icon_size(size)),
+                size: size.map(|size| ThemeAwareValue::Size(slot_icon_size(size))),
                 sx: &DECREMENT_SX,
                 // Not a tab stop: the field is, and the arrow keys do the same
                 // job from there.
@@ -1168,7 +1168,7 @@ fn Steppers(
             }
             ActionIcon {
                 aria_label: increment_label.unwrap_or_else(|| labels.increase.to_string()),
-                size: ThemeAwareValue::Size(slot_icon_size(size)),
+                size: size.map(|size| ThemeAwareValue::Size(slot_icon_size(size))),
                 sx: &INCREMENT_SX,
                 tabindex: "-1",
                 disabled: disabled || reach.at_max,

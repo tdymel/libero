@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::RatingPart;
 use libero::components::{Code, Rating, Text};
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 use pictogram_icons_lucide as lucide;
 
@@ -43,6 +44,11 @@ mod tests {
     }
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn RatingPage() -> Element {
     let theme = use_theme();
@@ -73,7 +79,7 @@ pub fn RatingPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default(theme.rating.color.as_str())
                     .doc("The filled stars' colour; `theme.rating.color` when unset. Empty stars are `muted`."),
-                prop("size", "Responsive<Size>").default(theme.rating.size.as_str()).doc("Star size and the gap between stars."),
+                prop("size", "Responsive<Size>").default(theme.rating.size.as_str()).doc("Star size and the gap between stars. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                 prop("format", "Callback<f64, String>")
                     .doc("What a screen reader says for the value. Runs during render, so it can translate. The localization's `rating.value` (\"3.5 of 5\") when unset."),
                 prop("focusable", "bool")
@@ -156,7 +162,17 @@ pub fn RatingPage() -> Element {
                 component: "Rating",
                 children_text: "",
                 controls: vec![
-                    Control::sizes("size").default(theme.rating.size.as_str()),
+                    Control::sizes("size").default(theme.rating.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::color("color").default(theme.rating.color.as_str()),
                     Control::toggle("fractions", ["1", "2"])
                         .labels(["Whole", "Halves"])
@@ -215,7 +231,10 @@ pub fn RatingPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     Rating {
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, size) => responsive(Size::Sm).md(size),
+                            (false, size) => size.into(),
+                        },
                         color: values.str("color"),
                         fractions: values.str("fractions").parse::<u8>().ok(),
                         count: values.str("count").parse::<u8>().ok(),

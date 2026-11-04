@@ -6,6 +6,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::FieldPart;
+use libero::theme::{Size, responsive};
 use libero::{
     components::{
         Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, Code, Flex, OptionList,
@@ -101,6 +102,11 @@ fn starts_with(f: AutocompleteFilterArgs<String>) -> bool {
     // demo-code: filter end
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn AutocompletePage() -> Element {
     let mut value = use_signal(String::new);
@@ -116,10 +122,10 @@ pub fn AutocompletePage() -> Element {
                 props("Autocomplete", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.autocomplete.size.as_str())
-                        .doc("Height, padding and font size of the field and its rows."),
+                        .doc("Height, padding and font size of the field and its rows. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open list keeps the base size."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.autocomplete.radius.as_str())
-                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius of the frame and the list. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "String")
                         .default("\"\"")
                         .doc("The text. Pair it with `oninput`. Picking a suggestion inserts its label."),
@@ -259,7 +265,17 @@ pub fn AutocompletePage() -> Element {
                     "placeholder: \"Start typing\"".to_string(),
                 ],
                 controls: [vec![
-                    Control::sizes("size").default(theme.autocomplete.size.as_str()),
+                    Control::sizes("size").default(theme.autocomplete.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.autocomplete.radius.as_str()),
                 ], field_controls::<CityCopy>(), vec![
@@ -308,7 +324,10 @@ pub fn AutocompletePage() -> Element {
                     rsx! {
                     Autocomplete {
                         sx: sx().width("280px").max_width("100%"),
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, size) => responsive(Size::Sm).md(size),
+                            (false, size) => size.into(),
+                        },
                         radius: values.str("radius"),
                         label: field.label,
                         aria_label: field.aria_label,

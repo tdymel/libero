@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::SwitchGroupPart;
 use libero::components::{Code, OptionList, Options, SwitchGroup, Text};
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 struct AlertCopy;
@@ -81,6 +82,11 @@ fn max_checked(values: &DemoValues) -> Option<usize> {
     values.str("max_checked").parse().ok()
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn SwitchGroupPage() -> Element {
     let mut alerts = use_signal(|| vec![Alert::Email, Alert::Digest]);
@@ -122,7 +128,7 @@ pub fn SwitchGroupPage() -> Element {
                         .doc("Track color of the switches that are on; `theme.switch.color` when unset."),
                     prop("size", "Responsive<Size>")
                         .default(theme.switch.size.as_str())
-                        .doc("Size of the tracks, the thumbs and their labels."),
+                        .doc("Size of the tracks, the thumbs and their labels. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("label", "Caption")
                         .doc("The question, and the group's name."),
                     prop("description", "Caption")
@@ -200,7 +206,17 @@ pub fn SwitchGroupPage() -> Element {
                         }),
                     Control::color("color").default(theme.switch.color.as_str()),
                     Control::sizes("size")
-                        .default(theme.switch.size.as_str()),
+                        .default(theme.switch.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .labels(["Horizontal", "Vertical"])
                         .default("vertical")
@@ -238,7 +254,10 @@ pub fn SwitchGroupPage() -> Element {
                             option_description: (values.str("variant") == "card")
                                 .then(|| Callback::new(alert_description)),
                             color: values.str("color"),
-                            size: values.str("size"),
+                            size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                (true, size) => responsive(Size::Sm).md(size),
+                                (false, size) => size.into(),
+                            },
                             orientation: values.str("orientation"),
                             max_checked: max_checked(&values),
                             label: field.label,

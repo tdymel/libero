@@ -18,7 +18,7 @@ use crate::{
     localization::fill,
     platform::{ElementApi, focus_first_of, logical_key},
     sx::{ThemeAwareValue, sx},
-    theme::{FileFieldVariant, Size},
+    theme::{FileFieldVariant, Responsive, Size},
 };
 
 use super::file_field::FileFieldPart;
@@ -129,7 +129,7 @@ pub(super) struct FileRows {
     /// What a caller's `selection` hears.
     pub(super) disabled: bool,
     pub(super) readonly: bool,
-    pub(super) icon_size: Input<ThemeAwareValue>,
+    pub(super) icon_size: Input<Responsive<ThemeAwareValue>>,
     /// The field's; the chips step down from it themselves.
     pub(super) size: Size,
     /// The loader a card carries, once no surface is left to carry it.
@@ -431,7 +431,7 @@ fn default_chip(
 fn default_card(
     file: &FileData,
     remove: Callback<()>,
-    icon_size: Input<ThemeAwareValue>,
+    icon_size: Input<Responsive<ThemeAwareValue>>,
     editable: bool,
     loading: Option<Size>,
     id: String,

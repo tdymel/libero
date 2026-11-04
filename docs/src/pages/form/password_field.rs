@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, PasswordField, Text};
+use libero::theme::{Size, responsive};
 use libero::{sx::sx, use_theme};
 
 struct PasswordCopy;
@@ -15,6 +16,11 @@ impl FieldCopy for PasswordCopy {
     const HELPER: &'static str = "At least 8 characters.";
     const WARNING: &'static str = "That password is weak.";
     const ERROR: &'static str = "Too short.";
+}
+
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
 }
 
 #[component]
@@ -31,10 +37,10 @@ pub fn PasswordFieldPage() -> Element {
                 props("PasswordField", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.text_field.size.as_str())
-                        .doc("Height, padding and font size."),
+                        .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.text_field.radius.as_str())
-                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Option<String>")
                         .doc("The secret. Leave it out and the input keeps its own text."),
                     prop("oninput", "EventHandler<String>")
@@ -111,7 +117,17 @@ pub fn PasswordFieldPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default(theme.text_field.size.as_str()),
+                        .default(theme.text_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.text_field.radius.as_str()),
@@ -133,7 +149,10 @@ pub fn PasswordFieldPage() -> Element {
                     PasswordField {
                         // As `TextField`'s demo: the frame holds its width at every size.
                         sx: sx().width("100%").max_width("320px"),
-                        size: values.str("size"),
+                        size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                            (true, size) => responsive(Size::Sm).md(size),
+                            (false, size) => size.into(),
+                        },
                         radius: values.str("radius"),
                         label: field.label,
                         aria_label: field.aria_label,

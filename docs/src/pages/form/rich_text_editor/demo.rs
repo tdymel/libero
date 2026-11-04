@@ -7,6 +7,7 @@ use libero::components::rich_text::{
 };
 use libero::components::{ComboboxOption, Paper, RichTextEditor};
 use libero::sx::sx;
+use libero::theme::{Size, responsive};
 
 /// The `max_length` switch's cap: room to type past the sample, then the limit.
 pub const MAX_LENGTH: usize = 1000;
@@ -155,7 +156,10 @@ pub fn NotesEditor(values: DemoValues, mut doc: Signal<Doc>) -> Element {
     };
     rsx! {
         RichTextEditor {
-            size: values.str("size"),
+            size: match (super::responsive_on(&values), Size::from(values.str("size").as_str())) {
+                (true, size) => responsive(Size::Sm).md(size),
+                (false, size) => size.into(),
+            },
             radius: values.str("radius"),
             label: field.label,
             aria_label: field.aria_label,

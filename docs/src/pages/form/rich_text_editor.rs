@@ -6,6 +6,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::rich_text::Doc;
 use libero::components::{Code, FieldPart, Text};
+use libero::theme::Size;
 use libero::use_theme;
 
 mod demo;
@@ -130,6 +131,11 @@ fn wrap_extensions(values: &DemoValues, code: &str) -> String {
     items.join("\n\n")
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn RichTextEditorPage() -> Element {
     let theme = use_theme();
@@ -189,10 +195,10 @@ pub fn RichTextEditorPage() -> Element {
                     prop("tools", "Vec<RichTextTool>")
                         .default("vec![]")
                         .doc("Your toolbar buttons, after the block buttons: `RichTextTool::new(command, label, icon)` runs the command by name; `.active(fn)` makes it a toggle with `aria-pressed`. They never move into the More menu."),
-                    prop("size", "Responsive<Size>").default(theme.textarea.size.as_str()).doc("Padding and font size."),
+                    prop("size", "Responsive<Size>").default(theme.textarea.size.as_str()).doc("Padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.textarea.radius.as_str())
-                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the toolbar. It names the text."),
                     prop("description", "Caption")
@@ -309,7 +315,17 @@ pub fn RichTextEditorPage() -> Element {
                 ],
                 controls: [vec![
                     Control::sizes("size")
-                        .default(theme.textarea.size.as_str()),
+                        .default(theme.textarea.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.textarea.radius.as_str()),

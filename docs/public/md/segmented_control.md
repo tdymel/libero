@@ -53,11 +53,11 @@ fn Demo() -> Element {
 | `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::with_icon` or `OptionLabel::rich`. Runs during render, so it can read a locale from context. `#[option(label = "..")]` renames one at the type. |
 | `orientation` | `Orientation` | `horizontal` | A row or a column. |
-| `variant` | `Variant` | `filled` | The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. |
+| `variant` | `Responsive<Variant>` | `filled` | The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. Or one per breakpoint, `variant: responsive(Variant::Filled).md(Variant::Outlined)`. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset. |
-| `size` | `Responsive<Size>` | `md` | Size of the segments and the captions. |
-| `radius` | `Responsive<ThemeAwareValue>` | `md` | Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: "0"`. |
-| `gap` | `ThemeAwareValue` | - | Space between the segments, or any CSS, e.g. `gap: "0"`. Set, each segment gets its own border and radius. Unset, a wrapped second line keeps the joined look, so set it where the row may wrap. |
+| `size` | `Responsive<Size>` | `md` | Size of the segments and the captions. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `md` | Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
+| `gap` | `Responsive<ThemeAwareValue>` | - | Space between the segments, or any CSS, e.g. `gap: "0"`. Set, each segment gets its own border and radius. Unset, a wrapped second line keeps the joined look, so set it where the row may wrap. Or one per breakpoint, `gap: responsive(ThemeAwareValue::from("0")).md(Size::Sm.into())`. |
 | `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way. |
 | `selected_check` | `bool` | `true` | A check before the selected segment's label. Unset follows `theme.segmented_control.selected_check`. `false` keeps the segment's width; the selected segment keeps its ring and fill. |
 | `focusable` | `bool` | `true` | `false` keeps the segments out of the tab order, and a click leaves focus where it is. For a control inside a field's dropdown. |

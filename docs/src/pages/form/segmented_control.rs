@@ -11,6 +11,7 @@ use dioxus::prelude::*;
 use libero::components::{
     Code, Icon, Input, OptionLabel, OptionList, Options, SegmentedControl, Text,
 };
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 struct AlignmentCopy;
@@ -72,6 +73,11 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn SegmentedControlPage() -> Element {
     let theme = use_theme();
@@ -101,18 +107,18 @@ pub fn SegmentedControlPage() -> Element {
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("A row or a column."),
-                    prop("variant", "Variant")
+                    prop("variant", "Responsive<Variant>")
                         .default(theme.segmented_control.variant.as_str())
-                        .doc("The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient."),
+                        .doc("The unselected look, shared by every segment (`filled` draws them tonal, under a solid pick): `filled`, `tonal`, `elevated`, `outlined`, `standard`, or `gradient`, which takes the theme's gradient. Or one per breakpoint, `variant: responsive(Variant::Filled).md(Variant::Outlined)`."),
                     prop("color", "ThemeAwareValue")
                         .default(theme.segmented_control.color.as_str())
                         .doc("Accent color. A theme color name or any CSS color; `theme.segmented_control.color` when unset."),
-                    prop("size", "Responsive<Size>").default(theme.button.size.as_str()).doc("Size of the segments and the captions."),
+                    prop("size", "Responsive<Size>").default(theme.button.size.as_str()).doc("Size of the segments and the captions. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.button.radius.as_str())
-                        .doc("Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: \"0\"`."),
-                    prop("gap", "ThemeAwareValue")
-                        .doc("Space between the segments, or any CSS, e.g. `gap: \"0\"`. Set, each segment gets its own border and radius. Unset, a wrapped second line keeps the joined look, so set it where the row may wrap."),
+                        .doc("Radius of the control's outer corners. Inner corners are square. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
+                    prop("gap", "Responsive<ThemeAwareValue>")
+                        .doc("Space between the segments, or any CSS, e.g. `gap: \"0\"`. Set, each segment gets its own border and radius. Unset, a wrapped second line keeps the joined look, so set it where the row may wrap. Or one per breakpoint, `gap: responsive(ThemeAwareValue::from(\"0\")).md(Size::Sm.into())`."),
                     prop("full_width", "bool")
                         .default("false")
                         .doc("Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way."),
@@ -224,7 +230,17 @@ pub fn SegmentedControlPage() -> Element {
                     // to, so that swatch prints nothing.
                     Control::color("color").default(theme.segmented_control.color.as_str()),
                     Control::sizes("size")
-                        .default("md"),
+                        .default("md")
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
@@ -265,10 +281,13 @@ pub fn SegmentedControlPage() -> Element {
                                 "primary" => Input::None,
                                 color => Input::from(color),
                             },
-                            size: values.str("size"),
+                            size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                (true, size) => responsive(Size::Sm).md(size),
+                                (false, size) => size.into(),
+                            },
                             radius: values.str("radius"),
                             orientation: values.str("orientation"),
-                            gap: or_unset(values.str("gap")),
+                            gap: or_unset::<libero::sx::ThemeAwareValue>(values.str("gap")),
                             full_width: is_on(&values, "full_width"),
                             selected_check: is_on(&values, "selected_check"),
                             label: field.label,

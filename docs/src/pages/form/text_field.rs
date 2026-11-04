@@ -51,7 +51,7 @@ pub fn TextFieldPage() -> Element {
                 props("TextField", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.text_field.size.as_str())
-                        .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent; the slot buttons and the clear button keep the base size."),
+                        .doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent; the slot buttons follow too."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.text_field.radius.as_str())
                         .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),

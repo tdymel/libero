@@ -5,6 +5,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, Flex, PinField, Text};
+use libero::theme::{Size, responsive};
 use libero::use_theme;
 
 struct CodeCopy;
@@ -17,6 +18,11 @@ impl FieldCopy for CodeCopy {
     const ERROR: &'static str = "That code is wrong.";
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn PinFieldPage() -> Element {
     let theme = use_theme();
@@ -27,8 +33,8 @@ pub fn PinFieldPage() -> Element {
             markdown: "/md/pin_field.md",
             properties: vec![
                 props("PinField", vec![
-                    prop("size", "Responsive<Size>").default(theme.pin_field.size.as_str()).doc("The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size."),
-                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.pin_field.radius.as_str()).doc("Corner radius of each cell, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
+                    prop("size", "Responsive<Size>").default(theme.pin_field.size.as_str()).doc("The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
+                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.pin_field.radius.as_str()).doc("Corner radius of each cell, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("length", "usize").default(theme.pin_field.length.to_string()).doc("How many cells, clamped to 1 through 32."),
                     prop("kind", "PinKind").default(theme.pin_field.kind.as_str()).doc("`numeric` takes the digits 0-9, `alphanumeric` the ASCII letters and digits. Any other character, an accented letter too, is ignored as it is typed."),
                     prop("value", "Option<String>")
@@ -117,7 +123,17 @@ pub fn PinFieldPage() -> Element {
                             "alphanumeric" => vec!["kind: \"alphanumeric\"".to_string()],
                             _ => vec![],
                         }),
-                    Control::sizes("size").default(theme.pin_field.size.as_str()),
+                    Control::sizes("size").default(theme.pin_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.pin_field.radius.as_str()),
                 ], field_controls::<CodeCopy>(), vec![
@@ -159,7 +175,10 @@ fn PinFieldDemo(values: DemoValues) -> Element {
     rsx! {
         Flex { direction: "column", gap: "sm", align: "center",
             PinField {
-                size: values.str("size"),
+                size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                    (true, size) => responsive(Size::Sm).md(size),
+                    (false, size) => size.into(),
+                },
                 radius: values.str("radius"),
                 length,
                 kind: values.str("kind"),

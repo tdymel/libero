@@ -27,9 +27,9 @@ pub(crate) use action_icon::{ACTION_ICON_GROWS, TooltipOpenDelay, is_compact, si
 #[cfg(feature = "action-icon")]
 pub use action_icon::{ActionIcon, ActionIconProps};
 #[cfg(feature = "button")]
-pub(crate) use button::button_variables;
-#[cfg(feature = "button")]
 pub use button::{Button, ButtonPart, ButtonProps, LoadingPosition};
+#[cfg(feature = "button")]
+pub(crate) use button::{button_variables, responsive_button_variables};
 #[cfg(feature = "button-group")]
 pub use button_group::{ButtonGroup, ButtonGroupProps};
 #[cfg(feature = "copy")]
@@ -51,4 +51,4 @@ pub use toolbar::{
     Toolbar, ToolbarGroup, ToolbarGroupProps, ToolbarPart, ToolbarProps, ToolbarSeparator,
     ToolbarSeparatorProps,
 };
-pub(crate) use variant_vars::variant_var;
+pub(crate) use variant_vars::{VARIANT_VARS, variant_var};

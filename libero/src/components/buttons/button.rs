@@ -194,7 +194,7 @@ pub(crate) fn button_variables(
 }
 
 /// Every variant a responsive `variant` takes, each under its own names ([`variant_var`]).
-fn responsive_button_variables(
+pub(crate) fn responsive_button_variables(
     variant: &Responsive<Variant>,
     base: &ThemeAwareValue,
     uncolored: bool,

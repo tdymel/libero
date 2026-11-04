@@ -39,8 +39,8 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | The box's color when checked. A theme color name or any CSS color; `theme.checkbox.color` when unset. |
-| `size` | `Responsive<Size>` | `md` | Size of the box, the label and the captions. |
-| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the box. Or any CSS, e.g. `radius: "0"`. |
+| `size` | `Responsive<Size>` | `md` | Size of the box, the label and the captions. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. |
+| `radius` | `Responsive<ThemeAwareValue>` | `sm` | Corner radius of the box. Or any CSS, e.g. `radius: "0"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`. |
 | `checked` | `bool` | - | Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it. |
 | `indeterminate` | `bool` | `false` | Draws a dash and reads as mixed. It wins over `checked`, and toggling from it gives `true`. Use it on a parent whose children are partly checked. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. |

@@ -6,6 +6,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::components::FieldPart;
 use libero::components::{Code, Decimals, NumberField, NumberValue, Text, TouchInput};
+use libero::theme::{Responsive, Size, responsive};
 use libero::use_theme;
 
 struct QuantityCopy;
@@ -92,6 +93,11 @@ fn percent(values: &DemoValues) -> bool {
     values.str("type") == "f64" && values.str("affix") == "percent"
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn NumberFieldPage() -> Element {
     let theme = use_theme();
@@ -108,10 +114,10 @@ pub fn NumberFieldPage() -> Element {
             markdown: "/md/number_field.md",
             properties: vec![
                 props("NumberField", vec![
-                    prop("size", "Responsive<Size>").default(theme.number_field.size.as_str()).doc("Height, padding and font size."),
+                    prop("size", "Responsive<Size>").default(theme.number_field.size.as_str()).doc("Height, padding and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.number_field.radius.as_str())
-                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Option<T>")
                         .doc("The number in the field, strictly controlled. `None` is the empty field. A signal that starts at `None` needs its type, such as `None::<i32>`."),
                     prop("onchange", "EventHandler<Option<T>>")
@@ -317,7 +323,17 @@ pub fn NumberFieldPage() -> Element {
                             _ => vec![],
                         }),
                     Control::sizes("size")
-                        .default(theme.number_field.size.as_str()),
+                        .default(theme.number_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.number_field.radius.as_str()),
@@ -379,7 +395,10 @@ pub fn NumberFieldPage() -> Element {
                         field.helper,
                         field.status,
                     );
-                    let size = values.str("size");
+                    let size: Responsive<Size> = match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                        (true, size) => responsive(Size::Sm).md(size),
+                        (false, size) => size.into(),
+                    };
                     let radius = values.str("radius");
                     let required = (values.str("required") == "true").then_some(true);
                     let disabled = (values.str("disabled") == "true").then_some(true);

@@ -15,6 +15,7 @@ use libero::components::FieldPart;
 use libero::components::{
     ChronoField, Code, DateLevel, DateRange, Flex, Icon, Rule, Text, Validators, not_empty,
 };
+use libero::theme::{Responsive, Size, responsive};
 use libero::{LiberoProvider, use_formats_handle, use_localization_handle};
 
 use super::date_locales::{FORMATS, LANGUAGES, options, picked};
@@ -65,6 +66,11 @@ fn moment(day: u32, hour: u32) -> Option<NaiveDateTime> {
         .map(|(day, time)| NaiveDateTime::new(day, time))
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn ChronoFieldPage() -> Element {
     let theme = libero::use_theme();
@@ -76,8 +82,8 @@ pub fn ChronoFieldPage() -> Element {
             markdown: "/md/chrono_field.md",
             properties: vec![
                 props("ChronoField<V: DateValue>", vec![
-                    prop("size", "Responsive<Size>").default(theme.chrono_field.size.as_str()).doc("Control height, font size and the dropdown's picker."),
-                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.chrono_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`."),
+                    prop("size", "Responsive<Size>").default(theme.chrono_field.size.as_str()).doc("Control height, font size and the dropdown's picker. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the open picker keeps the base size."),
+                    prop("radius", "Responsive<ThemeAwareValue>").default(theme.chrono_field.radius.as_str()).doc("Corner radius of the frame. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Option<V>").doc("The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`. A `TimeDelta` shows as `1 h 30 min` in the `DateLocale`'s units and is typed so, or as `1h30`, `1:30` or minutes; a fraction such as `1.5 h` is refused, not rounded. Below `sm`, a range shows short, `14–16 Sep`, until the field takes focus."),
                     prop("onchange", "EventHandler<Option<V>>")
                         .doc("Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`."),
@@ -227,7 +233,17 @@ pub fn ChronoFieldPage() -> Element {
                             code.extend(level.map(|level| format!("level: DateLevel::{level}")));
                             code
                         }),
-                        Control::sizes("size").default(theme.chrono_field.size.as_str()),
+                        Control::sizes("size").default(theme.chrono_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                         // `0` is plain CSS, next to the size scale.
                         Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.chrono_field.radius.as_str()),
                         // Both swap the site's own, so they add no prop.
@@ -319,7 +335,13 @@ fn ChronoFieldDemo(values: DemoValues) -> Element {
         use_signal(|| moment(14, 9).map(|start| DateRange::new(start, moment(16, 17))));
     let mut duration = use_signal(|| TimeDelta::try_minutes(90));
 
-    let size = values.str("size");
+    let size: Responsive<Size> = match (
+        responsive_on(&values),
+        Size::from(values.str("size").as_str()),
+    ) {
+        (true, size) => responsive(Size::Sm).md(size),
+        (false, size) => size.into(),
+    };
     let radius = values.str("radius");
     let (language_name, language) = picked(&LANGUAGES, &values.str("language"));
     let (_, conventions) = picked(&FORMATS, &values.str("formats"));

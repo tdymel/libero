@@ -348,7 +348,6 @@ fn use_cascader_field(
 ) -> CascaderField {
     // From the posted value: one no option holds still posts, so it fills the field (todo 4235).
     let empty = props.form_value.is_none();
-    let size = sizes.base();
     let field = use_field()
         .labelled_by()
         .label(&props.label)
@@ -377,7 +376,7 @@ fn use_cascader_field(
     let onpick = props.onpick;
     let clear = clear_button(
         props.clearable && !empty && !disabled && !readonly,
-        size,
+        sizes,
         trigger,
         Some(&field),
         move |_| {

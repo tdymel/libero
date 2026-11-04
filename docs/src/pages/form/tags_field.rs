@@ -5,6 +5,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::components::TagsFieldPart;
+use libero::theme::{Size, responsive};
 use libero::{
     components::{
         ActionIcon, Chip, Code, FieldStatus, Flex, OptionList, OptionSource, SelectionArgs,
@@ -234,6 +235,11 @@ fn max_tags(values: &DemoValues) -> Option<usize> {
     values.str("max_tags").parse().ok()
 }
 
+/// The demo's size from the `md` breakpoint up, `sm` below it.
+fn responsive_on(values: &DemoValues) -> bool {
+    values.str("responsive") == "true"
+}
+
 #[component]
 pub fn TagsFieldPage() -> Element {
     let mut value = use_signal(Vec::<String>::new);
@@ -251,10 +257,10 @@ pub fn TagsFieldPage() -> Element {
                 props("TagsField", vec![
                     prop("size", "Responsive<Size>")
                         .default(theme.tags_field.size.as_str())
-                        .doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field."),
+                        .doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`; the chips keep the base size."),
                     prop("radius", "Responsive<ThemeAwareValue>")
                         .default(theme.tags_field.radius.as_str())
-                        .doc("Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: \"0\"`."),
+                        .doc("Corner radius of the frame and the list, independent of `size`. Or any CSS, e.g. `radius: \"0\"`. Or one per breakpoint, `radius: responsive(Size::Sm).md(Size::Xl)`."),
                     prop("value", "Vec<String>")
                         .default("[]")
                         .doc("The tags, in order. Controlled with `onchange`; a path `name` binds the list to the `Form` instead. With neither, the field starts from it and keeps its own edits until a form reset."),
@@ -420,7 +426,17 @@ pub fn TagsFieldPage() -> Element {
                             false => vec!["onchange: move |next| topics.set(next)".to_string()],
                         }
                     }),
-                    Control::sizes("size").default(theme.tags_field.size.as_str()),
+                    Control::sizes("size").default(theme.tags_field.size.as_str())
+                        .code(|control, values| match (responsive_on(values), values.str("size")) {
+                            (true, size) => vec![format!(
+                                "size: responsive(Size::Sm).md(Size::{:?})",
+                                Size::from(size.as_str())
+                            )],
+                            (false, size) if size == control.default => vec![],
+                            (false, size) => vec![format!("size: {size:?}")],
+                        }),
+                    // On, so the breakpoint switch shows without another switch: resize the window.
+                    Control::switch("responsive").default("true").code(|_, _| vec![]),
                     // `0` is plain CSS, next to the size scale.
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "xxl"]).default(theme.tags_field.radius.as_str()),
                     Control::toggle("status", ["valid", "warning", "error"])
@@ -532,7 +548,10 @@ pub fn TagsFieldPage() -> Element {
                     rsx! {
                         TagsField {
                             sx: sx().width("100%").max_width("320px"),
-                            size: values.str("size"),
+                            size: match (responsive_on(&values), Size::from(values.str("size").as_str())) {
+                                (true, size) => responsive(Size::Sm).md(size),
+                                (false, size) => size.into(),
+                            },
                             radius: values.str("radius"),
                             label: (values.str("label") == "true").then(|| "Topics".to_string()),
                             aria_label: (values.str("label") != "true").then_some("Topics"),

@@ -4,9 +4,16 @@
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
 use libero::{
-    components::{Checkbox, Flex, TextField},
+    components::{Checkbox, Flex, Options, SegmentedControl, TextField},
+    sx::ThemeAwareValue,
     theme::{ChoiceVariant, Size, responsive},
 };
+
+#[derive(Clone, PartialEq, Options)]
+enum View {
+    List,
+    Grid,
+}
 
 fn app() -> Element {
     rsx! {
@@ -20,6 +27,15 @@ fn app() -> Element {
                 Checkbox {
                     label: "Card from md",
                     variant: responsive(ChoiceVariant::Plain).md(ChoiceVariant::Card),
+                }
+            }
+            div { id: "rspf-seg",
+                SegmentedControl {
+                    label: "View",
+                    value: View::List,
+                    onchange: move |_| {},
+                    size: responsive(Size::Sm).md(Size::Lg),
+                    gap: responsive(ThemeAwareValue::from("2px")).md("10px".into()),
                 }
             }
         }
@@ -48,4 +64,18 @@ fn form_props_follow_the_window_width() {
     page.resize(600, 800);
     let (_, _, field, card) = look(&page);
     assert_eq!((field, card.as_str()), (small, "0px"));
+}
+
+/// The segments' height and the strip's gap switch at md: copies keyed on the strip.
+#[test]
+fn a_segmented_control_follows_the_window_width() {
+    let mut page = mount(app);
+    let segment = "#rspf-seg label[data-slot='segment']";
+    let gap = "#rspf-seg [data-slot='control']";
+    page.resize(1280, 800);
+    let (wide, wide_gap) = (page.rect(segment).3, page.computed(gap, "column-gap"));
+    page.resize(600, 800);
+    let (narrow, narrow_gap) = (page.rect(segment).3, page.computed(gap, "column-gap"));
+    assert!(narrow < wide, "{narrow} {wide}");
+    assert_eq!((wide_gap.as_str(), narrow_gap.as_str()), ("10px", "2px"));
 }

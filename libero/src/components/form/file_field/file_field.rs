@@ -328,7 +328,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let trailing = trailing_slot(
         loading.then_some(chip_size),
         clearable && has_files && editable,
-        size,
+        sizes,
         browse_element,
         value
             .iter()
@@ -397,7 +397,9 @@ pub fn FileField(props: FileFieldProps) -> Element {
         editable,
         disabled,
         readonly: props.readonly.unwrap_or(false),
-        icon_size: ThemeAwareValue::Size(slot_icon_size(size)).into(),
+        icon_size: sizes
+            .map(|size| ThemeAwareValue::Size(slot_icon_size(size)))
+            .into(),
         size,
         // Only once the surface is gone: otherwise the loader is on the
         // surface, and one is enough.
