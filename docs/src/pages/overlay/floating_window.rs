@@ -1,13 +1,32 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, responsive_switch,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Dialog, Flex, FloatingWindowOptions, FloatingWindowPart, Text, WindowRect,
+        Button, Code, Dialog, Flex, FloatingWindowOptions, FloatingWindowPart, Placement, Text,
+        WindowRect,
     },
     hooks::{ModalScope, use_floating_window, use_media_query, use_modal},
     sx::sx,
-    theme::Size,
+    theme::{Responsive, Size, responsive},
 };
+
+/// Below `md` the Responsive switch docks Inspector and Notes at the bottom centre, clear
+/// of the trigger row and the site header.
+fn narrow_of(handle: &str) -> Option<Placement> {
+    matches!(handle, "inspector" | "notes").then_some(Placement::BottomCenter)
+}
+
+/// `placement` per breakpoint while the switch is on, else the plain pick.
+fn placement_of(
+    responsive_on: bool,
+    handle: &str,
+    placement: &str,
+) -> Option<Responsive<Placement>> {
+    let narrow = narrow_of(handle).filter(|_| responsive_on)?;
+    Some(responsive(narrow).md(Placement::from(placement)))
+}
 
 /// The three windows the preview opens: the name its handle has in the
 /// printed code, its title, where it first appears, and its body.
@@ -55,10 +74,14 @@ fn hook_code(
     values: &DemoValues,
     (handle, title, placement, body): (&str, &str, &str, &str),
 ) -> String {
-    let mut options = vec![
-        format!("title: Some({title:?}.into()),"),
-        format!("placement: {placement:?}.into(),"),
-    ];
+    let placement = match narrow_of(handle).filter(|_| values.str("responsive") == "true") {
+        Some(narrow) => format!(
+            "placement: responsive(Placement::{narrow:?}).md(Placement::{:?}).into(),",
+            Placement::from(placement),
+        ),
+        None => format!("placement: {placement:?}.into(),"),
+    };
+    let mut options = vec![format!("title: Some({title:?}.into()),"), placement];
     if values.str("resizable") == "true" {
         options.push("resizable: true,".into());
         options.push(
@@ -125,19 +148,28 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
 
 /// The hooks need a scope of their own: `Demo` calls `render` from its own.
 #[component]
-fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -> Element {
+fn WindowDemo(
+    resizable: bool,
+    pinned: bool,
+    report: bool,
+    responsive: bool,
+    values: DemoValues,
+) -> Element {
     let mut last = use_signal(|| None::<WindowRect>);
     let record = use_callback(move |rect: WindowRect| last.set(Some(rect)));
     let phone = use_media_query(&format!("(width < {})", Size::Sm.breakpoint_value()));
-    let options = move |title: &str, placement: &str| FloatingWindowOptions {
+    let options = move |handle: &str, title: &str, placement: &str| FloatingWindowOptions {
         title: Some(title.into()),
         // Below `sm` the middle holds the trigger row and the top the site header,
         // so Notes sits at the bottom (todo 4965).
-        placement: match (phone(), placement) {
-            (true, "center-end") => "bottom-center",
-            _ => placement,
-        }
-        .into(),
+        placement: match placement_of(responsive, handle, placement) {
+            Some(per_breakpoint) => per_breakpoint.into(),
+            None => match (phone(), placement) {
+                (true, "center-end") => "bottom-center",
+                _ => placement,
+            }
+            .into(),
+        },
         resizable,
         pinned,
         // A narrow phone page keeps room beside a window.
@@ -164,13 +196,14 @@ fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -
             }
         }
     });
-    let inspector = use_floating_window(options("Inspector", "bottom-end"), |window| {
-        rsx! {
-            Text { "Drag the title bar, or focus it and use the arrow keys." }
-            Button { onclick: move |_| window.close(), "Done" }
-        }
-    });
-    let notes = use_floating_window(options("Notes", "center-end"), move |_| {
+    let inspector =
+        use_floating_window(options("inspector", "Inspector", "bottom-end"), |window| {
+            rsx! {
+                Text { "Drag the title bar, or focus it and use the arrow keys." }
+                Button { onclick: move |_| window.close(), "Done" }
+            }
+        });
+    let notes = use_floating_window(options("notes", "Notes", "center-end"), move |_| {
         rsx! {
             Text { "A modal opened from here covers every window." }
             Button {
@@ -181,7 +214,7 @@ fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -
             }
         }
     });
-    let layers = use_floating_window(options("Layers", "bottom-start"), |window| {
+    let layers = use_floating_window(options("layers", "Layers", "bottom-start"), |window| {
         rsx! {
             Text { "Click a window to bring it to the front." }
             Button { onclick: move |_| window.close(), "Done" }
@@ -278,7 +311,7 @@ pub fn FloatingWindowPage() -> Element {
                 props("FloatingWindowOptions", vec![
                     prop("title", "Option<String>").doc("The title bar's heading, and the window's accessible name."),
                     prop("aria_label", "Option<String>").doc("Names the window instead of `title`."),
-                    prop("placement", "Input<Placement>").default("center-center").doc("Where it first appears, inside the viewport's safe area (clear of a notch and the home indicator). Once dragged, it stays where it was put, inside that area."),
+                    prop("placement", "Input<Responsive<Placement>>").default("center-center").doc("Where it first appears, inside the viewport's safe area (clear of a notch and the home indicator). Once dragged, it stays where it was put, inside that area. Or one per breakpoint, `placement: responsive(Placement::BottomCenter).md(Placement::BottomEnd).into()`: read in Rust, so a window open while the page is server-rendered switches after mount. Breakpoints follow the window."),
                     prop("resizable", "bool").default("false").doc("Draws the corner resize handle."),
                     prop("pinned", "bool").default("false").doc("Keeps it at `placement`, with no drag, keyboard move or Move menu item; turning it on puts a moved window back."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Overrides the stacking. Unset, windows sit below overlays and modals."),
@@ -350,12 +383,14 @@ pub fn FloatingWindowPage() -> Element {
                     Control::switch("resizable").default("true"),
                     Control::switch("pinned"),
                     Control::switch("report_moves"),
+                    responsive_switch(),
                 ],
                 render: move |values: DemoValues| rsx! {
                     WindowDemo {
                         resizable: values.str("resizable") == "true",
                         pinned: values.str("pinned") == "true",
                         report: values.str("report_moves") == "true",
+                        responsive: values.str("responsive") == "true",
                         values: values.clone(),
                     }
                 },

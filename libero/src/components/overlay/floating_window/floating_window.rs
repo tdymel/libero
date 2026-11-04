@@ -16,7 +16,7 @@ use crate::{
         layout::{Float, Placement, use_box},
     },
     context::{ModalContext, WindowHost},
-    hooks::{ElementHandle, escape_closes, use_element, use_focus_within, use_id},
+    hooks::{ElementHandle, escape_closes, use_element, use_focus_within, use_id, use_responsive},
     localization::{FloatingWindowLabels, fill},
     platform::{ElementApi, PlatformError},
     sx::{Sx, ThemeAwareValue},
@@ -195,7 +195,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         onresize,
     } = props.options;
     let onclose = props.onclose;
-    let placement = placement.copied_or(defaults.placement);
+    let placement = use_responsive(&placement.copied_or(defaults.placement.into()))();
     // A blank one names nothing: the label must not mask the title, nor the title the label.
     let aria_label = aria_label.filter(|label| !label.trim().is_empty());
     let title = title.filter(|title| !title.trim().is_empty());

@@ -21,7 +21,8 @@ card is a [Dialog](dialog.md), placed like a [Popover](popover.md).
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Flex, Text, TourOptions, TourStep, use_tour},
-    hooks::use_element,
+    hooks::{Side, use_element},
+    theme::responsive,
 };
 
 #[component]
@@ -37,11 +38,13 @@ fn Demo() -> Element {
                 .target(search)
                 .interactive(true)
                 .title("Search")
-                .description("Finds any page by its name. Try it: press it, or Tab to it."),
+                .description("Finds any page by its name. Try it: press it, or Tab to it.")
+                .side(responsive(Side::Top).md(Side::Bottom)),
             TourStep::new("create")
                 .target_selector("#tour-demo-create")
                 .title("New project")
-                .description("Starts an empty project."),
+                .description("Starts an empty project.")
+                .side(responsive(Side::Top).md(Side::Bottom)),
         ],
         storage_key: Some("docs-tour-seen".into()),
         ..Default::default()
@@ -110,8 +113,8 @@ pub fn use_tour(options: TourOptions) -> TourHandle
 | `title` | `impl Into<String>` | - | The card's heading and, unless the tour has an `aria_label`, its name. |
 | `description` | `impl Into<String>` | - | The card's text. |
 | `content` | `Element` | - | Shown in place of `description`, for rich content. |
-| `side` | `Side` | `Bottom` | The card's side of the target. It flips when that side has no room. |
-| `align` | `Align` | `Center` | Where the card lines up along that side. |
+| `side` | `Responsive<Side>` | `Bottom` | The card's side of the target. It flips when that side has no room. Or one per breakpoint, `.side(responsive(Side::Bottom).md(Side::End))`: read in Rust, so a card open while the page is server-rendered switches after mount. Breakpoints follow the window. |
+| `align` | `Responsive<Align>` | `Center` | Where the card lines up along that side. Or one per breakpoint, `.align(responsive(Align::Center).md(Align::Start))`. |
 | `padding` | `f64` | `6` | Room between the target and the edge of the hole, in pixels. |
 | `radius` | `f64` | `4` | The hole's corner radius, in pixels. |
 

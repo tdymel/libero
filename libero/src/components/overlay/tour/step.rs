@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 
-use crate::hooks::{Align, ElementHandle, Side};
+use crate::{
+    hooks::{Align, ElementHandle, Side},
+    tokens::Responsive,
+};
 
 /// One stop of a [`use_tour`](super::use_tour): what to highlight and what to say.
 /// A step without a [`target`](Self::target) shows its card in the middle of the screen.
@@ -33,9 +36,11 @@ pub struct TourStep {
     pub description: Option<String>,
     /// Shown in place of `description`, for rich content.
     pub content: Option<Element>,
-    /// The card's side of the target. It flips when that side has no room.
-    pub side: Side,
-    pub align: Align,
+    /// The card's side of the target. It flips when that side has no room. Per
+    /// breakpoint too; a server-rendered card switches after mount.
+    pub side: Responsive<Side>,
+    /// Per breakpoint too: `responsive(Align::Center).md(Align::Start)`.
+    pub align: Responsive<Align>,
     /// Overrides [`TourDefaults::padding`](crate::theme::TourDefaults::padding).
     pub padding: Option<f64>,
     /// Overrides [`TourDefaults::radius`](crate::theme::TourDefaults::radius).
@@ -53,8 +58,8 @@ impl TourStep {
             title: None,
             description: None,
             content: None,
-            side: Side::Bottom,
-            align: Align::Center,
+            side: Side::Bottom.into(),
+            align: Align::Center.into(),
             padding: None,
             radius: None,
             interactive: false,
@@ -90,13 +95,14 @@ impl TourStep {
         self
     }
 
-    pub fn side(mut self, side: Side) -> Self {
-        self.side = side;
+    /// Sets [`side`](Self::side): a [`Side`], or `responsive(Side::Bottom).md(Side::End)`.
+    pub fn side(mut self, side: impl Into<Responsive<Side>>) -> Self {
+        self.side = side.into();
         self
     }
 
-    pub fn align(mut self, align: Align) -> Self {
-        self.align = align;
+    pub fn align(mut self, align: impl Into<Responsive<Align>>) -> Self {
+        self.align = align.into();
         self
     }
 

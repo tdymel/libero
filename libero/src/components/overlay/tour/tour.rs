@@ -22,7 +22,7 @@ use crate::{
         ElementHandle, ElementRect, FocusReturn, LocalText, POPOVER_AVAILABLE_HEIGHT,
         PopoverOptions, Rect, escape_closes, local_text, placement_sx, use_back, use_dismiss_layer,
         use_element, use_element_rect, use_focus_return, use_id, use_localization, use_popover_on,
-        use_portal_slot, use_scheduled, use_theme,
+        use_portal_slot, use_responsive, use_scheduled, use_theme,
     },
     localization::fill,
     platform::{
@@ -857,14 +857,16 @@ fn TourCard(
     let labels = use_localization().tour;
     let fallback = use_element();
     let anchor = step.target.unwrap_or(fallback);
+    let side = use_responsive(&step.side)();
+    let align = use_responsive(&step.align)();
     // The positioner wraps the card exactly, so it is what the popover measures.
     let popover = use_popover_on(
         anchor,
         positioner,
         !centred,
         PopoverOptions::new(gap, edge)
-            .side(step.side)
-            .align(step.align)
+            .side(side)
+            .align(align)
             .remeasure(remeasure),
     );
     let body_id = use_id();

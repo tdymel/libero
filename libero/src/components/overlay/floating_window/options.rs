@@ -7,7 +7,10 @@ use crate::{
         overlay::MenuPart,
     },
     sx::{Sx, ThemeAwareValue},
+    tokens::Responsive,
 };
+
+crate::sx::input::input_from_responsive!(str Placement);
 
 /// A window's position and size in viewport pixels, handed to
 /// `onmove`/`onresize` so a caller can persist it.
@@ -25,8 +28,9 @@ pub struct FloatingWindowOptions {
     /// Title bar heading, and the accessible name unless `aria_label` is set.
     pub title: Option<String>,
     pub aria_label: Option<String>,
-    /// Where it first appears. Dragging takes over from there.
-    pub placement: Input<Placement>,
+    /// Where it first appears. Dragging takes over from there. Per breakpoint too:
+    /// `responsive(Placement::BottomCenter).md(Placement::BottomEnd)`, read when it opens.
+    pub placement: Input<Responsive<Placement>>,
     /// Draws the corner resize handle.
     pub resizable: bool,
     /// Pins it where `placement` put it: no moving.

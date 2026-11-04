@@ -18,24 +18,25 @@ the `charts` feature. Web and Android.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{LineChart, MarkLine, MarkPoint, Series};
-use libero::theme::PointSymbol;
+use libero::components::{BarChart, Orientation, Series};
+use libero::theme::{BarLayout, responsive};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        LineChart {
-            title: "Visitors",
-            x: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        BarChart {
+            title: "Profit",
+            x: ["Q1", "Q2", "Q3", "Q4"],
             series: vec![
-                Series::new("This week", [120.0, 132.0, 101.0, 134.0, 90.0, 230.0, 210.0])
-                    .mark_line(MarkLine::average())
-                    .mark_point(MarkPoint::Max),
-                Series::new("Last week", [98.0, 110.0, 115.0, 120.0, 104.0, 170.0, 180.0])
-                    .dashed()
-                    .symbol(PointSymbol::Square),
+                Series::new("2025", [40.0, 55.0, -25.0, 62.0]),
+                Series::new("2026", [30.0, -15.0, 20.0, 48.0]),
             ],
-            area: true,
+            layout: responsive(BarLayout::Stacked).md(BarLayout::Grouped),
+            orientation: responsive(Orientation::Horizontal).md(Orientation::Vertical),
+            y_min: -30.0,
+            y_max: 90.0,
+            x_title: "Quarter",
+            y_title: "Profit",
         }
     }
 }

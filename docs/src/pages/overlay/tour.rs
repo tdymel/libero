@@ -1,5 +1,6 @@
 use crate::components::{
-    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props, side_of,
+    Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, prop, props, responsive_switch,
+    side_of,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -9,6 +10,7 @@ use libero::{
     },
     hooks::{Side, use_element},
     sx::sx,
+    theme::{Responsive, responsive},
     use_theme,
 };
 
@@ -20,14 +22,27 @@ fn mask_click_of(value: &str) -> MaskClick {
     }
 }
 
+/// The picked side from `md`, under or over the target below it while the switch is on.
+fn step_side(values: &DemoValues) -> (Side, Option<Side>) {
+    let side = side_of(&values.str("side"));
+    let narrow = match side {
+        Side::Bottom => Side::Top,
+        _ => Side::Bottom,
+    };
+    (side, (values.str("responsive") == "true").then_some(narrow))
+}
+
 /// The page's own source: the custom card prints from `TourDemo`.
 const FILE: DemoFile = DemoFile(include_str!("tour.rs"));
 
 /// The hook, its steps and the targets, rebuilt from the controls as `TourDemo` runs them.
 fn wrap_hook(values: &DemoValues, _: &str) -> String {
-    let side = match side_of(&values.str("side")) {
-        Side::Bottom => String::new(),
-        side => format!("\n            .side(Side::{side:?})"),
+    let side = match step_side(values) {
+        (side, Some(narrow)) => {
+            format!("\n            .side(responsive(Side::{narrow:?}).md(Side::{side:?}))")
+        }
+        (Side::Bottom, None) => String::new(),
+        (side, None) => format!("\n            .side(Side::{side:?})"),
     };
     let custom = values.str("card") == "custom";
     let card = match custom {
@@ -101,8 +116,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
 
 /// The hook needs a scope of its own: `Demo` calls its `render` closure from its own.
 #[component]
-fn TourDemo(side: String, mask_click: String, custom: bool) -> Element {
-    let side = side_of(&side);
+fn TourDemo(side: Responsive<Side>, mask_click: String, custom: bool) -> Element {
     let search = use_element();
     let mut searches = use_signal(|| 0);
     // demo-code: card start
@@ -265,12 +279,12 @@ pub fn TourPage() -> Element {
                         .doc("The card's text."),
                     prop("content", "Element")
                         .doc("Shown in place of `description`, for rich content."),
-                    prop("side", "Side")
+                    prop("side", "Responsive<Side>")
                         .default("Bottom")
-                        .doc("The card's side of the target. It flips when that side has no room."),
-                    prop("align", "Align")
+                        .doc("The card's side of the target. It flips when that side has no room. Or one per breakpoint, `.side(responsive(Side::Bottom).md(Side::End))`: read in Rust, so a card open while the page is server-rendered switches after mount. Breakpoints follow the window."),
+                    prop("align", "Responsive<Align>")
                         .default("Center")
-                        .doc("Where the card lines up along that side."),
+                        .doc("Where the card lines up along that side. Or one per breakpoint, `.align(responsive(Align::Center).md(Align::Start))`."),
                     prop("padding", "f64")
                         .default(theme.tour.padding.to_string())
                         .doc("Room between the target and the edge of the hole, in pixels."),
@@ -328,13 +342,17 @@ pub fn TourPage() -> Element {
                 children_text: "",
                 controls: vec![
                     Control::side(["top", "end", "bottom", "start"]),
+                    responsive_switch(),
                     Control::toggle("mask_click", ["none", "close", "next"])
                         .labels(["None", "Close", "Next"]),
                     Control::toggle("card", ["default", "custom"]).labels(["Default", "Custom"]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     TourDemo {
-                        side: values.str("side"),
+                        side: match step_side(&values) {
+                            (side, Some(narrow)) => responsive(narrow).md(side),
+                            (side, None) => side.into(),
+                        },
                         mask_click: values.str("mask_click"),
                         custom: values.str("card") == "custom",
                     }

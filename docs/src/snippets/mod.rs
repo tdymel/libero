@@ -50,6 +50,8 @@ use libero::theme::*;
 use libero::{IconProvider, IconSet, IconSlot, LiberoProvider, use_theme};
 // Both globs name a `Title`; the component is the one a snippet means.
 use libero::components::Title;
+// Both globs name a `Placement`; the Float enum is the one a snippet means.
+use libero::components::Placement;
 use pictogram_icons_lucide as lucide;
 use std::time::Duration;
 ";

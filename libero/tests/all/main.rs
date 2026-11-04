@@ -121,6 +121,7 @@ mod responsive_form;
 mod responsive_layout;
 mod responsive_orientation;
 mod responsive_overlay;
+mod responsive_placement;
 mod rich_text_view;
 mod rsx_wrapping;
 mod scroll_area;

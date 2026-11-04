@@ -20,9 +20,10 @@ the whole window, so keep its body shallow.
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, FloatingWindowOptions, Text},
+    components::{Button, FloatingWindowOptions, Placement, Text},
     hooks::use_floating_window,
     sx::sx,
+    theme::responsive,
 };
 
 #[component]
@@ -30,7 +31,7 @@ fn Demo() -> Element {
     let inspector = use_floating_window(
         FloatingWindowOptions {
             title: Some("Inspector".into()),
-            placement: "bottom-end".into(),
+            placement: responsive(Placement::BottomCenter).md(Placement::BottomEnd).into(),
             resizable: true,
             sx: sx().min_width("16rem").min_height("8rem").max_width("40rem").into(),
             ..Default::default()
@@ -63,7 +64,7 @@ handle, so the body can close its own window.
 |---|---|---|---|
 | `title` | `Option<String>` | - | The title bar's heading, and the window's accessible name. |
 | `aria_label` | `Option<String>` | - | Names the window instead of `title`. |
-| `placement` | `Input<Placement>` | `center-center` | Where it first appears, inside the viewport's safe area (clear of a notch and the home indicator). Once dragged, it stays where it was put, inside that area. |
+| `placement` | `Input<Responsive<Placement>>` | `center-center` | Where it first appears, inside the viewport's safe area (clear of a notch and the home indicator). Once dragged, it stays where it was put, inside that area. Or one per breakpoint, `placement: responsive(Placement::BottomCenter).md(Placement::BottomEnd).into()`: read in Rust, so a window open while the page is server-rendered switches after mount. Breakpoints follow the window. |
 | `resizable` | `bool` | `false` | Draws the corner resize handle. |
 | `pinned` | `bool` | `false` | Keeps it at `placement`, with no drag, keyboard move or Move menu item; turning it on puts a moved window back. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Overrides the stacking. Unset, windows sit below overlays and modals. |

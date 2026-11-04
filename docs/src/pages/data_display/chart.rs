@@ -928,7 +928,8 @@ pub fn ChartPage() -> Element {
                         "type",
                         ["line", "bar", "pie", "funnel", "scatter", "heatmap", "candlestick", "radar"],
                     )
-                        .default("line")
+                        // Bar first, so the responsive layout and orientation show at once (todo 5694).
+                        .default("bar")
                         .labels(["Line", "Bar", "Pie", "Funnel", "Scatter", "Heatmap", "Candlestick", "Radar"])
                         .code(|_, values| {
                             let mark = marks_code(values);

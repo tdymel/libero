@@ -135,3 +135,62 @@ fn a_min_above_the_max_wins() {
     };
     assert_eq!(crossed.fit((65535.0, 10.0)).0, 500.0);
 }
+
+/// Todo 5692: a plain placement starts no viewport watch; a responsive one does,
+/// and takes its breakpoint's value once the viewport answers.
+#[test]
+fn a_responsive_placement_watches_and_switches() {
+    use crate::{
+        components::layout::Placement, context::Viewport, theme::responsive, tokens::Size,
+    };
+    thread_local! {
+        static VIEWPORT: std::cell::Cell<Option<Viewport>> = const { std::cell::Cell::new(None) };
+    }
+    #[component]
+    fn Probe() -> Element {
+        VIEWPORT.set(try_consume_context::<Viewport>());
+        rsx! {}
+    }
+    #[component]
+    fn Page(placement: crate::tokens::Responsive<Placement>) -> Element {
+        let onclose = use_callback(|()| {});
+        rsx! {
+            LiberoProvider {
+                FloatingWindow {
+                    options: FloatingWindowOptions {
+                        title: Some("Notes".into()),
+                        placement: placement.into(),
+                        ..Default::default()
+                    },
+                    onclose,
+                    onmount: |_| {},
+                    opener: |()| None,
+                    "content"
+                }
+                Probe {}
+            }
+        }
+    }
+    let render = |placement: crate::tokens::Responsive<Placement>, at: Option<Size>| {
+        let mut dom = VirtualDom::new_with_props(Page, PageProps { placement });
+        dom.rebuild_in_place();
+        let viewport = VIEWPORT.get().expect("a viewport");
+        let wanted = viewport.wanted();
+        if at.is_some() {
+            dom.in_runtime(|| viewport.force(at));
+            dom.mark_dirty(ScopeId::APP);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        (wanted, dioxus_ssr::render(&dom))
+    };
+
+    let (wanted, bottom) = render(Placement::BottomEnd.into(), None);
+    assert!(!wanted);
+    let (_, top) = render(Placement::TopStart.into(), None);
+    assert_ne!(bottom, top);
+    let per_breakpoint = responsive(Placement::BottomEnd).md(Placement::TopStart);
+    let (wanted, base) = render(per_breakpoint, None);
+    assert!(wanted);
+    assert_eq!(base, bottom);
+    assert_eq!(render(per_breakpoint, Some(Size::Md)).1, top);
+}
