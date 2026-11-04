@@ -11,7 +11,8 @@ use crate::{
     },
     context::{Dismiss, ModalContext},
     hooks::{
-        SwipeClose, listener, swipe_close_sx, use_css, use_element, use_swipe_close, use_theme,
+        SwipeClose, listener, swipe_close_sx, use_css, use_element, use_responsive,
+        use_swipe_close, use_theme,
     },
     str_enum::str_enum,
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, Variables, sx},
@@ -151,12 +152,13 @@ str_enum! {
 }
 
 input_from_str!(DrawerAnchor);
+crate::sx::input::input_from_responsive!(str DrawerAnchor);
 
 base_props! {
     pub struct DrawerProps {
-        /// The edge the drawer docks to.
+        /// The edge the drawer docks to, per breakpoint too.
         #[props(default, into)]
-        anchor: Input<DrawerAnchor>,
+        anchor: Input<Responsive<DrawerAnchor>>,
         /// The width (or height, docked top or bottom): a size word or any CSS, as `size: "24rem"`.
         #[props(default, into)]
         size: Input<Responsive<ThemeAwareValue>>,
@@ -182,7 +184,8 @@ base_props! {
 /// the portal and the dismissal are [`crate::hooks::use_drawer`]'s.
 #[component]
 pub(crate) fn Drawer(props: DrawerProps) -> Element {
-    let anchor = props.anchor.copied_or_default();
+    // Read in Rust: it moves the panel, the swipe strip and its listeners.
+    let anchor = use_responsive(&props.anchor.copied_or(DrawerAnchor::default().into()))();
     let theme = use_theme();
     let size = ScaleOrCss::new(
         props.size.as_ref().map(Responsive::base_ref),

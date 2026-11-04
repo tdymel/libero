@@ -1,6 +1,7 @@
+use super::tooltip::{responsive_side, responsive_side_enum_code};
 use crate::components::{
     Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, align_of, delay_of, indent, prop, props,
-    side_of,
+    responsive_switch,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -45,12 +46,12 @@ pub fn HoverCardPage() -> Element {
                 prop("children", "Element")
                     .default("required")
                     .doc("The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card."),
-                prop("side", "Side")
+                prop("side", "Responsive<Side>")
                     .default(theme.hover_card.side.as_str())
-                    .doc("Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`. Takes the popover's enums, `libero::hooks::{Side, Align}`, such as `side: Side::Top`."),
-                prop("align", "Align")
+                    .doc("Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`. Takes the popover's enums, `libero::hooks::{Side, Align}`, such as `side: Side::Top`. Or one per breakpoint, `side: responsive(Side::Bottom).md(Side::End)`: read in Rust, so a card open while the page is server-rendered switches after mount. Breakpoints follow the window, not the parent."),
+                prop("align", "Responsive<Align>")
                     .default(theme.hover_card.align.as_str())
-                    .doc("Where the card lines up along that side."),
+                    .doc("Where the card lines up along that side. Or one per breakpoint, `align: responsive(Align::Start).md(Align::Center)`."),
                 prop("gap", "ThemeAwareValue")
                     .default(format!("{}px", theme.popover.gap))
                     .doc("Distance to the trigger, from the arrow's tip with `arrow`: a size word, or a `px` or `rem` length, e.g. `gap: \"12px\"`. Other CSS places the card by the theme's popover gap."),
@@ -119,8 +120,9 @@ pub fn HoverCardPage() -> Element {
                 code_child: Child(|_| TRIGGER.to_string()),
                 wrap: Wrap(wrap),
                 controls: vec![
-                    Control::side(["top", "end", "bottom", "start"]),
+                    Control::side(["top", "end", "bottom", "start"]).code(responsive_side_enum_code),
                     Control::align(),
+                    responsive_switch(),
                     // On by default, so the arrow shows on the first hover; printed while on.
                     Control::switch("arrow").default("true").code(|_, values| {
                         match values.str("arrow").as_str() {
@@ -148,7 +150,7 @@ pub fn HoverCardPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     HoverCard {
-                        side: side_of(&values.str("side")),
+                        side: responsive_side(&values),
                         align: align_of(&values.str("align")),
                         arrow: values.str("arrow") == "true",
                         gap: match values.str("gap").as_str() {

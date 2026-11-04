@@ -1,8 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Dialog, Flex, Text},
+    components::{Button, Code, Dialog, DialogFullScreen, Flex, Text},
     hooks::{ModalScope, use_modal},
+    theme::responsive,
 };
 
 const CHOICE: &str = "#[derive(Clone, Copy, PartialEq)]
@@ -85,6 +86,7 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
         values.str("size"),
         match values.str("full_screen").as_str() {
             "never" => String::new(),
+            "responsive" => "full_screen: responsive(true).md(false),\n            ".to_string(),
             full_screen => format!("full_screen: \"{full_screen}\",\n            "),
         },
         indent(&indent(&button)),
@@ -116,7 +118,11 @@ fn ModalDemo(size: String, full_screen: String, awaited: bool) -> Element {
             Dialog {
                 title: "Unsaved changes",
                 size: size.clone(),
-                full_screen: full_screen.clone(),
+                // Edge to edge below `md`, centred from it.
+                full_screen: match full_screen.as_str() {
+                    "responsive" => responsive(true).md(false),
+                    full_screen => DialogFullScreen::from(full_screen).into(),
+                },
                 Flex {
                     direction: "column",
                     gap: "md",
@@ -258,8 +264,9 @@ pub fn ModalPage() -> Element {
                 children_text: "",
                 controls: vec![
                     Control::sizes("size").default("md"),
-                    // `phone` by default: centred here, edge to edge on a phone.
-                    Control::toggle("full_screen", ["never", "phone", "always"])
+                    // `phone` by default: centred here, edge to edge on a phone. `responsive`
+                    // fills the screen below `md`.
+                    Control::toggle("full_screen", ["never", "phone", "always", "responsive"])
                         .capitalised()
                         .default("phone"),
                     // An `Opening` is also a future, for an answer that gates

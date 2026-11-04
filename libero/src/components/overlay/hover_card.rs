@@ -19,7 +19,8 @@ use crate::{
     hooks::{
         Align, DismissOptions, ElementHandle, POPOVER_AVAILABLE_HEIGHT, PopoverOptions, Side,
         owner_link, placement_sx, use_dismiss, use_element, use_focus_within, use_popover_on,
-        use_press_away, use_press_marker, use_range_css, use_resize_fallback, use_theme,
+        use_press_away, use_press_marker, use_range_css, use_resize_fallback, use_responsive,
+        use_theme,
     },
     platform::{ElementApi, PlatformError, is_tab, next_task, scrolls_on_keys},
     sx::{Property, StaticSx, ThemeAwareValue, sx},
@@ -31,6 +32,7 @@ use crate::{
 };
 
 input_from_str!(Align);
+crate::sx::input::input_from_responsive!(str Align);
 
 // `paper_sx()` through `use_box`, not `Paper`: it needs the popover's element and events.
 static HOVER_CARD_SX: StaticSx = StaticSx::new(|| {
@@ -83,11 +85,13 @@ base_props! {
     pub struct HoverCardProps {
         /// What the card shows; it may hold links and buttons.
         content: Element,
-        /// The preferred side. The card flips when that side has no room.
+        /// The preferred side. The card flips when that side has no room. Per breakpoint
+        /// too: `responsive(Side::Bottom).md(Side::End)`, read when the card opens.
         #[props(default, into)]
-        side: Input<Side>,
+        side: Input<Responsive<Side>>,
+        /// Per breakpoint too: `responsive(Align::Center).md(Align::Start)`.
         #[props(default, into)]
-        align: Input<Align>,
+        align: Input<Responsive<Align>>,
         /// Distance to the trigger: a size word or a `px` or `rem` length, as `gap: "12px"`.
         /// Unset, or other CSS, the theme's popover gap.
         #[props(default, into)]
@@ -169,14 +173,16 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             }
         }
     };
+    let side = use_responsive(&props.side.copied_or(defaults.side.into()))();
+    let align = use_responsive(&props.align.copied_or(defaults.align.into()))();
     let anchor = use_element();
     let popover = use_popover_on(
         anchor,
         use_element(),
         open,
         PopoverOptions {
-            side: props.side.copied_or(defaults.side),
-            align: props.align.copied_or(defaults.align),
+            side,
+            align,
             ..PopoverOptions::new(
                 gap + if props.arrow {
                     arrow_reach(ARROW_SIZE)
@@ -649,6 +655,49 @@ mod tests {
 
         assert!(html.contains("role=\"dialog\""), "{html}");
         assert!(!html.contains("aria-label"), "{html}");
+    }
+
+    /// Todo 5657: plain popover sides and a plain drawer anchor start no viewport watch;
+    /// one responsive side does.
+    #[test]
+    fn a_plain_side_or_anchor_starts_no_viewport_watch() {
+        use crate::{
+            components::overlay::{Drawer, Tooltip},
+            context::Viewport,
+            theme::responsive,
+        };
+        thread_local! {
+            static WANTED: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
+        }
+        // Last in the tree, so every popover above has rendered.
+        #[component]
+        fn Probe() -> Element {
+            WANTED.set(try_consume_context::<Viewport>().map(Viewport::wanted));
+            rsx! {}
+        }
+        #[component]
+        fn Page(responsive_side: bool) -> Element {
+            let side = match responsive_side {
+                true => responsive(Side::Bottom).md(Side::End),
+                false => Side::End.into(),
+            };
+            rsx! {
+                HoverCard { open: true, aria_label: "Card", side, align: Align::Center, content: rsx! { "Profile" }, "Ada" }
+                Tooltip { open: true, side: "end", label: rsx! { "Tip" }, "Save" }
+                Drawer { anchor: "end", aria_label: "Panel", "Nav" }
+                Probe {}
+            }
+        }
+        for responsive_side in [false, true] {
+            let mut dom = VirtualDom::new_with_props(
+                |props: PageProps| {
+                    rsx! { crate::LiberoProvider { Page { responsive_side: props.responsive_side } } }
+                },
+                PageProps { responsive_side },
+            );
+            dom.rebuild_in_place();
+            assert_eq!(WANTED.get(), Some(responsive_side));
+        }
     }
 
     /// Todo 4468: the arrow's inline shadow and fill, read from the caller's `sx`, refuse a hostile value.

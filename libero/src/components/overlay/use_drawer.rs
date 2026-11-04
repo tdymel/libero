@@ -14,8 +14,9 @@ use crate::{
 /// How the panel docks, shared by every opening.
 #[derive(Clone, Default, PartialEq)]
 pub struct DrawerOptions {
-    /// The edge it docks to.
-    pub anchor: Input<DrawerAnchor>,
+    /// The edge it docks to. Per breakpoint too, read when it opens and on a resize:
+    /// `responsive(DrawerAnchor::Bottom).md(DrawerAnchor::End).into()`.
+    pub anchor: Input<Responsive<DrawerAnchor>>,
     /// Width when docked start or end, height when docked top or bottom: a size word or any
     /// CSS, as `size: "24rem".into()`. Per breakpoint too: `responsive(Size::Md).lg(Size::Xl).into()`.
     pub size: Input<Responsive<ThemeAwareValue>>,

@@ -49,8 +49,8 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `content` | `Element` | required | What the card shows. Links and buttons are fine. |
 | `children` | `Element` | required | The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card. |
-| `side` | `Side` | `bottom` | Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. Takes the popover's enums, `libero::hooks::{Side, Align}`, such as `side: Side::Top`. |
-| `align` | `Align` | `start` | Where the card lines up along that side. |
+| `side` | `Responsive<Side>` | `bottom` | Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. Takes the popover's enums, `libero::hooks::{Side, Align}`, such as `side: Side::Top`. Or one per breakpoint, `side: responsive(Side::Bottom).md(Side::End)`: read in Rust, so a card open while the page is server-rendered switches after mount. Breakpoints follow the window, not the parent. |
+| `align` | `Responsive<Align>` | `start` | Where the card lines up along that side. Or one per breakpoint, `align: responsive(Align::Start).md(Align::Center)`. |
 | `gap` | `ThemeAwareValue` | theme popover gap | Distance to the trigger, from the arrow's tip with `arrow`: a size word, or a `px` or `rem` length, e.g. `gap: "12px"`. Other CSS places the card by the theme's popover gap. |
 | `arrow` | `bool` | `false` | Draws an arrow from the card to the trigger's centre, in the theme's paper background, or in `sx`'s own `background` and `box_shadow`. It stays on the trigger when the card shifts to fit the viewport, and `gap` runs from its tip. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |

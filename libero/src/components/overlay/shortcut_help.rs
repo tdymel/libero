@@ -5,14 +5,14 @@ use crate::{
     components::{
         common::{HtmlTag, Input, States, base_props, inset_focus_ring_sx},
         layout::use_box,
-        overlay::{Dialog, DialogFullScreen},
+        overlay::{Dialog, dialog::use_full_screen_states},
         typography::{chord_kbd, chord_words},
     },
     context::ModalContext,
     hooks::{Chord, current_localization, use_css, use_element, use_resize_fallback, use_theme},
     platform::{ElementApi, mod_is_meta},
-    sx::{StaticSx, sx},
-    theme::Size,
+    sx::{StaticSx, Sx, sx},
+    theme::{Responsive, Size, responsive},
     utils::use_warn_once,
 };
 
@@ -42,12 +42,16 @@ static SHORTCUT_SCROLL_SX: StaticSx = StaticSx::new(|| {
     sx().max_height("min(24rem, 60vh)")
         .overflow_y("auto")
         .focus_visible(inset_focus_ring_sx("-2px"))
-        .when("full-screen-always", sx().max_height("none"))
+        .when("full-screen-always", full_screen_scroll_sx())
         .media(
             format!("not all and (min-width: {})", Size::Sm.breakpoint_value()),
-            sx().when("full-screen-phone", sx().max_height("none")),
+            sx().when("full-screen-phone", full_screen_scroll_sx()),
         )
 });
+
+fn full_screen_scroll_sx() -> Sx {
+    sx().max_height("none")
+}
 
 /// One row of a [`ShortcutHelp`]: a chord as [`Hotkey`](crate::hooks::Hotkey) takes it, and
 /// what it does.
@@ -79,9 +83,9 @@ base_props! {
         close_label: Option<String>,
         /// Inside a modal, fills the screen edge to edge instead of centring: `"phone"`
         /// below the `sm` breakpoint, `"always"` at every width. Unset,
-        /// `theme.dialog.full_screen`, else centred.
+        /// `theme.dialog.full_screen`, else centred. Per breakpoint too: `responsive(true).md(false)`.
         #[props(default, into)]
-        full_screen: Input<DialogFullScreen>,
+        full_screen: Input<Responsive<bool>>,
     }
 }
 
@@ -165,16 +169,16 @@ pub fn ShortcutHelp(props: ShortcutHelpProps) -> Element {
         .is_some();
     let theme_full_screen = use_theme().dialog.full_screen;
     let full_screen = match in_modal {
-        true => props.full_screen.copied_or(theme_full_screen),
-        false => DialogFullScreen::Never,
+        true => props.full_screen.copied_or(theme_full_screen.into()),
+        false => responsive(false),
     };
-    let states: Input<States> = States::default()
-        .with("full-screen-phone", full_screen == DialogFullScreen::Phone)
-        .with(
-            "full-screen-always",
-            full_screen == DialogFullScreen::Always,
-        )
-        .into();
+    let states: Input<States> = use_full_screen_states(
+        States::default(),
+        &full_screen,
+        &SHORTCUT_SCROLL_SX,
+        full_screen_scroll_sx,
+    )
+    .into();
     let scroll_box = use_box()
         .framework_sx(&SHORTCUT_SCROLL_SX)
         .states(&states)

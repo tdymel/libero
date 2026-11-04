@@ -1,9 +1,12 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props, responsive_switch,
+};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Flex, Options, Tabs, Text},
+    components::{Button, Code, DrawerAnchor, Flex, Options, Tabs, Text},
     hooks::{DrawerOptions, ModalScope, use_drawer},
     sx::sx,
+    theme::{Responsive, responsive},
     use_theme,
 };
 
@@ -63,6 +66,23 @@ enum Setting {
     Advanced,
 }
 
+/// While the `responsive` switch is on, a bottom sheet below `md` and the picked edge from it.
+fn responsive_anchor(values: &DemoValues) -> Responsive<DrawerAnchor> {
+    let anchor = DrawerAnchor::from(values.str("anchor").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(DrawerAnchor::Bottom).md(anchor),
+        false => anchor.into(),
+    }
+}
+
+fn anchor_code(values: &DemoValues) -> String {
+    let anchor = DrawerAnchor::from(values.str("anchor").as_str());
+    match values.str("responsive") == "true" && anchor != DrawerAnchor::Bottom {
+        true => format!("responsive(DrawerAnchor::Bottom).md(DrawerAnchor::{anchor:?}).into()"),
+        false => format!("{:?}.into()", anchor.as_str()),
+    }
+}
+
 /// A drawer is a hook, so the options and the trigger belong in the example.
 /// The generated props are rebuilt here as the struct literal they are.
 fn wrap_hook(values: &DemoValues, _: &str) -> String {
@@ -86,7 +106,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
     format!(
         "{items}{state}let nav = use_drawer(\n    \
              DrawerOptions {{\n        \
-                 anchor: {:?}.into(),\n        \
+                 anchor: {},\n        \
                  size: {:?}.into(),\n        \
                  title: Some(\"Temporary drawer\".into()),{}{}\n        \
                  ..Default::default()\n    \
@@ -95,7 +115,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
          rsx! {{\n    \
              Button {{ variant: \"outlined\", onclick: move |_| {{ nav.open(); }}, \"Open drawer\" }}\n\
          }}",
-        values.str("anchor"),
+        anchor_code(values),
         values.str("size"),
         close_button,
         handle,
@@ -107,7 +127,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
 /// its own, where a hook would be invisible to the next reader.
 #[component]
 fn DrawerDemo(
-    anchor: String,
+    anchor: Responsive<DrawerAnchor>,
     size: String,
     handle: bool,
     close_button: bool,
@@ -168,7 +188,7 @@ pub fn DrawerPage() -> Element {
             markdown: "/md/drawer.md",
             properties: vec![
                 props("DrawerOptions", vec![
-                    prop("anchor", "Input<DrawerAnchor>").default("start").doc("The edge the panel docks to. `start` is the right edge under `dir=\"rtl\"`. It is read on every render, so an anchor in a signal moves an open drawer."),
+                    prop("anchor", "Input<Responsive<DrawerAnchor>>").default("start").doc("The edge the panel docks to. `start` is the right edge under `dir=\"rtl\"`. It is read on every render, so an anchor in a signal moves an open drawer. Or one per breakpoint, `responsive(DrawerAnchor::Bottom).md(DrawerAnchor::End).into()`: a bottom sheet on a phone, a side panel from `md`. Read in Rust, so a drawer open while the page is server-rendered switches after mount. Breakpoints follow the window, not the parent."),
                     prop("size", "Input<Responsive<ThemeAwareValue>>").default(theme.drawer.size.as_str()).doc("Width when docked start or end, height when docked top or bottom: a size word or any CSS, e.g. `size: \"24rem\".into()`. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. With neither this nor `title`, it warns in a debug build."),
@@ -218,6 +238,7 @@ pub fn DrawerPage() -> Element {
                 controls: vec![
                     Control::toggle("anchor", ["start", "end", "top", "bottom"])
                         .labels(["Start", "End", "Top", "Bottom"]),
+                    responsive_switch(),
                     // `24rem` is plain CSS, next to the size scale.
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl", "24rem"]).default(theme.drawer.size.as_str()),
                     // On by default, so the header button shows on the first open; printed while on.
@@ -229,7 +250,7 @@ pub fn DrawerPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     DrawerDemo {
-                        anchor: values.str("anchor"),
+                        anchor: responsive_anchor(&values),
                         size: values.str("size"),
                         handle: values.str("handle") == "true",
                         close_button: values.str("close_button") == "true",

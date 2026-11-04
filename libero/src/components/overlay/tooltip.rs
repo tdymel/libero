@@ -18,7 +18,8 @@ use crate::{
     hooks::{
         Align, ElementHandle, PopoverOptions, Rect, escape_closes, place, placement_sx, use_css,
         use_element, use_escape_dismiss, use_focus_within, use_popover_on, use_portal_slot,
-        use_press_away, use_press_marker, use_range_css, use_resize_fallback, use_theme,
+        use_press_away, use_press_marker, use_range_css, use_resize_fallback, use_responsive,
+        use_theme,
     },
     platform::{Dimensions, ElementApi, document, keyboard, when_laid_out},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -32,6 +33,7 @@ use crate::{
 use crate::theme::Side;
 
 input_from_str!(Side);
+crate::sx::input::input_from_responsive!(str Side);
 
 const TOOLTIP_GAP_VAR: CssVar = CssVar::new("--lsx-tooltip-gap");
 
@@ -212,9 +214,10 @@ base_props! {
     pub struct TooltipProps {
         /// The bubble's content.
         label: Element,
-        /// The preferred side. The bubble flips when that side has no room.
+        /// The preferred side. The bubble flips when that side has no room. Per breakpoint
+        /// too: `responsive(Side::Top).md(Side::End)`, read when the bubble opens.
         #[props(default, into)]
-        side: Input<Side>,
+        side: Input<Responsive<Side>>,
         /// Distance to the trigger, bridged so the pointer can cross it: a size word or a
         /// `px` or `rem` length, as `gap: "6px"`. Other CSS places by the theme's gap.
         #[props(default, into)]
@@ -598,7 +601,7 @@ fn TooltipBubble(
     onclose: Callback<()>,
 ) -> Element {
     let theme = use_theme();
-    let side = tooltip.side.copied_or(theme.tooltip.side);
+    let side = use_responsive(&tooltip.side.copied_or(theme.tooltip.side.into()))();
     let sizes = tooltip.size.copied_or(theme.tooltip.size.into());
     let gap = ScaleOrCss::new(tooltip.gap.as_ref(), theme.tooltip.gap);
     let custom = gap.custom_css(SizeCss::SPACING);

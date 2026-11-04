@@ -138,6 +138,7 @@ mod responsive_feedback;
 mod responsive_form;
 mod responsive_layout;
 mod responsive_orientation;
+mod responsive_overlay;
 mod rich_text_editor;
 mod rich_text_editor_blocks;
 mod rich_text_editor_input;

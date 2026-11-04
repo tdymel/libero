@@ -1,3 +1,4 @@
+use super::tooltip::{responsive_side, responsive_side_enum_code};
 use crate::components::{
     Child, Control, Demo, DemoFile, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
     responsive_size, responsive_size_code, responsive_switch,
@@ -83,12 +84,12 @@ pub fn MenuPage() -> Element {
                     prop("children", "Element")
                         .default("required")
                         .doc("The trigger, carrying `menu.a11y_attributes()`. It needs no click or key handler of its own."),
-                    prop("side", "Side")
+                    prop("side", "Responsive<Side>")
                         .default("Bottom")
-                        .doc("Which side of the trigger the menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`."),
-                    prop("align", "Align")
+                        .doc("Which side of the trigger the menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`. Or one per breakpoint, `side: responsive(Side::Bottom).md(Side::End)`, read when the menu opens and on a resize. Breakpoints follow the window, not the parent."),
+                    prop("align", "Responsive<Align>")
                         .default("Start")
-                        .doc("Where the menu lines up along that side."),
+                        .doc("Where the menu lines up along that side. Or one per breakpoint, `align: responsive(Align::Start).md(Align::End)`."),
                     prop("close_on_select", "bool")
                         .default(theme.menu.close_on_select.to_string())
                         .doc("Whether choosing an item closes the menu."),
@@ -209,7 +210,7 @@ pub fn MenuPage() -> Element {
                 code_child: Child(trigger_code),
                 wrap: Wrap(wrap),
                 controls: vec![
-                    Control::side(["top", "end", "bottom", "start"]),
+                    Control::side(["top", "end", "bottom", "start"]).code(responsive_side_enum_code),
                     Control::align(),
                     Control::sizes("size")
                         .default(theme.menu.size.as_str()).code(responsive_size_code),
@@ -227,7 +228,7 @@ pub fn MenuPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     MenuDemo {
-                        side: values.str("side"),
+                        side: responsive_side(&values),
                         align: values.str("align"),
                         size: responsive_size(&values),
                         radius: values.str("radius"),

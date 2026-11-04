@@ -1,7 +1,8 @@
-use crate::components::{align_of, side_of};
+use crate::components::align_of;
 use dioxus::prelude::*;
 use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu};
 use libero::{
+    hooks::Side,
     sx::sx,
     theme::{Responsive, Size},
 };
@@ -10,7 +11,7 @@ use libero::{
 /// rather than in `Demo`'s render closure, whose hook slots they would land in.
 #[component]
 pub fn MenuDemo(
-    side: String,
+    side: Responsive<Side>,
     align: String,
     size: Responsive<Size>,
     radius: String,
@@ -100,7 +101,7 @@ pub fn MenuDemo(
             Menu {
                 state: menu,
                 items,
-                side: side_of(&side),
+                side,
                 align: align_of(&align),
                 size,
                 radius,

@@ -13,7 +13,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{Align, Side, id_selector, use_element, use_theme},
+    hooks::{Align, Side, id_selector, use_element, use_responsive, use_theme},
     platform::mounted_by_selector,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Responsive, Size, SizeCss},
@@ -49,11 +49,13 @@ base_props! {
         state: MenuState,
         /// The menu, in order.
         items: Vec<MenuEntry>,
-        /// The preferred side. The menu flips when that side has no room.
-        #[props(default)]
-        side: Side,
-        #[props(default)]
-        align: Align,
+        /// The preferred side. The menu flips when that side has no room. Per breakpoint
+        /// too: `responsive(Side::Bottom).md(Side::End)`, read when the menu opens.
+        #[props(default, into)]
+        side: Input<Responsive<Side>>,
+        /// Per breakpoint too: `responsive(Align::Start).md(Align::End)`.
+        #[props(default, into)]
+        align: Input<Responsive<Align>>,
         /// Whether choosing an item closes the menu.
         #[props(default)]
         close_on_select: Option<bool>,
@@ -147,6 +149,8 @@ pub fn Menu(props: MenuProps) -> Element {
         }
     }));
 
+    let side = use_responsive(&props.side.copied_or(Side::default().into()))();
+    let align = use_responsive(&props.align.copied_or(Align::default().into()))();
     let onclose = use_callback(move |()| state.close());
     let marker = state.marker();
     // A touch or pen press on the trigger: its click opens on the box, not the first item.
@@ -221,8 +225,8 @@ pub fn Menu(props: MenuProps) -> Element {
             onedge: props.onedge,
             parents: Parents(Vec::new()),
             onpointerenter: None,
-            side: props.side,
-            align: props.align,
+            side,
+            align,
             size: props.size.copied_or(theme.menu.size.into()),
             sheet_size: props.sheet_size.as_ref().copied().or(theme.menu.sheet_size),
             radius: ResponsiveScale::new(props.radius.as_ref(), theme.menu.radius, SizeCss::RADIUS),

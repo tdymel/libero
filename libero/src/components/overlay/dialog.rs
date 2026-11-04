@@ -13,11 +13,11 @@ use crate::{
         typography::Title,
     },
     context::{Dismiss, IconSlot, ModalContext},
-    hooks::{current_localization, use_id, use_theme},
+    hooks::{current_localization, use_id, use_range_css, use_theme},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, DIALOG_DEFAULT_SIZE, DIALOG_SIZE, DialogFullScreen, PAPER_RADIUS, Responsive, Size,
-        SizeCss,
+        SizeCss, responsive,
     },
     utils::warn,
 };
@@ -65,6 +65,72 @@ fn full_screen_sx() -> Sx {
 }
 
 input_from_str!(DialogFullScreen);
+crate::sx::input::input_from_responsive!(bool);
+
+/// `Phone` is `responsive(true).sm(false)`.
+impl From<DialogFullScreen> for Responsive<bool> {
+    fn from(value: DialogFullScreen) -> Self {
+        match value {
+            DialogFullScreen::Never => responsive(false),
+            DialogFullScreen::Phone => responsive(true).sm(false),
+            DialogFullScreen::Always => responsive(true),
+        }
+    }
+}
+
+impl From<DialogFullScreen> for Input<Responsive<bool>> {
+    fn from(value: DialogFullScreen) -> Self {
+        Self::Value(value.into())
+    }
+}
+
+impl From<&str> for Input<Responsive<bool>> {
+    fn from(value: &str) -> Self {
+        DialogFullScreen::from(value).into()
+    }
+}
+
+impl From<String> for Input<Responsive<bool>> {
+    fn from(value: String) -> Self {
+        value.as_str().into()
+    }
+}
+
+/// The enum shape a value has, which writes today's word; `None` takes run words and copies.
+fn full_screen_shape(value: &Responsive<bool>) -> Option<DialogFullScreen> {
+    [
+        DialogFullScreen::Never,
+        DialogFullScreen::Phone,
+        DialogFullScreen::Always,
+    ]
+    .into_iter()
+    .find(|shape| Responsive::from(*shape).runs() == value.runs())
+}
+
+fn full_screen_word(on: bool) -> &'static str {
+    if on { "full-screen" } else { "centred" }
+}
+
+/// `full_screen` as state words; a custom shape registers `block` per full-screen range on `base`.
+pub(super) fn use_full_screen_states(
+    states: States,
+    value: &Responsive<bool>,
+    base: &'static StaticSx,
+    block: fn() -> Sx,
+) -> States {
+    let shape = full_screen_shape(value);
+    let copies = match shape {
+        Some(_) => Vec::new(),
+        None => value.range_copies(full_screen_word, move |on| if on { block() } else { sx() }),
+    };
+    use_range_css(base, copies);
+    match shape {
+        Some(shape) => states
+            .with("full-screen-phone", shape == DialogFullScreen::Phone)
+            .with("full-screen-always", shape == DialogFullScreen::Always),
+        None => states.responsive(value, full_screen_word),
+    }
+}
 
 fn dialog_header_sx(margin_bottom: &str) -> Sx {
     sx().display("flex")
@@ -175,9 +241,10 @@ base_props! {
         size: Input<Responsive<ThemeAwareValue>>,
         /// Inside a modal, fills the screen edge to edge instead of centring: `"phone"`
         /// below the `sm` breakpoint, `"always"` at every width. Unset,
-        /// `theme.dialog.full_screen`, else centred.
+        /// `theme.dialog.full_screen`, else centred. Per breakpoint too:
+        /// `responsive(true).md(false)`; `"phone"` is `responsive(true).sm(false)`.
         #[props(default, into)]
-        full_screen: Input<DialogFullScreen>,
+        full_screen: Input<Responsive<bool>>,
         /// Layered onto Dialog's own - e.g. `Drawer`'s anchor/size vars.
         #[props(default, into)]
         variables: Input<Variables>,
@@ -218,7 +285,7 @@ base_props! {
 /// });
 /// let mut draft = use_signal(String::new);
 /// let note = use_modal(move |_: ModalScope<()>| rsx! {
-///     Dialog { title: "New note", ondismiss: move |_| draft.read().is_empty(),
+///     Dialog { title: "New note", full_screen: "phone", ondismiss: move |_| draft.read().is_empty(),
 ///         textarea { aria_label: "Note", oninput: move |e| draft.set(e.value()) }
 ///     }
 /// });
@@ -292,18 +359,16 @@ pub fn Dialog(props: DialogProps) -> Element {
         .into();
     // Outside a modal there is no frame to fill.
     let full_screen = match is_modal {
-        true => props.full_screen.copied_or(defaults.full_screen),
-        false => DialogFullScreen::Never,
+        true => props.full_screen.copied_or(defaults.full_screen.into()),
+        false => responsive(false),
     };
-    let states: Input<States> = props
-        .states
-        .unwrap_or_default()
-        .with("full-screen-phone", full_screen == DialogFullScreen::Phone)
-        .with(
-            "full-screen-always",
-            full_screen == DialogFullScreen::Always,
-        )
-        .into();
+    let states: Input<States> = use_full_screen_states(
+        props.states.unwrap_or_default(),
+        &full_screen,
+        &DIALOG_BASE_SX,
+        full_screen_sx,
+    )
+    .into();
 
     // Pushed after the caller's, to win a duplicate name.
     let mut attributes = props.attributes;
@@ -481,6 +546,22 @@ mod tests {
             "{html}"
         );
         assert!(html.contains("data-state=\"full-screen-phone\""), "{html}");
+    }
+
+    /// 5657: a value shaped like an enum word keeps that word; any other shape takes runs.
+    #[test]
+    fn a_full_screen_value_finds_its_enum_shape() {
+        let phone = responsive(true).xs(true).sm(false);
+        assert_eq!(full_screen_shape(&phone), Some(DialogFullScreen::Phone));
+        assert_eq!(
+            full_screen_shape(&false.into()),
+            Some(DialogFullScreen::Never)
+        );
+        assert_eq!(
+            full_screen_shape(&true.into()),
+            Some(DialogFullScreen::Always)
+        );
+        assert_eq!(full_screen_shape(&responsive(true).md(false)), None);
     }
 
     /// 5365: an unset `full_screen` takes `theme.dialog.full_screen`; a prop beats it.

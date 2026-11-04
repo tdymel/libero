@@ -5,7 +5,9 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, Input, Text, Tooltip},
+    hooks::Side,
     sx::sx,
+    theme::{Responsive, responsive},
     use_theme,
 };
 
@@ -17,6 +19,45 @@ const LABEL_ID: &str = r#"label_id: "draft-tip""#;
 const TRIGGER: &str = r#"Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }"#;
 // snippet: in Tooltip { label: rsx! { "Save" }, .., Button { "Save" } }
 const STYLED: &str = r#"sx: sx().background("primary.6").white_space("normal").max_width("12rem")"#;
+
+/// While the `responsive` switch is on, the picked side holds from `md` and the facing one
+/// (`bottom` for a side pick) below it. Shared by the popover demos.
+pub(super) fn responsive_side(values: &DemoValues) -> Responsive<Side> {
+    let side = Side::from(values.str("side").as_str());
+    match values.str("responsive") == "true" {
+        true => responsive(narrow_side(side)).md(side),
+        false => side.into(),
+    }
+}
+
+fn narrow_side(side: Side) -> Side {
+    match side {
+        Side::Bottom => Side::Top,
+        _ => Side::Bottom,
+    }
+}
+
+/// The `side` control's code line, the responsive form while the switch is on.
+fn responsive_side_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    side_code(control, values, |side| format!("{:?}", side.as_str()))
+}
+
+/// As [`responsive_side_code`], a plain pick printed as `Side::Top`.
+pub(super) fn responsive_side_enum_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    side_code(control, values, |side| format!("Side::{side:?}"))
+}
+
+fn side_code(control: &Control, values: &DemoValues, plain: fn(Side) -> String) -> Vec<String> {
+    let side = Side::from(values.str("side").as_str());
+    match values.str("responsive") == "true" {
+        true => vec![format!(
+            "side: responsive(Side::{:?}).md(Side::{side:?})",
+            narrow_side(side)
+        )],
+        false if values.str("side") == control.default => vec![],
+        false => vec![format!("side: {}", plain(side))],
+    }
+}
 
 /// A bubble's worth of room on every side, so the preview shows the chosen
 /// side rather than a flip.
@@ -38,9 +79,9 @@ pub fn TooltipPage() -> Element {
             markdown: "/md/tooltip.md",
             properties: vec![props("Tooltip", vec![
                 prop("label", "Element").default("required").doc("The bubble's content."),
-                prop("side", "Side")
+                prop("side", "Responsive<Side>")
                     .default(theme.tooltip.side.as_str())
-                    .doc("The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`."),
+                    .doc("The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir=\"ltr\"`, the right under `rtl`. Or one per breakpoint, `side: responsive(Side::Bottom).md(Side::Top)`, read when the bubble opens and on a resize. Breakpoints follow the window, not the parent."),
                 prop("gap", "ThemeAwareValue")
                     .default(theme.tooltip.gap.as_str())
                     .doc("Distance to the trigger, or a `px` or `rem` length, e.g. `gap: \"6px\"`. The pointer can cross it without closing the bubble. Other CSS places the bubble by the theme's gap."),
@@ -109,7 +150,8 @@ pub fn TooltipPage() -> Element {
                 controls: vec![
                     Control::toggle("side", ["top", "end", "bottom", "start"])
                         .capitalised()
-                        .default(theme.tooltip.side.as_str()),
+                        .default(theme.tooltip.side.as_str())
+                        .code(responsive_side_code),
                     // On by default, so the arrow shows on the first hover; printed while on.
                     Control::switch("arrow").default("true").code(|_, values| {
                         match values.str("arrow").as_str() {
@@ -149,7 +191,7 @@ pub fn TooltipPage() -> Element {
                         Tooltip {
                             label: rsx! { "Saves the current draft" },
                             label_id: "draft-tip",
-                            side: values.str("side"),
+                            side: responsive_side(&values),
                             arrow: values.str("arrow") == "true",
                             size: responsive_size(&values),
                             gap: values.str("gap"),

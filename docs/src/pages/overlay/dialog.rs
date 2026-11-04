@@ -109,9 +109,9 @@ pub fn DialogPage() -> Element {
                     prop("size", "Responsive<ThemeAwareValue>")
                         .default(theme.dialog.size.as_str())
                         .doc("Caps the width from the dialog scale. `md` is 510px. A full-screen dialog ignores it, so with `full_screen: \"phone\"` it does nothing below the `sm` breakpoint. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent."),
-                    prop("full_screen", "DialogFullScreen")
+                    prop("full_screen", "Responsive<bool>")
                         .default(theme.dialog.full_screen.as_str())
-                        .doc("Inside a modal, fills the screen edge to edge with square corners instead of centring: `\"phone\"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `\"always\"` at every width. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`, so one theme line makes every dialog full screen on a phone. The Modal page's demo shows it."),
+                        .doc("Inside a modal, fills the screen edge to edge with square corners instead of centring: `\"phone\"` below the `sm` breakpoint, where a centred dialog leaves slivers of page, `\"always\"` at every width, `\"never\"` or `false` not at all. Or one per breakpoint, `full_screen: responsive(true).md(false)`; `\"phone\"` is `responsive(true).sm(false)`. It is CSS, so a server-rendered page draws it right away. Breakpoints follow the window, not the parent. Outside a modal it does nothing. Unset, the theme's `dialog.full_screen`, so one theme line makes every dialog full screen on a phone. The Modal page's demo shows it."),
                     prop("variables", "Variables")
                         .doc("CSS variables layered onto the dialog's own, as `Drawer` does."),
                     prop("parts", "Parts<DialogPart>")

@@ -42,7 +42,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `label` | `Element` | required | The bubble's content. |
-| `side` | `Side` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
+| `side` | `Responsive<Side>` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. Or one per breakpoint, `side: responsive(Side::Bottom).md(Side::Top)`, read when the bubble opens and on a resize. Breakpoints follow the window, not the parent. |
 | `gap` | `ThemeAwareValue` | `xs` | Distance to the trigger, or a `px` or `rem` length, e.g. `gap: "6px"`. The pointer can cross it without closing the bubble. Other CSS places the bubble by the theme's gap. |
 | `arrow` | `bool` | `false` | Draws an arrow from the bubble to the trigger's centre, in the bubble's background. It stays on the trigger when the bubble shifts to fit the viewport, and `gap` runs from its tip. |
 | `size` | `Responsive<Size>` | `lg` | Font size of the bubble. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |

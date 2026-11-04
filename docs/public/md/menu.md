@@ -128,8 +128,8 @@ fn Demo() -> Element {
 | `state` | `MenuState` | required | From `use_menu()`. Holds the open state and wires the trigger to the menu. |
 | `items` | `Vec<MenuEntry>` | required | The menu, in order. `MenuEntry::Item`, `MenuEntry::Group { label, items }` for a named section, and `MenuEntry::Separator`. |
 | `children` | `Element` | required | The trigger, carrying `menu.a11y_attributes()`. It needs no click or key handler of its own. |
-| `side` | `Side` | `Bottom` | Which side of the trigger the menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
-| `align` | `Align` | `Start` | Where the menu lines up along that side. |
+| `side` | `Responsive<Side>` | `Bottom` | Which side of the trigger the menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. Or one per breakpoint, `side: responsive(Side::Bottom).md(Side::End)`, read when the menu opens and on a resize. Breakpoints follow the window, not the parent. |
+| `align` | `Responsive<Align>` | `Start` | Where the menu lines up along that side. Or one per breakpoint, `align: responsive(Align::Start).md(Align::End)`. |
 | `close_on_select` | `bool` | `true` | Whether choosing an item closes the menu. |
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap from the last item to the first. |
 | `size` | `Responsive<Size>` | `md` | Item height and font size. Or one per breakpoint, `size: responsive(Size::Sm).md(Size::Lg)`. Breakpoints follow the window, not the parent. |
