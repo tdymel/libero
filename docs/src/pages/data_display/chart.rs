@@ -196,7 +196,7 @@ fn trend(values: &DemoValues) -> Option<(&'static str, Trend)> {
 fn y_range(values: &DemoValues) -> Option<(f64, f64)> {
     match (values.str("y_range").as_str(), values.str("type").as_str()) {
         ("auto", _) => None,
-        (_, "bar") if values.str("layout") == "grouped" => Some((-30.0, 90.0)),
+        (_, "bar") if values.str("layout") == "grouped" => Some((-40.0, 80.0)),
         (_, "bar") => Some((-60.0, 180.0)),
         (_, "scatter") => Some((0.0, 120.0)),
         (_, "candlestick") => Some((10.0, 70.0)),
@@ -1243,7 +1243,7 @@ pub fn ChartPage() -> Element {
                     }));
                     let selected = selected.read().clone().filter(|(of, _)| *of == kind).map(|(_, range)| range);
                     let drawn = match values.str("type").as_str() {
-                        "bar" => brushed(zoom, selected, rsx! {
+                        "bar" => brushed(zoom, values.str("orientation") == "horizontal" || responsive_on(&values), selected, rsx! {
                             BarChart {
                                 title: "Profit",
                                 x: QUARTERS,
@@ -1314,7 +1314,7 @@ pub fn ChartPage() -> Element {
                                 legend, tooltip, loading, handle,
                             }
                         },
-                        "candlestick" => brushed(zoom, selected, rsx! {
+                        "candlestick" => brushed(zoom, false, selected, rsx! {
                             CandlestickChart {
                                 title: "Share price",
                                 x: names(&MONTHS),
@@ -1334,7 +1334,7 @@ pub fn ChartPage() -> Element {
                                 legend, tooltip, loading, handle,
                             }
                         },
-                        _ => brushed(zoom, selected, rsx! {
+                        _ => brushed(zoom, false, selected, rsx! {
                             LineChart {
                                 title: "Visitors",
                                 x: DAYS,
@@ -1366,11 +1366,16 @@ pub fn ChartPage() -> Element {
     }
 }
 
-/// The demo's `chart`, with the brushed band under it while it zooms.
-fn brushed(zoom: bool, selected: Option<ChartRange>, chart: Element) -> Element {
-    let text = match &selected {
-        Some(range) => format!("Selected {} to {}", range.from, range.to),
-        None => "Drag across the plot to select a range.".to_string(),
+/// The demo's `chart`, with the brushed band under it while it zooms. A horizontal bar chart
+/// names the keys too, as a touch drag there scrolls the page.
+fn brushed(zoom: bool, horizontal: bool, selected: Option<ChartRange>, chart: Element) -> Element {
+    let text = match (&selected, horizontal) {
+        (Some(range), _) => format!("Selected {} to {}", range.from, range.to),
+        (None, true) => {
+            "Drag across the plot, or press Shift+ArrowDown or Shift+ArrowUp, to select a range."
+                .to_string()
+        }
+        (None, false) => "Drag across the plot to select a range.".to_string(),
     };
     rsx! {
         div { width: "100%",
@@ -1379,5 +1384,46 @@ fn brushed(zoom: bool, selected: Option<ChartRange>, chart: Element) -> Element 
                 Text { size: "sm", "{text}" }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use libero::context::LiberoProvider;
+
+    fn grouped_bar() -> DemoValues {
+        DemoValues::defaults(&[
+            Control::select("type", ["bar"]),
+            Control::select("layout", ["grouped"]),
+            Control::select("y_range", ["fixed"]),
+        ])
+    }
+
+    #[test]
+    fn grouped_range_holds_every_error_bar_end() {
+        let (low, high) = y_range(&grouped_bar()).unwrap();
+        for (from, to) in PROFIT_2025_RANGE {
+            assert!(
+                low <= from && to <= high,
+                "{from}..{to} outside {low}..{high}"
+            );
+        }
+    }
+
+    #[test]
+    fn horizontal_bar_hint_names_the_keys() {
+        let hint = |horizontal| {
+            let mut dom = VirtualDom::new_with_props(
+                move |horizontal: bool| {
+                    rsx! { LiberoProvider { {brushed(true, horizontal, None, rsx! {})} } }
+                },
+                horizontal,
+            );
+            dom.rebuild_in_place();
+            dioxus_ssr::render(&dom)
+        };
+        assert!(hint(true).contains("Shift+ArrowDown"));
+        assert!(!hint(false).contains("Shift+ArrowDown"));
     }
 }
