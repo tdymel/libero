@@ -352,12 +352,15 @@ impl StylesheetRegistry {
             ));
         }
 
+        // A kept sheet with a `<style>` of its own is back in the outlet's list.
+        registry.outlet_changed |= entry.ref_count == 0 && !entry.inserted;
         entry.ref_count += 1;
         key
     }
 
     /// Counts one user less. A class-scoped sheet without users stays until [`RETAINED`] newer
-    /// ones push it out, so a class toggled back costs no `<style>` write; a global one goes at once.
+    /// ones push it out, so a class toggled back costs no block rule write; a global one goes at
+    /// once. One with a `<style>` of its own leaves the outlet's list either way.
     pub fn release(&self, key: StylesheetKey) {
         let mut registry = self.inner.borrow_mut();
         let registry = &mut *registry;
@@ -376,6 +379,8 @@ impl StylesheetRegistry {
             registry.remove(&key);
             return;
         }
+        // Out of the outlet's list, see [`stylesheets`](Self::stylesheets).
+        registry.outlet_changed |= !entry.inserted;
         registry.clock += 1;
         entry.retired_at = registry.clock;
         registry.retired.push_back((key, registry.clock));
@@ -394,14 +399,17 @@ impl StylesheetRegistry {
         }
     }
 
-    /// Every sheet on `rank` that needs its own `<style>`, as `(node key, CSS)`.
-    /// Cheap: both are refcounted.
+    /// Every sheet on `rank` in use that needs its own `<style>`, as `(node key, CSS)`.
+    /// Cheap: both are refcounted. A kept unused sheet stays out: the server's render
+    /// releases sheets the hydrating client never registers (a placeholder its data replaced),
+    /// and a list longer than the client's binds each hydrated `<style>` after the first
+    /// difference to another sheet's node, which the next removal takes out while in use.
     pub fn stylesheets(&self, rank: SheetRank) -> Vec<(Rc<str>, Rc<str>)> {
         self.inner
             .borrow()
             .by_key
             .iter()
-            .filter(|(key, entry)| key.rank == rank && !entry.inserted)
+            .filter(|(key, entry)| key.rank == rank && !entry.inserted && entry.ref_count > 0)
             .map(|(_, entry)| (entry.node_key.clone(), entry.css.clone()))
             .collect()
     }
@@ -505,6 +513,26 @@ mod tests {
             CssLayer::UserCustom,
             SheetRank::Component,
         )
+    }
+
+    /// A server's render releases sheets the hydrating client never registers: listing them
+    /// would make the server's `<style>`s outnumber the client's, and hydration binds by position.
+    #[test]
+    fn an_unused_sheet_of_its_own_leaves_the_outlet_and_comes_back_with_a_user() {
+        let registry = StylesheetRegistry::new();
+        let kept = padding(&registry, 1);
+        let placeholder = padding(&registry, 2);
+        assert!(registry.take_outlet_change());
+
+        registry.release(placeholder);
+        assert!(registry.take_outlet_change());
+        assert_eq!(registry.stylesheets(SheetRank::Component).len(), 1);
+
+        let again = padding(&registry, 2);
+        assert_eq!(again, placeholder);
+        assert!(registry.take_outlet_change());
+        assert_eq!(registry.stylesheets(SheetRank::Component).len(), 2);
+        registry.release(kept);
     }
 
     #[test]
@@ -960,7 +988,11 @@ mod tests {
         let other =
             Stylesheet::from(&sx().media("(prefers-reduced-motion: reduce)", sx().padding("xs")));
         registry.acquire(other, CssLayer::Framework, SheetRank::Component);
-        assert_eq!(registry.stylesheets(SheetRank::Component).len(), 2);
+        assert_eq!(
+            registry.stylesheets(SheetRank::Component).len(),
+            1,
+            "the released one left the list"
+        );
         assert!(block(&rules, CssLayer::Framework).is_empty());
     }
 
