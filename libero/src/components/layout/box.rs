@@ -365,20 +365,26 @@ impl BoxStyle {
     ) -> Element {
         merge_listeners(&mut attributes, &mut self.own);
 
+        // In place and sized once: collecting into a new list, then growing it for the
+        // styling attributes, was two allocations more per element.
+        let ours = 1
+            + usize::from(self.style.data_state.is_some())
+            + usize::from(self.style.style.is_some());
+        attributes.reserve_exact(self.own.len() + self.fallback.len() + ours);
         // A component's own root id plus the caller's: `use_root_id` makes both
         // the caller's, so keeping the first is enough.
-        let mut seen_id = false;
-        let attributes = attributes
-            .into_iter()
-            .chain(self.own)
-            .filter(move |attribute| {
-                let duplicate = attribute.name == "id" && seen_id;
-                seen_id |= attribute.name == "id";
-                !duplicate
-            })
-            .collect::<Vec<_>>();
-
-        let mut attributes = attributes;
+        attributes.extend(self.own);
+        let is_id = |attribute: &Attribute| attribute.name == "id";
+        if attributes
+            .iter()
+            .filter(|attribute| is_id(attribute))
+            .count()
+            > 1
+        {
+            let mut seen_id = false;
+            attributes
+                .retain(|attribute| !(is_id(attribute) && std::mem::replace(&mut seen_id, true)));
+        }
         for attribute in self.fallback {
             if !attributes.iter().any(|set| set.name == attribute.name) {
                 attributes.push(attribute);
