@@ -36,6 +36,37 @@ pub fn use_responsive<T: Clone + PartialEq + 'static>(value: &Responsive<T>) -> 
     .into()
 }
 
+/// [`use_responsive`] read at once, for a component's own props. A plain value, the usual one,
+/// starts no memo and looks up no viewport: a row's closed `Menu` paid for two of each.
+pub(crate) fn use_responsive_value<T: Clone + PartialEq + 'static>(value: &Responsive<T>) -> T {
+    type Watch<T> = Option<(Signal<Responsive<T>>, Memo<T>)>;
+    let watch = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(Watch::<T>::None)));
+    let (mut source, resolved) = match watch.get() {
+        Some(started) => started,
+        None if value.is_plain() => return value.base_ref().clone(),
+        None => {
+            let viewport = try_consume_context::<Viewport>();
+            let source = Signal::new(value.clone());
+            let resolved = Memo::new(move || {
+                let value = source.read();
+                let breakpoint = viewport
+                    .filter(|_| !value.is_plain())
+                    .and_then(|viewport| viewport.breakpoint());
+                match breakpoint {
+                    Some(Some(size)) => value.at(size),
+                    _ => value.base_ref().clone(),
+                }
+            });
+            watch.set(Some((source, resolved)));
+            (source, resolved)
+        }
+    };
+    if *source.peek() != *value {
+        source.set(value.clone());
+    }
+    resolved()
+}
+
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use std::cell::{Cell, RefCell};

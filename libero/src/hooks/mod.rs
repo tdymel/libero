@@ -201,6 +201,8 @@ pub(crate) use presence::use_presence;
 #[cfg(feature = "use-push-subscription")]
 pub use push_subscription::{PushSubscription, use_push_subscription};
 pub use responsive::use_responsive;
+#[cfg(feature = "menu")]
+pub(crate) use responsive::use_responsive_value;
 pub(crate) use ripple::{child_ripple_sx, ripple_sx, use_ripple};
 #[cfg(feature = "use-element")]
 pub(crate) use scroll_lock::use_scroll_lock;

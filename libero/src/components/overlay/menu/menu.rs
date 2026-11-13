@@ -13,7 +13,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{Align, Side, id_selector, use_element, use_responsive, use_theme},
+    hooks::{Align, Side, id_selector, use_element, use_responsive_value, use_theme},
     platform::mounted_by_selector,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Responsive, Size, SizeCss},
@@ -124,13 +124,29 @@ pub fn Menu(props: MenuProps) -> Element {
     let trigger_selector = id_selector(&state.trigger_element_id());
     let first_child = format!("{wrapper_selector} > *");
     let trigger_selectors = vec![trigger_selector.clone(), first_child.clone()];
-    use_effect(use_reactive!(|wrapper_selector| {
-        wrapper.point_at(mounted_by_selector(&wrapper_selector));
+    // A menu never opened mounts no level and looks up neither element: the popover, dismissal
+    // and sheet hooks of a row's closed menu were most of its mount. Kept once opened, so
+    // closing runs as before.
+    let ever_open = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(false)));
+    ever_open.set(ever_open.get() || (opened && !disabled && !props.items.is_empty()));
+    let ever = ever_open.get();
+    use_effect(use_reactive!(|(wrapper_selector, ever)| {
+        if ever {
+            wrapper.point_at(mounted_by_selector(&wrapper_selector));
+        }
     }));
     // The contents-box wrapper measures nothing, so the menu anchors on the trigger.
     // Found per open, as the caller may have swapped it; no id falls back to the first child.
-    use_effect(use_reactive!(|(trigger_selector, first_child, opened)| {
+    use_effect(use_reactive!(|(
+        trigger_selector,
+        first_child,
+        opened,
+        ever,
+    )| {
         let _ = opened;
+        if !ever {
+            return;
+        }
         trigger.point_at(
             mounted_by_selector(&trigger_selector).or_else(|| mounted_by_selector(&first_child)),
         );
@@ -149,16 +165,12 @@ pub fn Menu(props: MenuProps) -> Element {
         }
     }));
 
-    let side = use_responsive(&props.side.copied_or(Side::default().into()))();
-    let align = use_responsive(&props.align.copied_or(Align::default().into()))();
+    let side = use_responsive_value(&props.side.copied_or(Side::default().into()));
+    let align = use_responsive_value(&props.align.copied_or(Align::default().into()));
     let onclose = use_callback(move |()| state.close());
     let marker = state.marker();
     // A touch or pen press on the trigger: its click opens on the box, not the first item.
     let mut finger = use_hook(|| CopyValue::new(false));
-    // A menu never opened mounts no level: the popover, dismissal and sheet hooks of a row's
-    // closed menu were most of its mount. Kept once opened, so closing runs as before.
-    let ever_open = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(false)));
-    ever_open.set(ever_open.get() || open);
     let wrapper_attributes: Vec<Attribute> = open
         .then(|| marker.attribute())
         .flatten()
@@ -210,7 +222,7 @@ pub fn Menu(props: MenuProps) -> Element {
                 })
                 .render(HtmlTag::Div, wrapper_attributes, props.children)
         }
-        if ever_open.get() {
+        if ever {
             MenuLevel {
                 // Never equal while it holds items, so a closed level gets none and
                 // skips its parent's renders. Its submenu levels unmount meanwhile.
