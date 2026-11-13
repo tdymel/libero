@@ -1,7 +1,6 @@
 use super::{Property, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue};
 use crate::css::canonical_condition;
 use crate::tokens::{CssVar, Size, SizeCss};
-use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 /// The one reduced-motion query for [`Sx::media`], so a grep finds every guard.
@@ -374,7 +373,7 @@ impl Sx {
 
     /// Hash of the entries, not the derived `Hash::hash`.
     pub(crate) fn content_hash(&self) -> u64 {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = ContentHasher::default();
         self.hash_into(&mut hasher);
         hasher.finish()
     }
@@ -387,6 +386,64 @@ impl Sx {
     #[cfg(test)]
     pub(crate) fn class_name(&self) -> String {
         class_name_from_hash(crate::css::Stylesheet::from(self).hash())
+    }
+}
+
+/// The hasher of [`Sx::content_hash`]: every styled element hashes its `sx` on every render, and
+/// SipHash was 2% of a screen. Whole words per step, 64 bits wide on wasm32 too, and a final
+/// mix, as the hash stands in for the content. Never for a class name: those must match the server's.
+#[derive(Default)]
+struct ContentHasher(u64);
+
+impl ContentHasher {
+    #[inline]
+    fn step(&mut self, word: u64) {
+        self.0 = (self.0.rotate_left(5) ^ word).wrapping_mul(0x517c_c1b7_2722_0a95);
+    }
+}
+
+impl Hasher for ContentHasher {
+    #[inline]
+    fn finish(&self) -> u64 {
+        // MurmurHash3's finaliser: the steps above leave the low bits weak.
+        let mut hash = self.0;
+        hash ^= hash >> 33;
+        hash = hash.wrapping_mul(0xff51_afd7_ed55_8ccd);
+        hash ^= hash >> 33;
+        hash = hash.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
+        hash ^ (hash >> 33)
+    }
+
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        let (words, rest) = bytes.as_chunks::<8>();
+        for word in words {
+            self.step(u64::from_le_bytes(*word));
+        }
+        let mut last = [0u8; 8];
+        last[..rest.len()].copy_from_slice(rest);
+        // The length too, so `"a\0"` and `"a"` differ.
+        self.step(u64::from_le_bytes(last) ^ ((bytes.len() as u64) << 56));
+    }
+
+    #[inline]
+    fn write_u8(&mut self, value: u8) {
+        self.step(u64::from(value));
+    }
+
+    #[inline]
+    fn write_u32(&mut self, value: u32) {
+        self.step(u64::from(value));
+    }
+
+    #[inline]
+    fn write_u64(&mut self, value: u64) {
+        self.step(value);
+    }
+
+    #[inline]
+    fn write_usize(&mut self, value: usize) {
+        self.step(value as u64);
     }
 }
 
