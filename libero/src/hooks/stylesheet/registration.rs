@@ -2,7 +2,7 @@
 //! registry entry across renders and gives it back when its scope goes.
 
 use std::{
-    cell::{Cell, RefCell},
+    cell::{Cell, OnceCell, RefCell},
     collections::{HashMap, hash_map::DefaultHasher},
     hash::{BuildHasherDefault, Hash, Hasher},
     rc::Rc,
@@ -13,7 +13,7 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    context::{LiberoContext, SheetRank, StylesheetKey, StylesheetRegistry},
+    context::{SheetRank, StylesheetKey, StylesheetRegistry},
     css::Stylesheet,
     sx::{ClassList, Input, StaticSx, Sx},
 };
@@ -502,7 +502,8 @@ fn cross_word(word: &'static str, other: &'static str) -> &'static str {
 
 /// The range copies one instance holds, released when its scope goes.
 struct RangeRegistrations {
-    context: RefCell<LiberoContext>,
+    /// Found with the first copy: a plain instance, nearly every one, never asks.
+    registry: OnceCell<(StylesheetRegistry, Signal<u64>)>,
     held: RefCell<Vec<(&'static str, Option<StylesheetKey>)>>,
     /// The root the held copies style: a changed root re-registers them even for the same words.
     root: Cell<u64>,
@@ -510,13 +511,15 @@ struct RangeRegistrations {
 
 impl Drop for RangeRegistrations {
     fn drop(&mut self) {
-        let context = self.context.get_mut();
+        let Some((registry, version)) = self.registry.get_mut() else {
+            return;
+        };
         let held = std::mem::take(self.held.get_mut());
         for key in held.iter().filter_map(|(_, key)| *key) {
-            context.stylesheet_registry.release(key);
+            registry.release(key);
         }
-        if !held.is_empty() && context.stylesheet_registry.take_outlet_change() {
-            *context.stylesheet_registry_version.write() += 1;
+        if !held.is_empty() && registry.take_outlet_change() {
+            *version.write() += 1;
         }
     }
 }
@@ -568,7 +571,7 @@ fn use_range_css_at(
 ) {
     let state = use_hook(|| {
         Rc::new(RangeRegistrations {
-            context: RefCell::new(crate::context::libero_context()),
+            registry: OnceCell::new(),
             held: RefCell::new(Vec::new()),
             root: Cell::new(root),
         })
@@ -583,7 +586,16 @@ fn use_range_css_at(
         return;
     }
     state.root.set(root);
-    let context = &mut *state.context.borrow_mut();
+    if held.is_empty() && copies.is_empty() {
+        return;
+    }
+    let (registry, version) = state.registry.get_or_init(|| {
+        let context = crate::context::libero_context();
+        (
+            context.stylesheet_registry,
+            context.stylesheet_registry_version,
+        )
+    });
     let Some(class_name) = class_name() else {
         return;
     };
@@ -595,11 +607,8 @@ fn use_range_css_at(
                 crate::sx::sx().media(copy.query, crate::sx::sx().when(copy.word, (copy.block)()));
             let sheet = Stylesheet::rooted_at(&sx, &class_name);
             // An empty block (Tabs' `top`) is a word with no rule.
-            let key = (!sheet.as_str().is_empty()).then(|| {
-                context
-                    .stylesheet_registry
-                    .acquire(sheet, layer, SheetRank::Range)
-            });
+            let key = (!sheet.as_str().is_empty())
+                .then(|| registry.acquire(sheet, layer, SheetRank::Range));
             (copy.word, key)
         })
         .collect();
@@ -607,13 +616,9 @@ fn use_range_css_at(
         .into_iter()
         .filter_map(|(_, key)| key)
     {
-        context.stylesheet_registry.release(key);
+        registry.release(key);
     }
-    bump_if_changed(
-        true,
-        &context.stylesheet_registry,
-        context.stylesheet_registry_version,
-    );
+    bump_if_changed(true, registry, *version);
 }
 
 #[cfg(test)]

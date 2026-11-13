@@ -65,29 +65,38 @@ pub(crate) fn use_gradient_style(
     active: bool,
     text: bool,
 ) -> Option<String> {
-    let context = crate::context::use_libero_context();
-    let shown = active && (gradient.is_some() || color.is_some());
-    let themes = if shown {
-        scheme_themes(&context)
-    } else {
-        vec![]
-    };
-    use_cached(
-        gradient_key(gradient, color, [shown, text], &themes),
-        || {
-            if !shown {
-                return None;
-            }
-            let gradient = gradient.cloned().unwrap_or_default();
-            Some(
-                gradient
-                    .declarations(color, &themes, text)
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect(),
-            )
-        },
-    )
+    // One slot, and the context found with the first gradient: every `Text`, `Icon` and
+    // `Button` calls this, and nearly none shows one.
+    type Last = Option<(GradientKey<2>, Option<String>)>;
+    let slot = use_hook(|| {
+        std::rc::Rc::new((
+            std::cell::OnceCell::<LiberoContext>::new(),
+            std::cell::RefCell::new(Last::None),
+        ))
+    });
+    if !(active && (gradient.is_some() || color.is_some())) {
+        return None;
+    }
+    let (context, last) = &*slot;
+    let themes = scheme_themes(context.get_or_init(libero_context));
+    let key = gradient_key(gradient, color, [true, text], &themes);
+    let mut last = last.borrow_mut();
+    if let Some((cached, value)) = &*last
+        && *cached == key
+    {
+        return value.clone();
+    }
+    let value: Option<String> = Some(
+        gradient
+            .cloned()
+            .unwrap_or_default()
+            .declarations(color, &themes, text)
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
+    );
+    *last = Some((key, value.clone()));
+    value
 }
 
 /// The gradient vars of [`use_gradient_style`] plus, for a glass surface, the label
