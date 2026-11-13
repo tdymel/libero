@@ -11,7 +11,7 @@ use crate::{
         data_display::{Pictogram, SvgData},
         layout::use_box,
     },
-    hooks::{use_cache, use_gradient_style, use_range_css, use_theme},
+    hooks::{use_gradient_style, use_range_css, use_shared_cache, use_theme},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, Gradient, ICON_DEFAULT_RADIUS, ICON_DEFAULT_SIZE, ICON_SIZE, ICON_SLOT_COLOR,
@@ -109,14 +109,20 @@ fn IconMask(src: String) -> Element {
         .render(HtmlTag::Span, Vec::new(), rsx! {})
 }
 
-fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
-    let base = base_color("Icon", props.color.as_ref());
+fn icon_variables(
+    color: &Input<ThemeAwareValue>,
+    size: &Input<Responsive<ThemeAwareValue>>,
+    radius: &Input<Responsive<ThemeAwareValue>>,
+    variant: Variant,
+) -> Variables {
+    let base = base_color("Icon", color.as_ref());
     let contrast = contrast_color(&base);
     let colors = variant_colors(variant, &base);
     // A colourless icon lets a slot (a segment) set its glyph colour; it is undefined elsewhere.
-    let glyph = text_color(&base).map(|color| match props.color.as_ref() {
-        Some(_) => color,
-        None => ICON_SLOT_COLOR.value_or(color),
+    let colored = color.as_ref().is_some();
+    let glyph = text_color(&base).map(|glyph| match colored {
+        true => glyph,
+        false => ICON_SLOT_COLOR.value_or(glyph),
     });
 
     variables()
@@ -130,19 +136,10 @@ fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
         )
         .with(ICON_CONTAINER_VAR, colors.container)
         .with(ICON_ON_CONTAINER_VAR, colors.on_container)
-        .with(
-            ICON_SIZE.override_var(),
-            plain_var(&props.size, Some(ICON_SIZE)),
-        )
+        .with(ICON_SIZE.override_var(), plain_var(size, Some(ICON_SIZE)))
         // A sized icon keeps its own box in a slot.
-        .with(
-            ICON_SLOT_PAD,
-            props.size.as_ref().map(|_| "0px".to_string()),
-        )
-        .with(
-            ICON_RADIUS_VAR,
-            plain_var(&props.radius, Some(SizeCss::RADIUS)),
-        )
+        .with(ICON_SLOT_PAD, size.as_ref().map(|_| "0px".to_string()))
+        .with(ICON_RADIUS_VAR, plain_var(radius, Some(SizeCss::RADIUS)))
 }
 
 base_props! {
@@ -206,14 +203,14 @@ pub fn Icon(props: IconProps) -> Element {
         false => variants.base(),
     };
     // Colour resolution is most of an icon's render, and its inputs rarely change.
-    let style = use_cache(
+    let style = use_shared_cache(
         (
             variant,
             props.color.clone(),
             props.size.clone(),
             props.radius.clone(),
         ),
-        |_| icon_variables(&props, variant).render(),
+        |(variant, color, size, radius)| icon_variables(color, size, radius, *variant).render(),
     );
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
@@ -432,8 +429,11 @@ mod tests {
 
     #[test]
     fn a_bare_theme_color_becomes_a_shade_plus_its_contrast() {
-        let variables =
-            icon_variables(&icon_props(Color::Error.into()), Variant::Filled).to_string();
+        let variables = {
+            let props = icon_props(Color::Error.into());
+            icon_variables(&props.color, &props.size, &props.radius, Variant::Filled)
+        }
+        .to_string();
 
         assert!(variables.contains(&format!(
             "{}:{};",
@@ -446,7 +446,11 @@ mod tests {
     /// A literal has no theme shade: its label is black or white, whichever reads (2105).
     #[test]
     fn a_literal_color_gets_the_readable_end() {
-        let variables = icon_variables(&icon_props("#123456".into()), Variant::Filled).to_string();
+        let variables = {
+            let props = icon_props("#123456".into());
+            icon_variables(&props.color, &props.size, &props.radius, Variant::Filled)
+        }
+        .to_string();
 
         assert!(variables.contains(&format!("{}:#123456;", ICON_COLOR_VAR.name())));
         assert!(variables.contains(&format!("{}:#FFFFFF;", ICON_CONTRAST_VAR.name())));

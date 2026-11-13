@@ -23,6 +23,56 @@ where
     }
 }
 
+/// How many results [`use_shared_cache`] keeps per call site before it starts over.
+#[cfg(any(
+    feature = "button",
+    feature = "icon",
+    feature = "action-icon",
+    feature = "avatar"
+))]
+const SHARED_KEPT: usize = 64;
+
+/// [`use_cache`] whose build is shared by every instance: the rows of a list each built the
+/// same colour variables on mount. `build` is a plain `fn`, so its result hangs on `deps` alone.
+#[cfg(any(
+    feature = "button",
+    feature = "icon",
+    feature = "action-icon",
+    feature = "avatar"
+))]
+pub(crate) fn use_shared_cache<D, T>(deps: D, build: fn(&D) -> T) -> T
+where
+    D: PartialEq + Clone + 'static,
+    T: Clone + 'static,
+{
+    use std::{any::Any, collections::HashMap};
+    thread_local! {
+        /// Per `build`, the deps it has seen with their results.
+        static SHARED: RefCell<HashMap<usize, Box<dyn Any>>> = RefCell::new(HashMap::new());
+    }
+    use_cache(deps, |deps| {
+        SHARED.with_borrow_mut(|shared| {
+            let seen = shared
+                .entry(build as usize)
+                .or_insert_with(|| Box::new(Vec::<(D, T)>::new()))
+                .downcast_mut::<Vec<(D, T)>>();
+            // Two `fn`s the linker folded into one address, of other types: build unshared.
+            let Some(seen) = seen else {
+                return build(deps);
+            };
+            if let Some((_, value)) = seen.iter().find(|(known, _)| known == deps) {
+                return value.clone();
+            }
+            if seen.len() >= SHARED_KEPT {
+                seen.clear();
+            }
+            let value = build(deps);
+            seen.push((deps.clone(), value.clone()));
+            value
+        })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

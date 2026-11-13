@@ -13,7 +13,7 @@ use crate::{
         layout::{Box, use_box},
     },
     context::IconSlot,
-    hooks::{listener, use_range_css, use_theme},
+    hooks::{listener, use_range_css, use_shared_cache, use_theme},
     platform,
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -379,7 +379,11 @@ pub fn Avatar(props: AvatarProps) -> Element {
     let overhang = props.overhang.unwrap_or(theme.avatar.overhang);
     let overhangs = overhang > 0 && src.is_some() && !failed;
 
-    let variables = avatar_variables(Some(&color), axes.variant, axes.plain_radius);
+    // Shared: a list's avatars build the same colour variables, one row after the other.
+    let variables = use_shared_cache(
+        (color.clone(), axes.variant, axes.plain_radius.cloned()),
+        |(color, variant, radius)| avatar_variables(Some(color), *variant, radius.as_ref()),
+    );
     let variables: Input<Variables> = match overhangs {
         true => variables.with(AVATAR_OVERHANG, Some(format!("{overhang}%"))),
         false => variables,

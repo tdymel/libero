@@ -25,7 +25,7 @@ use crate::{
     context::IconSlot,
     hooks::{
         Chord, aria_keyshortcuts, child_ripple_sx, current_localization, use_gradient_style,
-        use_range_css, use_ripple, use_theme,
+        use_range_css, use_ripple, use_shared_cache, use_theme,
     },
     platform::{click_stopped, mod_is_meta},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -319,11 +319,13 @@ fn plain(value: &Input<Responsive<ThemeAwareValue>>) -> Option<&ThemeAwareValue>
 }
 
 fn action_icon_variables(
-    props: &ActionIconProps,
+    size: &Input<Responsive<ThemeAwareValue>>,
+    radius: &Input<Responsive<ThemeAwareValue>>,
+    color: &Input<ThemeAwareValue>,
     variant: &Responsive<Variant>,
     has_variant_styling: bool,
 ) -> Variables {
-    let result = match plain(&props.size) {
+    let result = match plain(size) {
         Some(size) => {
             // A size word is `Button`'s height round `Icon`'s glyph; a length is both.
             let glyph = match size {
@@ -341,14 +343,14 @@ fn action_icon_variables(
     }
     .with(
         ACTION_ICON_RADIUS.override_var(),
-        plain(&props.radius).and_then(|radius| radius.resolve(Some(SizeCss::RADIUS))),
+        plain(radius).and_then(|radius| radius.resolve(Some(SizeCss::RADIUS))),
     );
 
     if !has_variant_styling {
         return result;
     }
 
-    let base = base_color("ActionIcon", props.color.as_ref());
+    let base = base_color("ActionIcon", color.as_ref());
     let contrast = contrast_color(&base);
     let result = result
         .with(ACTION_ICON_COLOR_VAR, text_color(&base))
@@ -609,8 +611,20 @@ fn action_icon(mut props: ActionIconProps, keyshortcuts: Option<String>) -> Elem
     let theme = use_theme();
     let variants = props.variant.copied_or(theme.action_icon.variant.into());
     let new_tab_icon = props.new_tab_icon.unwrap_or(theme.anchor.new_tab_icon);
-    let variables: Input<Variables> =
-        action_icon_variables(&props, &variants, has_variant_styling).into();
+    // Shared: it ran on every render, and a list's icons build the same variables.
+    let variables: Input<Variables> = use_shared_cache(
+        (
+            props.size.clone(),
+            props.radius.clone(),
+            props.color.clone(),
+            variants,
+            has_variant_styling,
+        ),
+        |(size, radius, color, variants, has_variant_styling)| {
+            action_icon_variables(size, radius, color, variants, *has_variant_styling)
+        },
+    )
+    .into();
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
         props.color.as_ref(),
@@ -922,7 +936,14 @@ mod tests {
     #[test]
     fn without_variant_styling_only_the_size_variables_are_set() {
         let props = action_icon_props(Color::Primary.into());
-        let variables = action_icon_variables(&props, &Variant::Filled.into(), false).to_string();
+        let variables = action_icon_variables(
+            &props.size,
+            &props.radius,
+            &props.color,
+            &Variant::Filled.into(),
+            false,
+        )
+        .to_string();
 
         assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
         assert!(!variables.contains(ACTION_ICON_COLOR_VAR.name()));
@@ -931,8 +952,11 @@ mod tests {
     /// Todo 1069: a size word is `Button`'s height round `Icon`'s glyph; a length fills.
     #[test]
     fn a_size_word_takes_the_button_height_and_a_length_fills() {
+        let props = action_icon_props(Input::None);
         let word = action_icon_variables(
-            &action_icon_props(Input::None),
+            &props.size,
+            &props.radius,
+            &props.color,
             &Variant::Filled.into(),
             false,
         )
@@ -944,7 +968,14 @@ mod tests {
             size: "20px".into(),
             ..action_icon_props(Input::None)
         };
-        let length = action_icon_variables(&length, &Variant::Filled.into(), false).to_string();
+        let length = action_icon_variables(
+            &length.size,
+            &length.radius,
+            &length.color,
+            &Variant::Filled.into(),
+            false,
+        )
+        .to_string();
         assert!(length.contains("-size-override:20px;"), "{length}");
         assert!(length.contains("-glyph-override:100%;"), "{length}");
     }
@@ -952,7 +983,14 @@ mod tests {
     #[test]
     fn with_variant_styling_the_colour_variables_are_added() {
         let props = action_icon_props(Color::Primary.into());
-        let variables = action_icon_variables(&props, &Variant::Filled.into(), true).to_string();
+        let variables = action_icon_variables(
+            &props.size,
+            &props.radius,
+            &props.color,
+            &Variant::Filled.into(),
+            true,
+        )
+        .to_string();
 
         assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
         assert!(variables.contains(ACTION_ICON_COLOR_VAR.name()));

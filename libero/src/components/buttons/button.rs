@@ -17,7 +17,9 @@ use crate::{
         layout::{render_anchor, use_box, use_link_router},
         navigation::{NewTabHint, wants_new_tab_hint},
     },
-    hooks::{ripple_sx, use_cache, use_gradient_style, use_range_css, use_ripple, use_theme},
+    hooks::{
+        ripple_sx, use_gradient_style, use_range_css, use_ripple, use_shared_cache, use_theme,
+    },
     platform::click_stopped,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -431,7 +433,7 @@ pub fn Button(props: ButtonProps) -> Element {
     let showing = ripple.showing();
     // ~790 ns uncached, and the key rarely changes between renders.
     let uncolored = color_prop.is_none();
-    let style = use_cache(
+    let mut style = use_shared_cache(
         (variants, color, uncolored, disabled),
         |(variants, color, uncolored, disabled)| match variants.is_plain() {
             true => button_variables(variants.base(), color, *uncolored, *disabled),
@@ -447,30 +449,18 @@ pub fn Button(props: ButtonProps) -> Element {
                 .any(|(_, value)| value == Variant::Gradient),
         false,
     );
-    let style = match gradient {
-        Some(gradient) => format!("{style}{gradient}"),
-        None => style,
+    // Appended only where set: a `format!` per unset part was three allocations a render.
+    if let Some(gradient) = gradient {
+        style.push_str(&gradient);
+    }
+    let mut own_variable = |name, value: Option<String>| {
+        if value.is_some() {
+            style.push_str(&variables().with(name, value).render());
+        }
     };
-    let style = format!(
-        "{style}{}",
-        variables()
-            .with(SizeCss::RADIUS.override_var(), radius.custom_css())
-            .render()
-    );
-    let style = match props.justify.resolve(None) {
-        Some(justify) => format!(
-            "{style}{}",
-            variables().with(BUTTON_JUSTIFY_VAR, Some(justify)).render()
-        ),
-        None => style,
-    };
-    let style = match props.gap.resolve(Some(SizeCss::SPACING)) {
-        Some(gap) => format!(
-            "{style}{}",
-            variables().with(BUTTON_GAP_VAR, Some(gap)).render()
-        ),
-        None => style,
-    };
+    own_variable(SizeCss::RADIUS.override_var(), radius.custom_css());
+    own_variable(BUTTON_JUSTIFY_VAR, props.justify.resolve(None));
+    own_variable(BUTTON_GAP_VAR, props.gap.resolve(Some(SizeCss::SPACING)));
     let style = match showing.as_ref() {
         Some(ripple) => ripple.with_point(style),
         None => style,

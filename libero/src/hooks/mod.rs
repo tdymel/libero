@@ -105,6 +105,13 @@ pub use crate::platform::{
 #[cfg(feature = "use-accessibility")]
 pub use accessibility::{AccessibilityHandle, use_accessibility};
 pub(crate) use cache::use_cache;
+#[cfg(any(
+    feature = "button",
+    feature = "icon",
+    feature = "action-icon",
+    feature = "avatar"
+))]
+pub(crate) use cache::use_shared_cache;
 #[cfg(feature = "use-clipboard")]
 pub use clipboard::{Clipboard, use_clipboard};
 #[cfg(feature = "use-color-scheme")]
