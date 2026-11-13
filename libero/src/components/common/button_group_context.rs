@@ -60,7 +60,9 @@ struct ButtonGroupScope(Signal<ButtonGroupContext>);
 
 /// Hands `defaults` to the buttons below, updating them when they change.
 pub(crate) fn use_provide_button_group(defaults: ButtonGroupContext) {
-    let mut scope = use_context_provider(|| ButtonGroupScope(Signal::new(defaults.clone())));
+    let mut scope = crate::context::use_counted_context_provider(|| {
+        ButtonGroupScope(Signal::new(defaults.clone()))
+    });
     if *scope.0.peek() != defaults {
         scope.0.set(defaults);
     }
@@ -68,7 +70,7 @@ pub(crate) fn use_provide_button_group(defaults: ButtonGroupContext) {
 
 /// The enclosing group's defaults, all unset outside one.
 pub(crate) fn use_button_group() -> ButtonGroupContext {
-    let scope = use_hook(try_consume_context::<ButtonGroupScope>);
+    let scope = use_hook(crate::context::try_counted_context::<ButtonGroupScope>);
     scope
         .map(|scope| scope.0.read().clone())
         .unwrap_or_default()

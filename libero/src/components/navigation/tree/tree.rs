@@ -837,7 +837,8 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let guides = props.guides.unwrap_or(theme.tree.guides);
 
     // A disabled `Fieldset` cannot reach a span row the way it does a button.
-    let group_disabled = try_use_context::<Disabled>().is_some_and(|Disabled(group)| group());
+    let group_disabled = use_hook(crate::context::try_counted_context::<Disabled>)
+        .is_some_and(|Disabled(group)| group());
     let order = visible_order(&props.data, &expanded.read(), group_disabled);
     let marks = use_marks(&props, expansion.open, group_disabled, &sizes);
     let selectable = props.selected.is_some();

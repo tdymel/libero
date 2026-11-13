@@ -16,7 +16,7 @@ pub fn use_theme() -> &'static Theme {
     let (page, scope) = use_hook(|| {
         (
             libero_context().theme,
-            try_consume_context::<ThemeScopeContext>(),
+            crate::context::try_counted_context::<ThemeScopeContext>(),
         )
     });
     let scoped = scope.and_then(|scope| scope.theme.cloned());

@@ -145,5 +145,5 @@ pub(crate) fn fieldset_required(own: Option<bool>) -> bool {
 
 /// Whether an enclosing `Fieldset` is disabled. A hook, for a control that is no field.
 pub(crate) fn use_fieldset_disabled() -> bool {
-    use_hook(try_consume_context::<Disabled>).is_some_and(|Disabled(group)| group())
+    use_hook(crate::context::try_counted_context::<Disabled>).is_some_and(|Disabled(group)| group())
 }

@@ -47,7 +47,7 @@ impl FieldHook {
             owner: current_scope_id(),
             form,
             binding: try_consume_context::<Binding>().unwrap_or_default(),
-            disabled: try_consume_context::<Disabled>(),
+            disabled: crate::context::try_counted_context::<Disabled>(),
             checking: OnceCell::new(),
         })
     }

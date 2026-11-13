@@ -150,7 +150,7 @@ pub(crate) fn use_provide_toolbar(orientation: Orientation) -> ToolbarScope {
         rechecks: Signal::new(0),
         asked: CopyValue::new(false),
     });
-    use_context_provider(|| ToolbarContext(Some(scope)));
+    crate::context::use_counted_context_provider(|| ToolbarContext(Some(scope)));
     // From an effect: a write in the body re-runs every reader mid-render (todo 5169).
     use_effect(use_reactive!(|orientation| {
         let mut current = scope.orientation;
@@ -163,13 +163,15 @@ pub(crate) fn use_provide_toolbar(orientation: Orientation) -> ToolbarScope {
 
 /// The enclosing `Toolbar`, `None` outside one.
 pub(crate) fn use_toolbar() -> Option<ToolbarScope> {
-    use_hook(|| try_consume_context::<ToolbarContext>().and_then(|context| context.0))
+    use_hook(|| {
+        crate::context::try_counted_context::<ToolbarContext>().and_then(|context| context.0)
+    })
 }
 
 /// Keeps the controls below this one out of an enclosing `Toolbar`'s arrow
 /// order: a `NumberField`'s steppers belong to it, not the bar.
 pub(crate) fn use_no_toolbar() {
-    use_context_provider(|| ToolbarContext(None));
+    crate::context::use_counted_context_provider(|| ToolbarContext(None));
 }
 
 /// A control inside a `Toolbar`: one of its roving tab stops.

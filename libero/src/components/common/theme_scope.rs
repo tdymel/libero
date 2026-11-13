@@ -50,13 +50,13 @@ pub fn ThemeScope(
     });
     let scope = use_memo(move || css.read().is_some().then(|| theme.cloned()));
     let own = use_memo(move || themes.read().get(&theme.read()));
-    let parent = use_hook(try_consume_context::<ThemeScopeContext>);
+    let parent = use_hook(crate::context::try_counted_context::<ThemeScopeContext>);
     let resolved =
         use_memo(move || own().or_else(|| parent.and_then(|parent| parent.theme.cloned())));
     // An unknown scope's overlays carry the scope around it, as its children inherit it.
     let carried =
         use_memo(move || scope().or_else(|| parent.and_then(|parent| parent.name.cloned())));
-    use_context_provider(|| ThemeScopeContext {
+    crate::context::use_counted_context_provider(|| ThemeScopeContext {
         name: carried,
         theme: resolved,
     });

@@ -1,3 +1,4 @@
+mod counted;
 mod icons;
 mod libero;
 mod modal;
@@ -5,6 +6,7 @@ mod portal;
 mod theme_scope;
 mod window;
 
+pub(crate) use counted::{try_counted_context, use_counted_context_provider};
 pub(crate) use icons::IconContext;
 pub use icons::{IconProvider, IconProviderProps, IconSet, IconSlot};
 #[cfg(test)]

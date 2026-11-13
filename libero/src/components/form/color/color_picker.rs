@@ -248,9 +248,9 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         .cloned()
         .unwrap_or(theme.color_picker.radius.into());
     // Every thumb and swatch inside reads it, as inside a disabled `Fieldset` (todo 4244).
-    let parent_disabled = use_hook(try_consume_context::<Disabled>);
+    let parent_disabled = use_hook(crate::context::try_counted_context::<Disabled>);
     let mut own_disabled = use_hook(|| Disabled(Signal::new(false)));
-    use_context_provider(|| own_disabled);
+    crate::context::use_counted_context_provider(|| own_disabled);
     let disabled =
         props.disabled.unwrap_or(false) || parent_disabled.is_some_and(|Disabled(parent)| parent());
     if *own_disabled.0.peek() != disabled {

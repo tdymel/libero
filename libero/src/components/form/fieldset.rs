@@ -225,9 +225,9 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
 
     // No native `disabled`: it would drop a focused button's focus (todo 3873). Every
     // control inside reads this context and disables itself, nested groups included.
-    let parent_disabled = use_hook(try_consume_context::<Disabled>);
+    let parent_disabled = use_hook(crate::context::try_counted_context::<Disabled>);
     let mut own_disabled = use_hook(|| Disabled(Signal::new(false)));
-    use_context_provider(|| own_disabled);
+    crate::context::use_counted_context_provider(|| own_disabled);
     let disabled =
         props.disabled.unwrap_or(false) || parent_disabled.is_some_and(|Disabled(parent)| parent());
     if *own_disabled.0.peek() != disabled {

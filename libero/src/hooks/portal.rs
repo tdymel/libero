@@ -85,7 +85,7 @@ fn ScopeContext(
     // Owned here: the slot's memos and the props' signals belong to scopes outside the outlet.
     let name = use_memo(use_reactive!(|name| Some(name)));
     let theme = use_memo(use_reactive!(|theme| theme));
-    use_context_provider(|| ThemeScopeContext { name, theme });
+    crate::context::use_counted_context_provider(|| ThemeScopeContext { name, theme });
     children
 }
 
@@ -93,7 +93,7 @@ fn ScopeContext(
 pub(crate) fn use_portal_slot() -> PortalSlot {
     let host = use_context::<PortalHost>();
     let id = use_hook(unique_id);
-    let scope = try_use_context::<ThemeScopeContext>();
+    let scope = use_hook(crate::context::try_counted_context::<ThemeScopeContext>);
 
     use_drop(move || {
         let mut host = host;
