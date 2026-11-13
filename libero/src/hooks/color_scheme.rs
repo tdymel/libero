@@ -24,7 +24,7 @@ use crate::{
 /// ```
 pub fn use_color_scheme() -> ColorSchemeHandle {
     ColorSchemeHandle {
-        context: use_context::<LiberoContext>(),
+        context: crate::context::use_libero_context(),
     }
 }
 

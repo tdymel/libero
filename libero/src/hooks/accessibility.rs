@@ -32,7 +32,7 @@ use crate::{
 /// Docs: <https://libero-ui.dev/accessibility/use-accessibility>
 pub fn use_accessibility() -> AccessibilityHandle {
     AccessibilityHandle {
-        context: use_context::<LiberoContext>(),
+        context: crate::context::use_libero_context(),
     }
 }
 

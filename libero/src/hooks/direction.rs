@@ -30,7 +30,7 @@ use crate::{context::LiberoContext, tokens::Direction};
 /// `LiberoProvider`.
 pub fn use_direction() -> DirectionHandle {
     DirectionHandle {
-        context: use_context::<LiberoContext>(),
+        context: crate::context::use_libero_context(),
     }
 }
 

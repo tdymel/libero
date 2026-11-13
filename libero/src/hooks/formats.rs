@@ -1,19 +1,19 @@
 use dioxus::prelude::*;
 
-use crate::{context::LiberoContext, localization::Formats};
+use crate::localization::Formats;
 
 /// The active [`Formats`]: how dates, times and numbers are written.
 /// Reactive. Panics outside a `LiberoProvider`.
 ///
 /// Docs: <https://libero-ui.dev/about/localization>
 pub fn use_formats() -> &'static Formats {
-    *use_context::<LiberoContext>().formats.read()
+    *crate::context::use_libero_context().formats.read()
 }
 
 /// [`use_formats`] without the hook, for a plain render function that may run
 /// conditionally or in a loop. Still subscribes the rendering scope.
 pub(crate) fn current_formats() -> &'static Formats {
-    *consume_context::<LiberoContext>().formats.read()
+    *crate::context::libero_context().formats.read()
 }
 
 /// The active [`Formats`], and how to swap them: a region picker's base.
@@ -34,7 +34,7 @@ pub(crate) fn current_formats() -> &'static Formats {
 /// Docs: <https://libero-ui.dev/about/localization>
 pub fn use_formats_handle() -> FormatsHandle {
     FormatsHandle {
-        formats: use_context::<LiberoContext>().formats,
+        formats: crate::context::use_libero_context().formats,
     }
 }
 

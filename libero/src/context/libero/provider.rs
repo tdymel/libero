@@ -166,6 +166,7 @@ pub fn LiberoProvider(
             stylesheet_registry_version,
         )
     });
+    super::lookup::use_provided(&context);
     use_hook(|| {
         set_current_a11y_answers(A11yAnswers::new(
             *accessibility_system.peek(),

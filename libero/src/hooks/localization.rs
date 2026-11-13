@@ -1,19 +1,19 @@
 use dioxus::prelude::*;
 
-use crate::{context::LiberoContext, localization::Localization};
+use crate::localization::Localization;
 
 /// The active [`Localization`]: every string libero shows a reader.
 /// Reactive. Panics outside a `LiberoProvider`.
 ///
 /// Docs: <https://libero-ui.dev/about/localization>
 pub fn use_localization() -> &'static Localization {
-    *use_context::<LiberoContext>().localization.read()
+    *crate::context::use_libero_context().localization.read()
 }
 
 /// [`use_localization`] without the hook, for a plain render function that may
 /// run conditionally or in a loop. Still subscribes the rendering scope.
 pub(crate) fn current_localization() -> &'static Localization {
-    *consume_context::<LiberoContext>().localization.read()
+    *crate::context::libero_context().localization.read()
 }
 
 /// The active [`Localization`], and how to swap it: a language picker's base.
@@ -34,7 +34,7 @@ pub(crate) fn current_localization() -> &'static Localization {
 /// Docs: <https://libero-ui.dev/about/localization>
 pub fn use_localization_handle() -> LocalizationHandle {
     LocalizationHandle {
-        localization: use_context::<LiberoContext>().localization,
+        localization: crate::context::use_libero_context().localization,
     }
 }
 

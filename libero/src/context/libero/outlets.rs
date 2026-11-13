@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use super::{CssLayer, LiberoContext, SheetRank};
+use super::{CssLayer, SheetRank};
 use crate::{
     css::style_text,
     platform::{self, A11yAnswers, answer_a11y_media, document, focus_selectors},
@@ -14,7 +14,7 @@ use crate::{
 /// provider's sheet: the same text is already in the document (todo 2207).
 #[component]
 pub(super) fn ThemeStyle(outer: Option<Signal<Rc<str>>>) -> Element {
-    let context = use_context::<LiberoContext>();
+    let context = crate::context::use_libero_context();
     let sheet = context.theme_css.read().clone();
     let shared = outer.is_some_and(|outer| {
         let outer = outer.read();
@@ -67,7 +67,7 @@ pub(super) fn ThemeStyle(outer: Option<Signal<Rc<str>>>) -> Element {
 /// re-renders only it; after `{children}`, so the first pass has every sheet.
 #[component]
 pub(super) fn StyleOutlet() -> Element {
-    let context = use_context::<LiberoContext>();
+    let context = crate::context::use_libero_context();
     let registry_version = *context.stylesheet_registry_version.read();
     // Blitz's stylo and a forced reduced motion need libero's answers in the text (todo 954).
     let answers = context.a11y_answers();

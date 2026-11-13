@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 
 use crate::{
-    LiberoContext,
     context::{CssLayer, ThemeScopeContext},
     css::Stylesheet,
     hooks::use_css,
@@ -38,7 +37,7 @@ pub fn ThemeScope(
     theme: ReadSignal<String>,
     children: Element,
 ) -> Element {
-    let themes = use_context::<LiberoContext>().themes;
+    let themes = crate::context::use_libero_context().themes;
     let css = use_memo(move || {
         let css = theme_scope_css(&themes.read(), &theme.read());
         if css.is_none() {

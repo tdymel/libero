@@ -9,7 +9,9 @@ pub(crate) use icons::IconContext;
 pub use icons::{IconProvider, IconProviderProps, IconSet, IconSlot};
 #[cfg(test)]
 pub(crate) use libero::use_viewport_provider;
-pub(crate) use libero::{CssLayer, SheetRank, StylesheetKey, Viewport};
+pub(crate) use libero::{
+    CssLayer, SheetRank, StylesheetKey, Viewport, libero_context, use_libero_context,
+};
 pub use libero::{LiberoContext, LiberoProvider};
 pub(crate) use modal::ModalHost;
 pub use modal::{Dismiss, ModalContext};

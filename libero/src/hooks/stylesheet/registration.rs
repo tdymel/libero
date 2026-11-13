@@ -201,7 +201,7 @@ impl Drop for CssRegistrations {
 fn use_css_registrations(slots: usize) -> Rc<CssRegistrations> {
     use_hook(|| {
         Rc::new(CssRegistrations {
-            context: RefCell::new(consume_context::<LiberoContext>()),
+            context: RefCell::new(crate::context::libero_context()),
             slots: RefCell::new((0..slots).map(|_| None).collect()),
         })
     })
@@ -505,7 +505,7 @@ fn use_range_css_at(
 ) {
     let state = use_hook(|| {
         Rc::new(RangeRegistrations {
-            context: RefCell::new(consume_context::<LiberoContext>()),
+            context: RefCell::new(crate::context::libero_context()),
             held: RefCell::new(Vec::new()),
             root: Cell::new(root),
         })

@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    context::{LiberoContext, ThemeScopeContext},
+    context::{LiberoContext, ThemeScopeContext, libero_context},
     sx::ThemeAwareValue,
     theme::{GlassTint, Gradient, Theme, ThemeSet, glass_gradient_declarations, glass_tint},
 };
@@ -12,8 +12,14 @@ use crate::{
 ///
 /// Docs: <https://libero-ui.dev/about/theming>
 pub fn use_theme() -> &'static Theme {
-    let page = use_context::<LiberoContext>().theme;
-    let scoped = try_use_context::<ThemeScopeContext>().and_then(|scope| scope.theme.cloned());
+    // One slot, and only the two handles: `use_context` clones the whole context per render.
+    let (page, scope) = use_hook(|| {
+        (
+            libero_context().theme,
+            try_consume_context::<ThemeScopeContext>(),
+        )
+    });
+    let scoped = scope.and_then(|scope| scope.theme.cloned());
     scoped.unwrap_or_else(|| *page.read())
 }
 
@@ -45,7 +51,7 @@ pub fn use_theme() -> &'static Theme {
 /// Docs: <https://libero-ui.dev/hooks/use-theme-set>
 pub fn use_theme_set() -> ThemeSetHandle {
     ThemeSetHandle {
-        context: use_context::<LiberoContext>(),
+        context: crate::context::use_libero_context(),
     }
 }
 
@@ -59,7 +65,7 @@ pub(crate) fn use_gradient_style(
     active: bool,
     text: bool,
 ) -> Option<String> {
-    let context = use_context::<LiberoContext>();
+    let context = crate::context::use_libero_context();
     let shown = active && (gradient.is_some() || color.is_some());
     let themes = if shown {
         scheme_themes(&context)
@@ -94,7 +100,7 @@ pub(crate) fn use_glass_gradient_style(
 ) -> Option<String> {
     let style = use_gradient_style(gradient, color, active, false);
     // A hook: called before the early return, or toggling `glass` panics (todo 2134).
-    let context = use_context::<LiberoContext>();
+    let context = crate::context::use_libero_context();
     // Read only when used, as before: a theme switch re-renders no plain component.
     let themes = if glass {
         scheme_themes(&context)
@@ -152,7 +158,7 @@ fn use_cached<K: PartialEq + 'static>(
 /// The label and share of a glass tint of `fill` (see [`glass_tint`]), measured
 /// as [`use_gradient_style`] is. `None` without a `fill`.
 pub(crate) fn use_glass_tint(fill: Option<&ThemeAwareValue>) -> Option<GlassTint> {
-    let context = use_context::<LiberoContext>();
+    let context = crate::context::use_libero_context();
     glass_tint(fill?, &scheme_themes(&context))
 }
 
