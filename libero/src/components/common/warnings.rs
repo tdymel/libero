@@ -60,15 +60,19 @@ pub(crate) fn blocked_scheme(url: &str) -> Option<&'static str> {
 }
 
 fn scheme_among(url: &str, blocked: &[&'static str]) -> Option<&'static str> {
-    let head: String = url
-        .trim_matches(|c: char| c <= ' ')
-        .chars()
-        .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
-        .take("javascript:".len())
-        .collect::<String>()
-        .to_ascii_lowercase();
-    let (scheme, _) = head.split_once(':')?;
-    blocked.iter().copied().find(|blocked| *blocked == scheme)
+    // No allocation: every link asks on every render.
+    let head = || {
+        url.trim_matches(|c: char| c <= ' ')
+            .chars()
+            .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
+    };
+    blocked.iter().copied().find(|blocked| {
+        let mut head = head();
+        blocked.chars().all(|expected| {
+            head.next()
+                .is_some_and(|c| c.eq_ignore_ascii_case(&expected))
+        }) && head.next() == Some(':')
+    })
 }
 
 const SCRIPT_SCHEMES: [&str; 2] = ["javascript", "vbscript"];
@@ -92,7 +96,7 @@ pub(crate) fn media_url(url: &str, owner: &str) -> Option<String> {
 
 /// Whether `url` may become an `href`. A `javascript:`, `data:` or `vbscript:` URL may
 /// come from user data: it warns and the caller renders the link without an `href`.
-pub(crate) fn allowed_href(url: &str, owner: &str) -> bool {
+pub(crate) fn allowed_href(url: &str, owner: impl std::fmt::Display) -> bool {
     let Some(scheme) = blocked_scheme(url) else {
         return true;
     };

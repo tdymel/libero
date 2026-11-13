@@ -90,7 +90,7 @@ pub(super) fn MenuRow(props: MenuRowProps) -> Element {
     // A blocked scheme renders the row as an inert button, not a link.
     let href = item
         .href_url()
-        .filter(|url| allowed_href(url, &format!("MenuItem \"{}\"", item.label)))
+        .filter(|url| allowed_href(url, format_args!("MenuItem \"{}\"", item.label)))
         .map(str::to_owned);
     let is_link = href.is_some();
     let hint = is_link && item.new_tab_hint;

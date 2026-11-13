@@ -1,4 +1,6 @@
-use dioxus::{html::input_data::MouseButton, prelude::*, router::RouterContext};
+use std::{cell::OnceCell, rc::Rc};
+
+use dioxus::{core::Runtime, html::input_data::MouseButton, prelude::*, router::RouterContext};
 
 use crate::{
     components::{
@@ -13,12 +15,73 @@ use crate::{
 
 /// A link the router does not handle still keeps its base path, else it leaves the app
 /// (todo 4855).
-fn plain_href(to: NavigationTarget, router: Option<RouterContext>) -> String {
-    match (to, router) {
-        (NavigationTarget::Internal(url), Some(router)) => {
-            router.prefix().unwrap_or_default() + &url
+/// The router and the current route for a link, found once per component: `try_router` climbs
+/// the scope tree and `full_route_string` reads `location`, and every link paid both per render.
+#[derive(Clone)]
+pub(crate) struct LinkRouter(Rc<OnceCell<Option<Found>>>);
+
+/// The router, the current route, and the base path the history was built with.
+type Found = (RouterContext, Memo<String>, Option<Rc<str>>);
+
+/// The route as one memo, provided beside the router it reads and gone with it.
+#[derive(Clone, Copy)]
+struct CurrentRoute(Memo<String>);
+
+/// A hook; the lookup waits for the first link the component renders.
+pub(crate) fn use_link_router() -> LinkRouter {
+    use_hook(|| LinkRouter(Rc::new(OnceCell::new())))
+}
+
+impl LinkRouter {
+    pub(crate) fn router(&self) -> Option<RouterContext> {
+        self.found().map(|(router, ..)| router)
+    }
+
+    /// Whether `matches` holds for the current route. Reactive, as `full_route_string` is.
+    pub(crate) fn route_is(&self, matches: impl FnOnce(&str) -> bool) -> bool {
+        self.found()
+            .is_some_and(|(_, route, _)| matches(route.read().as_str()))
+    }
+
+    /// `url` under the router's base path: asked once, as `prefix()` climbs for the history.
+    fn href(&self, url: &str) -> String {
+        match self.found() {
+            Some((.., Some(prefix))) => [&*prefix, url].concat(),
+            _ => url.to_string(),
         }
-        (NavigationTarget::Internal(url) | NavigationTarget::External(url), _) => url,
+    }
+
+    fn found(&self) -> Option<Found> {
+        self.0
+            .get_or_init(|| {
+                let router = try_router()?;
+                let route = try_consume_context::<CurrentRoute>()
+                    .map_or_else(|| provide_route(router), |CurrentRoute(route)| route);
+                Some((router, route, router.prefix().map(Rc::from)))
+            })
+            .clone()
+    }
+}
+
+/// Creates the route memo in the scope that provides `router`, for every later link under it.
+fn provide_route(router: RouterContext) -> Memo<String> {
+    let runtime = Runtime::current();
+    let mut scope = runtime.current_scope_id();
+    while runtime.has_context::<RouterContext>(scope).is_none() {
+        match runtime.parent_scope(scope) {
+            Some(parent) => scope = parent,
+            None => break,
+        }
+    }
+    let route = runtime.in_scope(scope, || Memo::new(move || router.full_route_string()));
+    runtime.provide_context(scope, CurrentRoute(route));
+    route
+}
+
+fn plain_href(to: NavigationTarget, link: &LinkRouter) -> String {
+    match to {
+        NavigationTarget::Internal(url) => link.href(&url),
+        NavigationTarget::External(url) => url,
     }
 }
 
@@ -50,6 +113,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         &props.hidden_from,
         &props.visible_from,
     );
+    let link = use_link_router();
     let style_attributes = use_style_attributes(
         &props.class,
         props.framework_sx,
@@ -61,6 +125,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
     );
 
     render_anchor(
+        &link,
         style_attributes,
         props.to,
         props.target,
@@ -75,6 +140,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
 /// [`InternalAnchor`]'s body from styling already resolved. No hooks, so a
 /// component that resolved its own styling renders the link in its own scope.
 pub(crate) fn render_anchor(
+    link: &LinkRouter,
     style_attributes: StyleAttributes,
     to: NavigationTarget,
     target: Option<String>,
@@ -85,7 +151,7 @@ pub(crate) fn render_anchor(
     let is_blank = target
         .as_deref()
         .is_some_and(|target| target.eq_ignore_ascii_case("_blank"));
-    let mounted = try_router();
+    let mounted = link.router();
     let router = mounted.filter(|_| target.is_none() || is_blank);
 
     // Without a router every string is `External`, so only an absolute URL counts as one.
@@ -93,12 +159,12 @@ pub(crate) fn render_anchor(
         .then_some("noopener noreferrer");
     // Every library link resolves here: a blocked scheme leaves an inert `<a>`.
     let (NavigationTarget::Internal(url) | NavigationTarget::External(url)) = &to;
-    let mut anchor = if allowed_href(url, &format!("Link to `{url}`")) {
+    let mut anchor = if allowed_href(url, format_args!("Link to `{url}`")) {
         match router {
-            Some(router) => routed(box_style(style_attributes), router, to, is_blank),
+            Some(router) => routed(box_style(style_attributes), link, router, to, is_blank),
             None => box_style(style_attributes)
                 .attr_default("rel", rel)
-                .attr("href", plain_href(to, mounted))
+                .attr("href", plain_href(to, link))
                 .attr("target", target),
         }
     } else {
@@ -117,17 +183,18 @@ pub(crate) fn render_anchor(
 /// (todo 2986). Its `href`, `rel`, `aria-current` and click are kept.
 fn routed(
     anchor: BoxStyle,
+    link: &LinkRouter,
     router: RouterContext,
     to: NavigationTarget,
     new_tab: bool,
 ) -> BoxStyle {
     let is_external = matches!(to, NavigationTarget::External(_));
     let href = match &to {
-        NavigationTarget::Internal(url) => router.prefix().unwrap_or_default() + url,
+        NavigationTarget::Internal(url) => link.href(url),
         NavigationTarget::External(url) => url.clone(),
     };
     let current =
-        matches!(&to, NavigationTarget::Internal(url) if *url == router.full_route_string());
+        matches!(&to, NavigationTarget::Internal(url) if link.route_is(|route| route == url));
     anchor
         .attr("href", href)
         .attr("target", new_tab.then_some("_blank"))

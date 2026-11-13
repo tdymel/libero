@@ -26,7 +26,7 @@ use crate::{
     theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, TEXT_FONT_SIZE},
 };
 
-use crate::components::layout::render_anchor;
+use crate::components::layout::{LinkRouter, render_anchor, use_link_router};
 
 // A literal CSS color has no lighter shade, so it falls back to the theme's.
 pub(super) fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
@@ -285,6 +285,7 @@ base_props! {
 #[component]
 pub fn NavLink(props: NavLinkProps) -> Element {
     let theme = use_theme();
+    let link_router = use_link_router();
     let labels = use_localization().nav_link;
     let link_id = use_root_id(&props.attributes);
     let (toggle_id, panel_id, description_id) = (use_id(), use_id(), use_id());
@@ -297,9 +298,9 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let group_disabled = use_fieldset_disabled();
     let toggle_disabled = disabled || group_disabled;
     let is_active = props.active.unwrap_or_else(|| match &props.to {
-        NavigationTarget::Internal(path) => try_router()
-            .map(|router| route_matches(&router.full_route_string(), path))
-            .unwrap_or(false),
+        NavigationTarget::Internal(path) => {
+            link_router.route_is(|route| route_matches(route, path))
+        }
         NavigationTarget::External(_) => false,
     });
 
@@ -391,6 +392,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let group_style = use_box().framework_sx(&NAV_GROUP_SX).prepare();
     let Some(nested) = props.nested else {
         return nav_link(
+            &link_router,
             style_attributes,
             props.to,
             props.target,
@@ -405,6 +407,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         attributes.push(attr("id", link_id()));
     }
     let link = nav_link(
+        &link_router,
         style_attributes,
         props.to,
         props.target,
@@ -460,6 +463,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
 /// The link itself: an `<a>` to `to`, or with `disabled` one that goes nowhere.
 #[allow(clippy::too_many_arguments)]
 fn nav_link(
+    link: &LinkRouter,
     style_attributes: StyleAttributes,
     to: NavigationTarget,
     target: Option<String>,
@@ -484,6 +488,7 @@ fn nav_link(
     }
 
     render_anchor(
+        link,
         style_attributes,
         to,
         target,

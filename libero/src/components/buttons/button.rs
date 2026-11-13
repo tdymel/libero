@@ -14,7 +14,7 @@ use crate::{
         },
         feedback::Loader,
         form::use_fieldset_disabled,
-        layout::{render_anchor, use_box},
+        layout::{render_anchor, use_box, use_link_router},
         navigation::{NewTabHint, wants_new_tab_hint},
     },
     hooks::{ripple_sx, use_cache, use_gradient_style, use_range_css, use_ripple, use_theme},
@@ -371,6 +371,7 @@ base_props! {
 #[component]
 pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
+    let link = use_link_router();
     let group = use_button_group();
     let item = use_toolbar_item();
     let variants = props
@@ -617,6 +618,7 @@ pub fn Button(props: ButtonProps) -> Element {
         let mut attributes = props.attributes;
         attributes.extend(item.into_iter().flat_map(ToolbarItem::attributes));
         return render_anchor(
+            &link,
             boxed.into_style_attributes(),
             to,
             props.target,

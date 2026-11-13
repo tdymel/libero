@@ -64,7 +64,7 @@ pub use grid::{
 pub use header::{Header, HeaderPosition, HeaderProps};
 // A `Box` rendered as a link, here so buttons and navigation share it one-way.
 #[cfg(feature = "box")]
-pub(crate) use internal_anchor::{InternalAnchor, render_anchor};
+pub(crate) use internal_anchor::{InternalAnchor, LinkRouter, render_anchor, use_link_router};
 #[cfg(feature = "paper")]
 pub use paper::{Paper, PaperProps, paper_sx};
 #[cfg(feature = "scroll-area")]

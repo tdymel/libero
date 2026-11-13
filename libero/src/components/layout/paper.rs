@@ -135,7 +135,7 @@ fn paper_unreachable_press(component: HtmlTag, attributes: &[Attribute]) -> bool
 fn drop_blocked_href(attributes: &mut Vec<Attribute>) {
     attributes.retain(|attribute| match &attribute.value {
         AttributeValue::Text(url) if attribute.name == "href" => {
-            allowed_href(url, &format!("Paper `href` `{url}`"))
+            allowed_href(url, format_args!("Paper `href` `{url}`"))
         }
         _ => true,
     });

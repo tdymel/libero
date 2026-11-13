@@ -14,7 +14,7 @@ use crate::{
             use_name_warning, use_style_attributes, variables,
         },
         form::use_fieldset_disabled,
-        layout::{Float, box_style, render_anchor, use_box},
+        layout::{Float, box_style, render_anchor, use_box, use_link_router},
     },
     css::Stylesheet,
     hooks::{use_css, use_theme},
@@ -651,6 +651,7 @@ base_props! {
 /// Docs: <https://libero-ui.dev/navigation/navigation-bar>
 #[component]
 pub fn NavigationBarItem(props: NavigationBarItemProps) -> Element {
+    let link = use_link_router();
     if cfg!(debug_assertions) {
         let count = use_hook(|| {
             let count = try_consume_context::<ItemCount>();
@@ -687,9 +688,7 @@ pub fn NavigationBarItem(props: NavigationBarItemProps) -> Element {
     let in_disabled_group = use_fieldset_disabled() && props.to.as_ref().is_none();
     let disabled = props.disabled.unwrap_or(false) || in_disabled_group;
     let selected = props.selected.unwrap_or_else(|| match props.to.as_ref() {
-        Some(NavigationTarget::Internal(path)) => try_router()
-            .map(|router| item_matches(&router.full_route_string(), path))
-            .unwrap_or(false),
+        Some(NavigationTarget::Internal(path)) => link.route_is(|route| item_matches(route, path)),
         _ => false,
     });
     let states: Input<States> = props
@@ -741,6 +740,7 @@ pub fn NavigationBarItem(props: NavigationBarItemProps) -> Element {
                 attributes.push(attr("aria-current", link_current));
             }
             render_anchor(
+                &link,
                 style_attributes,
                 to,
                 None,

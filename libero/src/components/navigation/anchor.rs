@@ -16,7 +16,7 @@ use crate::{
     theme::{AnchorDefaults, Responsive, Size, TextDefaults},
 };
 
-use crate::components::layout::{box_style, listener_attribute, render_anchor};
+use crate::components::layout::{box_style, listener_attribute, render_anchor, use_link_router};
 use crate::utils::warn;
 
 pub use crate::theme::AnchorUnderline;
@@ -162,6 +162,7 @@ base_props! {
 #[component]
 pub fn Anchor(props: AnchorProps) -> Element {
     let theme = use_theme();
+    let link = use_link_router();
     let sizes = props.size.copied_or(theme.anchor.size.into());
     let underline = props.underline.copied_or(theme.anchor.underline);
 
@@ -223,6 +224,7 @@ pub fn Anchor(props: AnchorProps) -> Element {
     let mut attributes = props.attributes;
     attributes.extend(listener_attribute("onclick", props.onclick));
     render_anchor(
+        &link,
         style_attributes,
         to,
         props.target,
