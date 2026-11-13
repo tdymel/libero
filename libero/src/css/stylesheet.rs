@@ -1,6 +1,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 
 use super::css_scope::CssScope;
 
@@ -18,7 +19,8 @@ use super::css_scope::CssScope;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stylesheet {
     css: String,
-    class_name: Option<String>,
+    /// Shared: every instance of the sheet holds its name, and `Arc` keeps the type `Send`.
+    class_name: Option<Arc<str>>,
     /// Of the CSS before [`with_root_class`](Self::with_root_class): the class name's source.
     hash: u64,
     /// Matches no element that does not opt in, see [`insertable`](Self::insertable).
@@ -33,6 +35,11 @@ impl Stylesheet {
 
     pub(crate) fn class_name(&self) -> Option<&str> {
         self.class_name.as_deref()
+    }
+
+    /// The class name without a copy, for a registration to hold.
+    pub(crate) fn shared_class_name(&self) -> Option<Arc<str>> {
+        self.class_name.clone()
     }
 
     /// Marks CSS that styles only elements opting in by a class or a `data-state` word, as a
@@ -52,7 +59,7 @@ impl Stylesheet {
     /// stays pre-swap, so class name and registry key are one number.
     pub(crate) fn with_root_class(mut self, placeholder: &str, class_name: String) -> Self {
         self.css = self.css.replace(placeholder, &class_name);
-        self.class_name = Some(class_name);
+        self.class_name = Some(class_name.into());
         self
     }
 

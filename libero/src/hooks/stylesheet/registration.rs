@@ -4,15 +4,16 @@
 use std::{
     cell::{Cell, RefCell},
     collections::{HashMap, hash_map::DefaultHasher},
-    hash::{Hash, Hasher},
+    hash::{BuildHasherDefault, Hash, Hasher},
     rc::Rc,
+    sync::Arc,
 };
 
 use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    context::{LiberoContext, SheetRank, StylesheetKey},
+    context::{LiberoContext, SheetRank, StylesheetKey, StylesheetRegistry},
     css::Stylesheet,
     sx::{ClassList, Input, StaticSx, Sx},
 };
@@ -21,7 +22,17 @@ use crate::{
 /// CSS build, so an unchanged re-render formats nothing.
 pub(crate) trait CssSource {
     fn identity_hash(&self) -> u64;
-    fn build(self) -> Stylesheet;
+    /// Hands the built sheet to `f`, borrowed: a `static`'s or a repeated `sx`'s is built once.
+    fn with_sheet<R>(self, identity_hash: u64, f: impl FnOnce(&Stylesheet) -> R) -> R;
+
+    #[cfg(test)]
+    fn build(self) -> Stylesheet
+    where
+        Self: Sized,
+    {
+        let identity_hash = self.identity_hash();
+        self.with_sheet(identity_hash, Stylesheet::clone)
+    }
 }
 
 impl CssSource for &Sx {
@@ -29,19 +40,63 @@ impl CssSource for &Sx {
         self.content_hash()
     }
 
-    fn build(self) -> Stylesheet {
-        Stylesheet::from(self)
+    fn with_sheet<R>(self, identity_hash: u64, f: impl FnOnce(&Stylesheet) -> R) -> R {
+        f(&built(self, identity_hash))
     }
 }
+
+/// A map key that is a hash or an address already: SipHash over it was measurable per mount.
+#[derive(Default)]
+struct KeyHasher(u64);
+
+impl Hasher for KeyHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        for byte in bytes {
+            self.0 = (self.0 ^ u64::from(*byte)).wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+
+    fn write_u64(&mut self, key: u64) {
+        // Fibonacci mixing: an address's entropy sits above its alignment bits.
+        self.0 = key.wrapping_mul(0x9e37_79b9_7f4a_7c15).rotate_left(26);
+    }
+
+    fn write_usize(&mut self, key: usize) {
+        self.write_u64(key as u64);
+    }
+}
+
+type KeyMap<K, V> = HashMap<K, V, BuildHasherDefault<KeyHasher>>;
+
+/// How many per-render sheets [`BUILT_SX_CSS`] keeps before it starts over.
+const BUILT_KEPT: usize = 1024;
 
 thread_local! {
     /// A `'static` `Sx`'s CSS, built once. Keyed by address, never reused by a
     /// `static`; unbounded, since the statics are a fixed set.
-    static STATIC_SX_CSS: RefCell<HashMap<usize, Stylesheet>> = RefCell::new(HashMap::new());
+    static STATIC_SX_CSS: RefCell<KeyMap<usize, Stylesheet>> = RefCell::new(KeyMap::default());
+    /// A per-render `Sx`'s CSS by content hash: the rows of a list build one `sx` each, all
+    /// alike, and each built and hashed the same text. Bounded, as an `sx` may hold any value.
+    static BUILT_SX_CSS: RefCell<KeyMap<u64, Rc<Stylesheet>>> = RefCell::new(KeyMap::default());
 }
 
-fn build_static(sx: &'static Sx) -> Stylesheet {
-    with_static(sx, Stylesheet::clone)
+/// `sx`'s sheet, built on the first sight of its `content_hash`.
+fn built(sx: &Sx, content_hash: u64) -> Rc<Stylesheet> {
+    BUILT_SX_CSS.with_borrow_mut(|cache| {
+        if let Some(sheet) = cache.get(&content_hash) {
+            return sheet.clone();
+        }
+        if cache.len() >= BUILT_KEPT {
+            cache.clear();
+        }
+        let sheet = Rc::new(Stylesheet::from(sx));
+        cache.insert(content_hash, sheet.clone());
+        sheet
+    })
 }
 
 fn with_static<R>(sx: &'static Sx, f: impl FnOnce(&Stylesheet) -> R) -> R {
@@ -61,8 +116,8 @@ impl CssSource for &'static StaticSx {
         std::ptr::from_ref::<Sx>(self) as u64
     }
 
-    fn build(self) -> Stylesheet {
-        build_static(self)
+    fn with_sheet<R>(self, _: u64, f: impl FnOnce(&Stylesheet) -> R) -> R {
+        with_static(self, f)
     }
 }
 
@@ -83,23 +138,20 @@ impl<'a> SxSource<'a> {
 }
 
 impl CssSource for SxSource<'_> {
-    /// Hashed with the variant, so a `Static` address can never be mistaken
-    /// for an `Owned` content hash in a slot whose caller alternates.
+    /// The low bit tells an `Owned` content hash from a `Static`'s (aligned) address, so
+    /// neither is mistaken for the other in a slot whose caller alternates.
     fn identity_hash(&self) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        std::mem::discriminant(self).hash(&mut hasher);
         match self {
             // Its entries, since a fresh `Sx` has no identity but its content.
-            Self::Owned(sx) => sx.content_hash().hash(&mut hasher),
-            Self::Static(sx) => std::ptr::from_ref(*sx).hash(&mut hasher),
+            Self::Owned(sx) => sx.content_hash() | 1,
+            Self::Static(sx) => std::ptr::from_ref(*sx) as u64,
         }
-        hasher.finish()
     }
 
-    fn build(self) -> Stylesheet {
+    fn with_sheet<R>(self, identity_hash: u64, f: impl FnOnce(&Stylesheet) -> R) -> R {
         match self {
-            Self::Owned(sx) => Stylesheet::from(sx),
-            Self::Static(sx) => build_static(sx),
+            Self::Owned(sx) => f(&built(sx, identity_hash)),
+            Self::Static(sx) => with_static(sx, f),
         }
     }
 }
@@ -109,8 +161,8 @@ impl CssSource for Stylesheet {
         self.hash()
     }
 
-    fn build(self) -> Stylesheet {
-        self
+    fn with_sheet<R>(self, _: u64, f: impl FnOnce(&Stylesheet) -> R) -> R {
+        f(&self)
     }
 }
 
@@ -120,8 +172,8 @@ struct CssRegistration {
     /// `None` when the source built empty CSS. Unrelated to `identity_hash` -
     /// the registry keys by rendered-CSS hash, not structure.
     key: Option<StylesheetKey>,
-    /// Cached, because recomputing it from an `Sx` means rendering the CSS.
-    class_name: Option<String>,
+    /// The sheet's own, shared: recomputing it from an `Sx` means rendering the CSS.
+    class_name: Option<Arc<str>>,
 }
 
 /// Registers one source, reusing the previous registration when unchanged.
@@ -131,7 +183,7 @@ fn register(
     source: Option<impl CssSource>,
     layer: CssLayer,
     rank: SheetRank,
-    context: &mut LiberoContext,
+    registry: &StylesheetRegistry,
 ) -> bool {
     let identity_hash = source.as_ref().map(CssSource::identity_hash);
 
@@ -141,29 +193,31 @@ fn register(
             false
         }
         prev => {
-            let stylesheet = source.map(CssSource::build);
-            let class_name = stylesheet
-                .as_ref()
-                .and_then(|stylesheet| stylesheet.class_name())
-                .map(str::to_string);
-            let mut changed = false;
+            // Acquire before release, so a sheet kept across the change never leaves.
+            let (key, class_name) = match (source, identity_hash) {
+                (Some(source), Some(identity_hash)) => {
+                    source.with_sheet(identity_hash, |stylesheet| {
+                        match stylesheet.as_str().is_empty() {
+                            true => (None, None),
+                            false => (
+                                Some(registry.acquire_ref(stylesheet, layer, rank)),
+                                stylesheet.shared_class_name(),
+                            ),
+                        }
+                    })
+                }
+                _ => (None, None),
+            };
+            let mut changed = key.is_some();
 
             if let Some(prev_key) = prev.and_then(|prev| prev.key) {
-                context.stylesheet_registry.release(prev_key);
+                registry.release(prev_key);
                 changed = true;
             }
 
-            let key = match stylesheet {
-                Some(stylesheet) if !stylesheet.as_str().is_empty() => {
-                    changed = true;
-                    Some(context.stylesheet_registry.acquire(stylesheet, layer, rank))
-                }
-                _ => None,
-            };
-
             *slot = Some(CssRegistration {
                 identity_hash,
-                class_name: key.and(class_name),
+                class_name,
                 key,
             });
 
@@ -173,57 +227,65 @@ fn register(
 }
 
 /// The registrations one component holds, released when its scope goes. One
-/// hook slot (~51 ns per render each) for context, slots and teardown.
-struct CssRegistrations {
-    context: RefCell<LiberoContext>,
-    slots: RefCell<Vec<Option<CssRegistration>>>,
+/// hook slot (~51 ns per render each) for the registry, slots and teardown, in one allocation.
+struct CssRegistrations<const SLOTS: usize> {
+    registry: StylesheetRegistry,
+    version: Signal<u64>,
+    slots: RefCell<[Option<CssRegistration>; SLOTS]>,
 }
 
-impl Drop for CssRegistrations {
+impl<const SLOTS: usize> Drop for CssRegistrations<SLOTS> {
     fn drop(&mut self) {
-        let context = self.context.get_mut();
-        let released = self
+        let mut released = false;
+        for key in self
             .slots
             .get_mut()
-            .drain(..)
-            .filter_map(|slot| slot.and_then(|prev| prev.key))
-            .fold(false, |_, key| {
-                context.stylesheet_registry.release(key);
-                true
-            });
+            .iter_mut()
+            .filter_map(|slot| slot.take().and_then(|prev| prev.key))
+        {
+            self.registry.release(key);
+            released = true;
+        }
 
-        if released && context.stylesheet_registry.take_outlet_change() {
-            *context.stylesheet_registry_version.write() += 1;
+        if released && self.registry.take_outlet_change() {
+            *self.version.write() += 1;
         }
     }
 }
 
-fn use_css_registrations(slots: usize) -> Rc<CssRegistrations> {
+fn use_css_registrations<const SLOTS: usize>() -> Rc<CssRegistrations<SLOTS>> {
     use_hook(|| {
+        let context = crate::context::libero_context();
         Rc::new(CssRegistrations {
-            context: RefCell::new(crate::context::libero_context()),
-            slots: RefCell::new((0..slots).map(|_| None).collect()),
+            registry: context.stylesheet_registry,
+            version: context.stylesheet_registry_version,
+            slots: RefCell::new([const { None }; SLOTS]),
         })
     })
 }
 
 /// A signal write during render, sound only because `StyleOutlet` renders
 /// after `{children}`: load-bearing ordering. Only when the outlet's `<style>` list moved.
-fn bump_if_changed(changed: bool, context: &mut LiberoContext) {
-    if changed && context.stylesheet_registry.take_outlet_change() {
-        *context.stylesheet_registry_version.write() += 1;
+fn bump_if_changed(changed: bool, registry: &StylesheetRegistry, mut version: Signal<u64>) {
+    if changed && registry.take_outlet_change() {
+        *version.write() += 1;
     }
 }
 
 /// `use_stylesheet` on a caller-chosen layer. An `Option`, so a caller with
 /// nothing to register still takes its hook slot.
 pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option<String> {
-    let state = use_css_registrations(1);
-    let context = &mut *state.context.borrow_mut();
+    let state = use_css_registrations::<1>();
     let slots = &mut *state.slots.borrow_mut();
 
-    let changed = register(&mut slots[0], source, layer, SheetRank::Component, context);
-    bump_if_changed(changed, context);
+    let changed = register(
+        &mut slots[0],
+        source,
+        layer,
+        SheetRank::Component,
+        &state.registry,
+    );
+    bump_if_changed(changed, &state.registry, state.version);
 
     class_name(&slots[0]).map(str::to_string)
 }
@@ -248,8 +310,8 @@ impl CssSource for WordSheet {
         hasher.finish()
     }
 
-    fn build(self) -> Stylesheet {
-        (self.build)(self.word)
+    fn with_sheet<R>(self, _: u64, f: impl FnOnce(&Stylesheet) -> R) -> R {
+        f(&(self.build)(self.word))
     }
 }
 
@@ -263,8 +325,8 @@ pub(crate) fn use_box_css(
     sx: Option<SxSource<'_>>,
     words: [Option<WordSheet>; 2],
 ) -> String {
-    let state = use_css_registrations(5);
-    let context = &mut *state.context.borrow_mut();
+    let state = use_css_registrations::<5>();
+    let registry = &state.registry;
     let slots = &mut *state.slots.borrow_mut();
     let (slots, word_slots) = slots.split_at_mut(3);
     let words_changed = word_slots
@@ -276,7 +338,7 @@ pub(crate) fn use_box_css(
                 word,
                 CssLayer::Framework,
                 SheetRank::Component,
-                context,
+                registry,
             ) || changed
         });
     let (head, sx_slot) = slots.split_at_mut(2);
@@ -287,25 +349,26 @@ pub(crate) fn use_box_css(
         focus,
         CssLayer::Framework,
         SheetRank::Default,
-        context,
+        registry,
     );
     let framework_changed = register(
         &mut framework_slot[0],
         framework,
         CssLayer::Framework,
         SheetRank::Component,
-        context,
+        registry,
     );
     let sx_changed = register(
         &mut sx_slot[0],
         sx,
         CssLayer::UserStatic,
         SheetRank::Component,
-        context,
+        registry,
     );
     bump_if_changed(
         focus_changed || framework_changed || sx_changed || words_changed,
-        context,
+        registry,
+        state.version,
     );
 
     // One `String`, not a `ClassList` (five allocations). Order: the caller's
@@ -546,7 +609,11 @@ fn use_range_css_at(
     {
         context.stylesheet_registry.release(key);
     }
-    bump_if_changed(true, context);
+    bump_if_changed(
+        true,
+        &context.stylesheet_registry,
+        context.stylesheet_registry_version,
+    );
 }
 
 #[cfg(test)]

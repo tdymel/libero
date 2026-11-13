@@ -53,11 +53,11 @@ struct RegisteredStylesheet {
 }
 
 impl RegisteredStylesheet {
-    /// Whether this entry holds `stylesheet`'s CSS. Debug-only: it re-renders
-    /// the layered text, the allocation `css` exists to avoid.
+    /// Whether this entry holds `stylesheet`'s CSS. Debug-only, and without rendering the
+    /// layered text again: a build with debug assertions paid that per mounted element.
     #[cfg(debug_assertions)]
     fn holds(&self, layer: CssLayer, stylesheet: &Stylesheet) -> bool {
-        *self.css == *layered_css(layer, stylesheet)
+        unlayered(layer, &self.css) == stylesheet.as_str()
     }
 }
 
@@ -304,7 +304,16 @@ impl StylesheetRegistry {
         layer: CssLayer,
         rank: SheetRank,
     ) -> StylesheetKey {
-        let stylesheet = stylesheet.into();
+        self.acquire_ref(&stylesheet.into(), layer, rank)
+    }
+
+    /// [`acquire`](Self::acquire) of a borrowed sheet: only a first registration copies its CSS.
+    pub(crate) fn acquire_ref(
+        &self,
+        stylesheet: &Stylesheet,
+        layer: CssLayer,
+        rank: SheetRank,
+    ) -> StylesheetKey {
         let key = StylesheetKey {
             layer,
             rank,
@@ -329,7 +338,7 @@ impl StylesheetRegistry {
                         SheetRank::Range => format!("{}-range-{:x}", layer.css_name(), key.hash),
                         SheetRank::Component => format!("{}-{:x}", layer.css_name(), key.hash),
                     }),
-                    css: Rc::from(layered_css(layer, &stylesheet)),
+                    css: Rc::from(layered_css(layer, stylesheet)),
                     ref_count: 0,
                     retired_at: 0,
                     retainable: insertable,
@@ -342,7 +351,7 @@ impl StylesheetRegistry {
         // A 64-bit hash collision would silently render one sheet with another's
         // CSS and share its refcount: too rare to design around, too quiet to ignore.
         #[cfg(debug_assertions)]
-        if !entry.holds(layer, &stylesheet) {
+        if !entry.holds(layer, stylesheet) {
             crate::utils::warn(&format!(
                 "StylesheetRegistry: CSS hash collision on {}-{:x} - two different \
                  stylesheets share one class name, and one will render with the \
