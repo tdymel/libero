@@ -155,6 +155,10 @@ pub fn Menu(props: MenuProps) -> Element {
     let marker = state.marker();
     // A touch or pen press on the trigger: its click opens on the box, not the first item.
     let mut finger = use_hook(|| CopyValue::new(false));
+    // A menu never opened mounts no level: the popover, dismissal and sheet hooks of a row's
+    // closed menu were most of its mount. Kept once opened, so closing runs as before.
+    let ever_open = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(false)));
+    ever_open.set(ever_open.get() || open);
     let wrapper_attributes: Vec<Attribute> = open
         .then(|| marker.attribute())
         .flatten()
@@ -206,44 +210,46 @@ pub fn Menu(props: MenuProps) -> Element {
                 })
                 .render(HtmlTag::Div, wrapper_attributes, props.children)
         }
-        MenuLevel {
-            // Never equal while it holds items, so a closed level gets none and
-            // skips its parent's renders. Its submenu levels unmount meanwhile.
-            items: if open { props.items } else { Vec::new() },
-            id: menu_id(&id),
-            labelledby,
-            anchor: trigger,
-            floating,
-            root: owner,
-            wrapper,
-            trigger,
-            open,
-            request: state.request().0,
-            initial: state.request().1,
-            onclose,
-            close_all: None,
-            onedge: props.onedge,
-            parents: Parents(Vec::new()),
-            onpointerenter: None,
-            side,
-            align,
-            size: props.size.copied_or(theme.menu.size.into()),
-            sheet_size: props.sheet_size.as_ref().copied().or(theme.menu.sheet_size),
-            radius: ResponsiveScale::new(props.radius.as_ref(), theme.menu.radius, SizeCss::RADIUS),
-            loop_focus: props.loop_focus.unwrap_or(theme.menu.loop_focus),
-            close_on_select: props
-                .close_on_select
-                .unwrap_or(theme.menu.close_on_select),
-            depth: 0,
-            marker: Some(marker),
-            trigger_selectors,
-            attributes: props.attributes,
-            class: props.class,
-            sx: props.sx,
-            parts: props.parts,
-            hidden_from: props.hidden_from,
-            visible_from: props.visible_from,
-            states: props.states,
+        if ever_open.get() {
+            MenuLevel {
+                // Never equal while it holds items, so a closed level gets none and
+                // skips its parent's renders. Its submenu levels unmount meanwhile.
+                items: if open { props.items } else { Vec::new() },
+                id: menu_id(&id),
+                labelledby,
+                anchor: trigger,
+                floating,
+                root: owner,
+                wrapper,
+                trigger,
+                open,
+                request: state.request().0,
+                initial: state.request().1,
+                onclose,
+                close_all: None,
+                onedge: props.onedge,
+                parents: Parents(Vec::new()),
+                onpointerenter: None,
+                side,
+                align,
+                size: props.size.copied_or(theme.menu.size.into()),
+                sheet_size: props.sheet_size.as_ref().copied().or(theme.menu.sheet_size),
+                radius: ResponsiveScale::new(props.radius.as_ref(), theme.menu.radius, SizeCss::RADIUS),
+                loop_focus: props.loop_focus.unwrap_or(theme.menu.loop_focus),
+                close_on_select: props
+                    .close_on_select
+                    .unwrap_or(theme.menu.close_on_select),
+                depth: 0,
+                marker: Some(marker),
+                trigger_selectors,
+                attributes: props.attributes,
+                class: props.class,
+                sx: props.sx,
+                parts: props.parts,
+                hidden_from: props.hidden_from,
+                visible_from: props.visible_from,
+                states: props.states,
+            }
         }
     }
 }
