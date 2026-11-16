@@ -2800,3 +2800,102 @@ fn a_shortened_hebrew_title_ends_in_an_ellipsis_and_a_rtl_mark() {
     let latin = labels::shorten(&attributes, "Quarterly sales by region and product", 60.0);
     assert!(latin.ends_with('…'), "{latin:?}");
 }
+
+/// The numeric labels whose baseline `keep` takes, top down and left to right.
+fn value_labels(drawn: &Drawn, keep: impl Fn(f32) -> bool) -> Vec<String> {
+    let mut labels: Vec<_> = texts(&drawn.svg)
+        .into_iter()
+        .filter(|text| keep(text.2) && text.3.starts_with(|c: char| c.is_ascii_digit()))
+        .collect();
+    labels.sort_by(|a, b| a.2.total_cmp(&b.2).then(a.0.total_cmp(&b.0)));
+    labels.into_iter().map(|text| text.3).collect()
+}
+
+/// A label writes its bar's value, not the renderer's one decimal; bars that round alike keep
+/// their own (1.75 was "1,80").
+#[test]
+fn a_bar_label_writes_its_exact_value() {
+    let cases = [
+        (
+            BarLayout::Grouped,
+            &Formats::AMERICAN,
+            [1.75, 1.51],
+            ["1.75", "1.51"],
+        ),
+        (
+            BarLayout::Grouped,
+            &Formats::GERMAN,
+            [1.75, 1.51],
+            ["1,75", "1,51"],
+        ),
+        (
+            BarLayout::Grouped,
+            &Formats::AMERICAN,
+            [1.76, 1.78],
+            ["1.76", "1.78"],
+        ),
+        (
+            BarLayout::Grouped,
+            &Formats::AMERICAN,
+            [1.78, 1.76],
+            ["1.78", "1.76"],
+        ),
+        // One stack of two segments, left to right.
+        (
+            BarLayout::Stacked,
+            &Formats::AMERICAN,
+            [1.78, 1.76],
+            ["1.78", "1.76"],
+        ),
+    ];
+    for (layout, formats, values, written) in cases {
+        let mut chart = bars(layout, true);
+        chart.series = match layout {
+            BarLayout::Grouped => {
+                chart.x.truncate(2);
+                vec![spec("A", &values.map(Some))]
+            }
+            _ => {
+                chart.x.truncate(1);
+                vec![spec("A", &[Some(values[0])]), spec("B", &[Some(values[1])])]
+            }
+        };
+        chart.format = ValueFormat::Fixed(2);
+        chart.formats = formats;
+        let drawn = draw_bar(&chart).expect("drawn");
+        let plot = drawn.geometry.plot;
+        let inside = |y: f32| plot.top < y && y < plot.bottom;
+        assert_eq!(
+            value_labels(&drawn, inside),
+            written,
+            "{layout:?} {values:?}"
+        );
+    }
+}
+
+/// A slice's and a stage's value label write their exact value too, and a stage's share is
+/// of the exact first stage.
+#[test]
+fn pie_and_funnel_labels_write_their_exact_value() {
+    let sorted = |mut labels: Vec<String>| {
+        labels.sort();
+        labels
+    };
+    let mut chart = pie(PieLabels::Value, None);
+    chart.slices = vec![spec("A", &[Some(1.75)]), spec("B", &[Some(1.51)])];
+    chart.format = ValueFormat::Fixed(2);
+    chart.unit = None;
+    let drawn = draw_pie(&chart).expect("drawn");
+    assert_eq!(sorted(value_labels(&drawn, |_| true)), ["1,51", "1,75"]);
+
+    let mut chart = funnel(PieLabels::Value, &[1.75, 1.51]);
+    chart.format = ValueFormat::Fixed(2);
+    let drawn = draw_funnel(&chart).expect("drawn");
+    assert_eq!(value_labels(&drawn, |_| true), ["1.75", "1.51"]);
+    let drawn = draw_funnel(&funnel(PieLabels::Percent, &[1.75, 1.51])).expect("drawn");
+    assert!(
+        value_labels(&drawn, |_| true)[0].starts_with("100"),
+        "{}",
+        drawn.svg
+    );
+}

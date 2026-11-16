@@ -50,6 +50,46 @@ pub(super) fn place_outside_labels(svg: &str, bottom: f32, surface: HexColor) ->
     out
 }
 
+/// The renderer's text of a value label's number (charts-rs 2.1.0 `format_float`): one
+/// decimal of the f32, a trailing `.0` dropped.
+fn renderer_text(value: f64) -> String {
+    let value = value as f32;
+    if !value.is_finite() {
+        return "0".to_string();
+    }
+    let text = format!("{value:.1}");
+    match text.strip_suffix(".0") {
+        Some(whole) => whole.to_string(),
+        None => text,
+    }
+}
+
+/// Writes each label behind `mark` with its exact value: in drawing order, the first unused
+/// one of `values` the renderer writes as the label's number. Values that round alike stay apart.
+pub(super) fn exact_labels(svg: &str, mark: char, values: &[f64]) -> String {
+    if !svg.contains(mark) {
+        return svg.to_string();
+    }
+    let mut unused: Vec<(f64, String)> = values.iter().map(|&v| (v, renderer_text(v))).collect();
+    let mut out = String::with_capacity(svg.len());
+    let mut rest = svg;
+    while let Some(at) = rest.find(mark) {
+        let label = &rest[at + mark.len_utf8()..];
+        out.push_str(&rest[..at + mark.len_utf8()]);
+        let end = label
+            .find(|c: char| !(c.is_ascii_digit() || matches!(c, '-' | '.')))
+            .unwrap_or(label.len());
+        let number = &label[..end];
+        match unused.iter().position(|(_, text)| text == number) {
+            Some(i) => out.push_str(&unused.remove(i).0.to_string()),
+            None => out.push_str(number),
+        }
+        rest = &label[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 /// Drops the value labels, as `text` writes them, that overlap a larger value's.
 pub(super) fn drop_crowded_labels(svg: &str, text: impl Fn(f64) -> String) -> String {
     // Per label: its value, its box and its element's byte range.

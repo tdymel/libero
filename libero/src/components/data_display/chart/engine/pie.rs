@@ -196,6 +196,10 @@ pub(crate) fn draw_pie(spec: &PieSpec) -> Option<Drawn> {
         0.0
     };
     let edge = format!(" stroke=\"{}\" stroke-width=\"{gap}\"", spec.ink.surface);
+    let values: Vec<f64> = (spec.slices.iter())
+        .filter_map(|s| s.values.first().copied().flatten())
+        .collect();
+    let svg = exact_labels(&svg, AXIS_MARK, &values);
     let (svg, triggers) = inert(
         &svg,
         |label| {

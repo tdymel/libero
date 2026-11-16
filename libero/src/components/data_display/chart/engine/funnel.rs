@@ -52,6 +52,18 @@ pub(crate) fn draw_funnel(spec: &FunnelSpec) -> Option<Drawn> {
         PieLabels::None => " ".to_string(),
     };
     let svg = centre_stage_labels(&chart.svg().ok()?);
+    // The renderer draws the widest stage first; a sort keeps ties in data order.
+    let mut order: Vec<usize> = (0..spec.stages.len()).collect();
+    order.sort_by(|a, b| {
+        let (a, b) = (
+            value(&spec.stages[*a]) as f32,
+            value(&spec.stages[*b]) as f32,
+        );
+        b.partial_cmp(&a).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let drawn: Vec<f64> = order.iter().map(|&i| value(&spec.stages[i])).collect();
+    let svg = exact_labels(&svg, AXIS_MARK, &drawn);
+    let svg = exact_labels(&svg, PERCENT_MARK, &drawn);
     let (svg, triggers) = inert(
         &svg,
         |label| {
@@ -64,15 +76,6 @@ pub(crate) fn draw_funnel(spec: &FunnelSpec) -> Option<Drawn> {
     let svg = relabel(&svg, PERCENT_MARK, |value| match spec.first > 0.0 {
         true => ValueFormat::Percent.format(value / spec.first, None, spec.formats),
         false => String::new(),
-    });
-    // The renderer draws the widest stage first; a sort keeps ties in data order.
-    let mut order: Vec<usize> = (0..spec.stages.len()).collect();
-    order.sort_by(|a, b| {
-        let (a, b) = (
-            value(&spec.stages[*a]) as f32,
-            value(&spec.stages[*b]) as f32,
-        );
-        b.partial_cmp(&a).unwrap_or(std::cmp::Ordering::Equal)
     });
     let expected: Vec<_> = order
         .iter()

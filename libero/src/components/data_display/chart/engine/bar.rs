@@ -364,24 +364,19 @@ fn bar_value_labels(
         let bottom = Plot::of(&svg, spec.width, spec.height).bottom;
         place_outside_labels(&svg, bottom, spec.ink.surface)
     };
-    // The renderer writes its f32s; a label writes the value its bar was drawn from.
-    let values: Vec<f64> = (ordered.iter().filter(|s| !s.extras.line))
-        .flat_map(|s| s.values.iter().flatten().copied())
-        .collect();
-    let exact = |label: f64| {
-        let near = |value: &f64| (value - label).abs() <= value.abs() * 1e-6;
-        values.iter().copied().find(near).unwrap_or(label)
-    };
-    let percent = spec.layout == BarLayout::Percent;
-    let written = |label: f64| {
-        if percent {
-            write(label)
-        } else {
-            write(exact(label))
+    // The renderer rounds its labels; each takes back the value its bar was drawn from.
+    // A percent stack's labels are shares, written as drawn.
+    let svg = match spec.layout {
+        BarLayout::Percent => svg,
+        _ => {
+            let values: Vec<f64> = (ordered.iter().filter(|s| !s.extras.line))
+                .flat_map(|s| s.values.iter().flatten().copied())
+                .collect();
+            exact_labels(&svg, LABEL_MARK, &values)
         }
     };
-    let svg = drop_crowded_labels(&svg, written);
-    relabel(&svg, LABEL_MARK, written)
+    let svg = drop_crowded_labels(&svg, &write);
+    relabel(&svg, LABEL_MARK, write)
 }
 
 /// The series' mark lines labelled off the bars and the mark point pins, from `left`.
