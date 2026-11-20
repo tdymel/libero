@@ -21,6 +21,8 @@ pub const ROUTES: Routes = &[
     ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
     ("/menu-unfocused-trigger", || rsx! { MenuUnfocusedTriggerPage {} }),
     ("/menu-submenu-low", || rsx! { MenuSubmenuLowPage {} }),
+    ("/menu-three-levels", || rsx! { MenuThreeLevelsPage { rtl: false } }),
+    ("/menu-three-levels-rtl", || rsx! { MenuThreeLevelsPage { rtl: true } }),
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
     ("/menu-row", || rsx! { MenuRowPage {} }),
     ("/menu-keep-open", || rsx! { MenuKeepOpenPage {} }),
@@ -567,6 +569,42 @@ fn MenuUnfocusedTriggerPage() -> Element {
         }
         // A focused control that opens it in code: focus goes back here, not to the trigger.
         button { id: "opener", onclick: move |_| menu.open(), "Open actions" }
+    }
+}
+
+/// A submenu inside a submenu: Escape closes one level at a time, each placed clear of the others.
+#[component]
+fn MenuThreeLevelsPage(rtl: bool) -> Element {
+    let menu = use_menu();
+    let leaf = |label: &'static str| MenuItem::new(label).onselect(|_| {}).into();
+    let items = vec![
+        MenuItem::new("Share")
+            .submenu(vec![
+                MenuItem::new("Email")
+                    .submenu(vec![leaf("Work"), leaf("Home")])
+                    .into(),
+                leaf("Link"),
+            ])
+            .into(),
+        leaf("Rename"),
+        // A root taller than its child's sheet, so its rows show above that sheet.
+        leaf("Duplicate"),
+        leaf("Move"),
+        leaf("Print"),
+        leaf("Archive"),
+    ];
+
+    // At the inline end, as an app bar's ⋮: the second level flips to the start.
+    rsx! {
+        div {
+            dir: if rtl { "rtl" } else { "ltr" },
+            style: "display: flex; justify-content: flex-end;",
+            Menu {
+                state: menu,
+                items,
+                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
+        }
     }
 }
 

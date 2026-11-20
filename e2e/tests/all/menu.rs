@@ -1,7 +1,7 @@
 //! `Menu`: the overlay archetype as a non-modal popup. Tab closes every level and moves on
 //! from the trigger.
 
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, Platform, eventually, eventually_focused, eventually_text};
@@ -1661,3 +1661,186 @@ e2e::scenario!(
     "/menu-file",
     a_second_press_on_a_sibling_trigger_closes
 );
+
+/// Shown levels: a closed one may stay in the DOM, hidden.
+fn shown_levels() -> String {
+    format!(
+        "[...document.querySelectorAll('{MENU}')].filter(m => {{ \
+         const s = getComputedStyle(m); return s.visibility !== 'hidden' && s.display !== 'none'; }})"
+    )
+}
+
+fn levels_shown(count: usize) -> String {
+    format!("{}.length === {count}", shown_levels())
+}
+
+/// A row that opens a level not open yet.
+const OPENER: &str = "[role=menuitem][aria-haspopup=menu]:not([aria-expanded=true])";
+
+/// The top level's first opener reads `text`.
+fn top_opener(text: &str) -> String {
+    format!(
+        "{}.at(-1).querySelector('{OPENER}')?.textContent.trim() === '{text}'",
+        shown_levels()
+    )
+}
+
+/// A third level: each Escape closes one level and focuses its parent item, and a level that
+/// flipped keeps its direction, so every level opens clear of the others, in either direction.
+#[test]
+fn escape_closes_a_third_level_alone_and_each_level_sits_clear() {
+    block_on(async {
+        for (route, viewport) in [
+            ("/menu-three-levels", Viewport::Desktop),
+            ("/menu-three-levels-rtl", Viewport::Desktop),
+            ("/menu-three-levels", Viewport::Mobile),
+        ] {
+            let fixture = Fixture::open(route, viewport).await.unwrap();
+            let outcome = three_levels_by_keys(&fixture.page, viewport).await;
+            let console = fixture.console.assert_clean("three levels");
+
+            fixture.close().await.unwrap();
+            outcome
+                .with_context(|| format!("{route} at {}", viewport.name()))
+                .unwrap();
+            console.unwrap();
+        }
+    });
+}
+
+async fn three_levels_by_keys(page: &chromiumoxide::Page, viewport: Viewport) -> Result<()> {
+    let levels = |count: usize, focused: &str| {
+        format!(
+            "{} && document.activeElement?.textContent.trim() === '{focused}'",
+            levels_shown(count)
+        )
+    };
+    pointer::click(page, TRIGGER).await?;
+    wait::for_js_true(page, &levels(1, "Share"), "focus on Share").await?;
+    keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+    wait::for_js_true(page, &levels(2, "Email"), "the second level").await?;
+    keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+    wait::for_js_true(page, &levels(3, "Work"), "the third level").await?;
+
+    // A phone stacks them as sheets.
+    if viewport == Viewport::Desktop {
+        let clear = format!(
+            "(() => {{ const r = {}.map(m => m.getBoundingClientRect()); \
+             const over = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 \
+               && a.top < b.bottom - 1 && b.top < a.bottom - 1; \
+             return r.length === 3 && !over(r[0], r[1]) && !over(r[0], r[2]) && !over(r[1], r[2]); }})()",
+            shown_levels()
+        );
+        wait::for_js_true(page, &clear, "three levels side by side").await?;
+    }
+
+    keyboard::press(page, keyboard::ESCAPE).await?;
+    wait::for_js_true(page, &levels(2, "Email"), "Escape closing the third level").await?;
+    keyboard::press(page, keyboard::ESCAPE).await?;
+    wait::for_js_true(page, &levels(1, "Share"), "Escape closing the second level").await?;
+    keyboard::press(page, keyboard::ESCAPE).await?;
+    wait::for_js_true(
+        page,
+        &format!(
+            "{} && document.activeElement?.matches('{TRIGGER}')",
+            levels_shown(0)
+        ),
+        "Escape closing the root",
+    )
+    .await
+}
+
+/// Three sheets opened by taps or by a mouse on a narrow window: each Escape (Android's Back)
+/// closes one, though a mouse is left resting over the opener of the sheet it closed.
+#[test]
+fn escape_closes_three_sheets_one_at_a_time_by_tap_or_click() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-three-levels", Viewport::Mobile)
+            .await
+            .unwrap();
+        let outcome = async {
+            three_sheets(&fixture.page, true).await.context("by taps")?;
+            three_sheets(&fixture.page, false)
+                .await
+                .context("by clicks")
+        }
+        .await;
+        let console = fixture.console.assert_clean("three sheets");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
+async fn three_sheets(page: &chromiumoxide::Page, by_tap: bool) -> Result<()> {
+    let press = async |selector: &str| match by_tap {
+        true => tap(page, selector).await,
+        false => pointer::click(page, selector).await,
+    };
+    press(TRIGGER).await?;
+    wait::for_js_true(page, &top_opener("Share"), "the root sheet").await?;
+    press(OPENER).await?;
+    wait::for_js_true(page, &top_opener("Email"), "the second sheet").await?;
+    press(OPENER).await?;
+    wait::for_js_true(page, &levels_shown(3), "the third sheet").await?;
+    for left in [2, 1, 0] {
+        keyboard::press(page, keyboard::ESCAPE).await?;
+        let why = format!("Escape leaving {left} sheet(s)");
+        wait::for_js_true(page, &levels_shown(left), &why).await?;
+    }
+    Ok(())
+}
+
+/// On a sheet a resting pointer focuses its row but opens nothing: a sheet closed by Escape
+/// leaves the pointer over its opener, which would reopen it at once.
+#[test]
+fn a_pointer_resting_on_a_sheet_focuses_but_opens_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-three-levels", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(page, &top_opener("Share"), "the root sheet").await?;
+            pointer::hover(page, "[role=menuitem]:not([aria-haspopup])").await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.textContent.trim() === 'Rename'",
+                "the hover to focus Rename",
+            )
+            .await?;
+            pointer::hover(page, OPENER).await?;
+            let still = format!(
+                "new Promise(r => setTimeout(() => r({} \
+                 && document.activeElement?.textContent.trim() === 'Share'), 500))",
+                levels_shown(1)
+            );
+            ensure!(
+                page.evaluate_bounded(still).await?.into_value::<bool>()?,
+                "resting on Share opened its sheet or left focus elsewhere"
+            );
+
+            // A row still showing above an open child's sheet takes no focus, which would close it.
+            pointer::click(page, OPENER).await?;
+            wait::for_js_true(page, &top_opener("Email"), "Share's sheet").await?;
+            pointer::hover(page, "[role=menuitem]:not([aria-haspopup])").await?;
+            let kept = format!(
+                "new Promise(r => setTimeout(() => r({}), 500))",
+                levels_shown(2)
+            );
+            ensure!(
+                page.evaluate_bounded(kept).await?.into_value::<bool>()?,
+                "resting on Rename closed Share's sheet"
+            );
+            Ok::<_, anyhow::Error>(())
+        }
+        .await;
+        let console = fixture.console.assert_clean("a resting pointer");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}

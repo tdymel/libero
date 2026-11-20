@@ -19,6 +19,9 @@ pub(super) struct HoverDelay {
     action: CopyValue<Option<HoverAction>>,
     scheduled: Scheduled,
     delay: Duration,
+    /// Stacked phone sheets: resting only focuses, as a closed sheet leaves the pointer
+    /// over its opener, which would reopen it at once.
+    sheets: ReadSignal<bool>,
 }
 
 impl HoverDelay {
@@ -36,6 +39,13 @@ impl HoverDelay {
     pub(super) fn enter(&self, level: Level, index: usize, opens: Option<usize>) {
         self.cancel();
         let expanded = *level.open_child.peek();
+        if *self.sheets.peek() {
+            // Under an open child's sheet a row's focus would close that child.
+            if expanded.is_none() {
+                level.focus(index);
+            }
+            return;
+        }
         match expanded {
             // Another item's submenu is open: wait, as the pointer may be crossing into it.
             Some(open) if open != index => self.schedule(HoverAction {
@@ -56,7 +66,12 @@ impl HoverDelay {
 }
 
 /// `open` is the level's: a closed level drops the pending action (4403).
-pub(super) fn use_hover_delay(level: Level, open: bool, delay: Duration) -> HoverDelay {
+pub(super) fn use_hover_delay(
+    level: Level,
+    open: bool,
+    delay: Duration,
+    sheets: ReadSignal<bool>,
+) -> HoverDelay {
     let action = use_hook(|| CopyValue::new(None::<HoverAction>));
     let scheduled = use_scheduled(move |_| {
         let mut slot = action;
@@ -78,5 +93,6 @@ pub(super) fn use_hover_delay(level: Level, open: bool, delay: Duration) -> Hove
         action,
         scheduled,
         delay,
+        sheets,
     }
 }

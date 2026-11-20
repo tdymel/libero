@@ -225,6 +225,7 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
         level,
         open,
         Duration::from_millis(theme.menu.submenu_delay.into()),
+        narrow,
     );
     let above = props.onpointerenter;
     let cancel_callback = use_callback(move |()| {
@@ -419,8 +420,12 @@ pub(super) fn MenuLevel(props: MenuLevelProps) -> Element {
             open_child.set(None);
         }
     });
-    // Logical, so `use_popover` puts it on the left under `dir="rtl"`.
-    let submenu_side = Side::End;
+    // Logical, so `use_popover` puts it on the left under `dir="rtl"`. A level that flipped
+    // keeps going that way, or a third level would open over the root.
+    let submenu_side = match (depth, popover.placement().side) {
+        (1.., Side::Start) => Side::Start,
+        _ => Side::End,
+    };
 
     rsx! {
         for (index, title, items, (anchor, floating)) in submenus {
