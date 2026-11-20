@@ -186,10 +186,15 @@ pub(crate) fn draw_bar(spec: &BarSpec) -> Option<Drawn> {
             ..mark
         })
         .collect::<Vec<_>>();
-    let svg = ink_bar_labels(&svg, &marks, |mark| {
-        spec.ink.on(bar_color(spec, mark.series, mark.index))
-    });
+    // The error bars first: a bar of 0's label, written last, stays readable over its whisker.
     let svg = draw_error_bars(svg, &marks, spec);
+    let svg = ink_bar_labels(
+        &svg,
+        &marks,
+        |mark| spec.ink.on(bar_color(spec, mark.series, mark.index)),
+        &spec.ink,
+        Plot::of(&svg, spec.width, spec.height),
+    );
     // An error bar is drawn in the labels' ink; one on a bar is in the page's.
     let svg = svg.replace(ON_BAR_STROKE, &format!("stroke=\"{}\"", spec.ink.label));
     let plot = Plot::of(&svg, spec.width, spec.height);
@@ -729,22 +734,38 @@ pub(super) fn draw_error_bars(svg: String, marks: &[Mark], spec: &BarSpec) -> St
     }
 }
 
-/// Gives every label drawn on a bar the ink that reads on the bar nearest to it.
-pub(super) fn ink_bar_labels(svg: &str, marks: &[Mark], ink: impl Fn(&Mark) -> HexColor) -> String {
-    let distance = |mark: &Mark, (x, y): (f32, f32)| match mark.shape {
-        MarkShape::Rect {
-            x: left,
-            y: top,
-            width,
-            height,
-        } => {
-            let dx = (left - x).max(x - left - width).max(0.0);
-            let dy = (top - y).max(y - top - height).max(0.0);
-            dx.hypot(dy)
-        }
-        _ => f32::INFINITY,
-    };
+/// Gives every label drawn on a bar the ink that reads on that bar; one that would reach off its
+/// bar, wider than a thin segment, is dropped: the summary and the tooltip still have it. A bar of
+/// 0 has nothing to write on: its label stands just past the axis, inside the `plot`, in the
+/// page's `ink` over a halo of its surface, whatever else is near; in a stack, where it would sit
+/// on the next segment, it is dropped. It is written last, over anything drawn at the axis, such as
+/// its error bar's whisker, which its halo then parts. A label on no bar at all takes the page's
+/// ink too.
+pub(super) fn ink_bar_labels(
+    svg: &str,
+    marks: &[Mark],
+    on: impl Fn(&Mark) -> HexColor,
+    ink: &ChartInk,
+    plot: Plot,
+) -> String {
+    let rects: Vec<[f32; 4]> = marks
+        .iter()
+        .filter_map(|mark| match mark.shape {
+            MarkShape::Rect {
+                x,
+                y,
+                width,
+                height,
+            } => Some([x, y, x + width, y + height]),
+            _ => None,
+        })
+        .collect();
+    let off = format!("fill=\"{}\"{}", ink.label, halo(ink.surface));
     let mut out = String::with_capacity(svg.len());
+    // The bars of 0's labels, whole elements, written at the end.
+    let mut last = String::new();
+    // The bars of 0 already written, one label a band.
+    let mut written: Vec<[f32; 4]> = Vec::new();
     let mut rest = svg;
     while let Some(start) = rest.find("<text ") {
         out.push_str(&rest[..start]);
@@ -752,24 +773,136 @@ pub(super) fn ink_bar_labels(svg: &str, marks: &[Mark], ink: impl Fn(&Mark) -> H
             .find('>')
             .map_or(rest.len(), |end| start + end + 1);
         let tag = &rest[start..end];
+        rest = &rest[end..];
+        if !tag.contains(ON_BAR_FILL) {
+            out.push_str(tag);
+            continue;
+        }
         let attributes = attributes(tag);
         let number = |name| attribute(&attributes, name)?.parse::<f32>().ok();
-        let nearest = number("x")
-            .zip(number("y"))
-            .filter(|_| tag.contains(ON_BAR_FILL))
-            .and_then(|point| {
-                marks
-                    .iter()
-                    .min_by(|a, b| distance(a, point).total_cmp(&distance(b, point)))
-            });
-        match nearest {
-            Some(mark) => {
-                out.push_str(&tag.replace(ON_BAR_FILL, &format!("fill=\"{}\"", ink(mark))))
-            }
-            None => out.push_str(tag),
+        let content = &rest[..rest.find("</text>").unwrap_or(rest.len())];
+        let label = unescape(rest[..rest.find('<').unwrap_or(rest.len())].trim());
+        let label = label.trim_start_matches(LABEL_MARK);
+        let Some((x, y)) = number("x").zip(number("y")) else {
+            out.push_str(tag);
+            continue;
+        };
+        // In the page's font, a little wider than the renderer measures it.
+        let [left, top, right, bottom] = text_box(&attributes, label, x, y);
+        let grow = (right - left) * (PAGE_FONT_SLACK - 1.0);
+        let (left, right) = match attribute(&attributes, "text-anchor") {
+            Some("middle") => (left - grow / 2.0, right + grow / 2.0),
+            Some("end") => (left - grow, right),
+            _ => (left, right + grow),
+        };
+        let label_box = [left, top, right, bottom];
+        let host = marks
+            .iter()
+            .zip(&rects)
+            .find(|(_, bar)| inside(label_box, **bar));
+        if let Some((mark, _)) = host {
+            out.push_str(&tag.replace(ON_BAR_FILL, &format!("fill=\"{}\"", on(mark))));
+            continue;
         }
-        rest = &rest[end..];
+        if let Some(bar) = zero_bar_of(label_box, &rects) {
+            let lying = bar[2] - bar[0] < ZERO;
+            let same_band = |other: &[f32; 4]| match lying {
+                true => other[1] < bar[3] && bar[1] < other[3],
+                false => other[0] < bar[2] && bar[0] < other[2],
+            };
+            let length = |[l, t, r, b]: &[f32; 4]| (r - l).max(b - t);
+            // A segment with a length in the same band: the 0 lies inside a stack. A stack of
+            // nothing but 0s writes one 0.
+            let stacked = rects
+                .iter()
+                .any(|other| *other != bar && length(other) >= ZERO && same_band(other));
+            let twice = written.iter().any(same_band);
+            if !stacked && !twice {
+                written.push(bar);
+                last.push_str(&past_axis(&attributes, label_box, bar, lying, plot, &off));
+                last.push_str(content);
+                last.push_str("</text>");
+            }
+            rest = past_text(rest);
+            continue;
+        }
+        if rects.iter().any(|bar| touches(label_box, *bar)) {
+            rest = past_text(rest);
+            continue;
+        }
+        out.push_str(&tag.replace(ON_BAR_FILL, &off));
     }
     out.push_str(rest);
+    if let Some(end) = out.rfind("</svg>") {
+        out.insert_str(end, &last);
+    }
     out
+}
+
+/// What follows a text element's content and its close: the element left out.
+fn past_text(rest: &str) -> &str {
+    rest.find("</text>").map_or("", |close| &rest[close + 7..])
+}
+
+/// Under this length, in pixels, a bar is a bar of 0.
+const ZERO: f32 = 0.01;
+
+/// How far, in pixels, a bar of 0's label may stand off its bar and still be its own.
+const NEAR: f32 = 2.0;
+
+/// Whether the box `[left, top, right, bottom]` lies within `bar`, give or take half a pixel.
+fn inside([left, top, right, bottom]: [f32; 4], [l, t, r, b]: [f32; 4]) -> bool {
+    const EDGE: f32 = 0.5;
+    l - EDGE <= left && right <= r + EDGE && t - EDGE <= top && bottom <= b + EDGE
+}
+
+/// Whether the box overlaps `bar`.
+fn touches([left, top, right, bottom]: [f32; 4], [l, t, r, b]: [f32; 4]) -> bool {
+    left < r && l < right && top < b && t < bottom
+}
+
+/// The bar of 0 a label on no bar is written at: lying, a rect of no width across whose height the
+/// label's middle falls and whose end its box reaches; upright, one of no height under the label's
+/// middle that its box reaches up or down to.
+fn zero_bar_of([left, top, right, bottom]: [f32; 4], rects: &[[f32; 4]]) -> Option<[f32; 4]> {
+    let near = |at: f32, from: f32, to: f32| from - NEAR <= at && at <= to + NEAR;
+    let (middle_x, middle_y) = ((left + right) / 2.0, (top + bottom) / 2.0);
+    rects.iter().copied().find(|[l, t, r, b]| {
+        (r - l < ZERO && near(middle_y, *t, *b) && near(*l, left, right))
+            || (b - t < ZERO && near(middle_x, *l, *r) && near(*t, top, bottom))
+    })
+}
+
+/// A bar of 0's label tag, its box `label_box`, moved just past its axis, `bar`: right of a lying
+/// one, above an upright one, or to the other side where that would leave the `plot`; in `ink`.
+fn past_axis(
+    attributes: &[(&str, &str)],
+    [left, top, right, bottom]: [f32; 4],
+    [l, t, r, _]: [f32; 4],
+    lying: bool,
+    plot: Plot,
+    ink: &str,
+) -> String {
+    const GAP: f32 = 4.0;
+    let moved = ["x", "y", "dy", "text-anchor", "fill"];
+    let kept: String = attributes
+        .iter()
+        .filter(|(name, _)| !moved.contains(name) || (lying && matches!(*name, "y" | "dy")))
+        .map(|(name, value)| format!(" {name}=\"{value}\""))
+        .collect();
+    let (width, height) = (right - left, bottom - top);
+    let place = match lying {
+        true if l + GAP + width <= plot.right => format!(" x=\"{}\"", l + GAP),
+        true => format!(" x=\"{}\" text-anchor=\"end\"", l - GAP),
+        false => {
+            // The baseline: the box's ascent above it, a quarter of its height below.
+            let above = t - GAP - height * 0.2;
+            let y = match above - height * 0.8 >= plot.top {
+                true => above,
+                false => t + GAP + height * 0.8,
+            };
+            format!(" x=\"{}\" y=\"{y}\" text-anchor=\"middle\"", (l + r) / 2.0)
+        }
+    };
+    format!("<text{kept}{place} {ink}>")
 }

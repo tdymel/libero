@@ -2899,3 +2899,305 @@ fn pie_and_funnel_labels_write_their_exact_value() {
         drawn.svg
     );
 }
+
+/// Each value label's text and its opening tag.
+fn drawn_texts(svg: &str) -> Vec<(String, String)> {
+    svg.split("<text")
+        .skip(1)
+        .filter_map(|text| {
+            let (tag, rest) = text.split_once('>')?;
+            let label = rest.split('<').next()?.trim().to_string();
+            Some((label, tag.to_string()))
+        })
+        .collect()
+}
+
+/// A label wider than its thin bar would cross the bar's end into another ink: it is dropped,
+/// the others kept, the bar still drawn.
+#[test]
+fn a_label_wider_than_its_bar_is_dropped() {
+    for layout in [BarLayout::Grouped, BarLayout::Stacked] {
+        let mut chart = bars(layout, true);
+        chart.width = 328.0;
+        chart.unit = Some("%".to_string());
+        chart.format = ValueFormat::Fixed(0);
+        chart.axes.min = Some(0.0);
+        chart.axes.max = Some(100.0);
+        chart.series = vec![
+            spec("A", &[Some(70.0), Some(28.0), Some(1.0)]),
+            spec("B", &[Some(29.0), Some(30.0), Some(2.0)]),
+        ];
+        let drawn = draw_bar(&chart).expect("drawn");
+        let labels: Vec<String> = drawn_texts(&drawn.svg)
+            .into_iter()
+            .map(|(label, _)| label)
+            .filter(|label| {
+                label.contains('%')
+                    && !label.starts_with("0 ")
+                    && !label.starts_with("50 ")
+                    && !label.starts_with("100 ")
+            })
+            .collect();
+        for wide in ["70", "28", "29", "30"] {
+            assert!(
+                labels.iter().any(|l| l.starts_with(wide)),
+                "{layout:?} {labels:?}"
+            );
+        }
+        for thin in ["1", "2"] {
+            assert!(
+                !labels
+                    .iter()
+                    .any(|l| l.split('\u{a0}').next() == Some(thin)
+                        || l.split(' ').next() == Some(thin)),
+                "{layout:?} {labels:?}"
+            );
+        }
+        assert_eq!(drawn.geometry.marks.len(), 6, "{layout:?}");
+        assert!(!drawn.svg.contains(ON_BAR_FILL), "{}", drawn.svg);
+    }
+}
+
+/// A bar of 0 has no length to write on: its value stands past the axis in the page's ink over
+/// a halo, lying or upright, beside a bar of its group, with the axis inside the plot, at a phone's
+/// width as at a wide one, whatever the bars' colour. In a stack it would sit on the next segment.
+#[test]
+fn a_bar_of_0_writes_its_value_in_the_page_ink() {
+    for (horizontal, min, width) in [
+        (true, 0.0, 640.0),
+        (true, 0.0, 328.0),
+        (true, -1.0, 328.0),
+        (false, 0.0, 640.0),
+        (false, 0.0, 300.0),
+        (false, -1.0, 328.0),
+    ] {
+        let case = format!("lying {horizontal}, min {min}, {width} px");
+        let mut chart = bars(BarLayout::Grouped, horizontal);
+        chart.labels_inside = true;
+        chart.width = width;
+        chart.height = width / 2.0;
+        chart.format = ValueFormat::Fixed(2);
+        chart.axes.min = Some(min);
+        chart.axes.max = Some(3.0);
+        let mut first = spec("A", &[Some(2.1), Some(0.0), Some(1.5)]);
+        first.color = chart_hex(&Theme::DEFAULT, Color::Success, ColorShade::S9);
+        first.extras.mark_lines = vec![(1.2, "1,20".into())];
+        let mut second = spec("B", &[Some(2.5), Some(2.4), Some(0.0)]);
+        second.color = first.color;
+        chart.series = vec![first, second];
+        let drawn = draw_bar(&chart).expect("drawn");
+        let page = chart.ink.label;
+        assert_ne!(chart.ink.on(chart.series[0].color), page);
+        let zeros: Vec<String> = drawn_texts(&drawn.svg)
+            .into_iter()
+            .filter(|(label, tag)| label == "0,00" && tag.contains("stroke="))
+            .map(|(_, tag)| tag)
+            .collect();
+        assert_eq!(zeros.len(), 2, "{case}: {}", drawn.svg);
+        for tag in &zeros {
+            assert!(tag.contains(&format!("fill=\"{page}\"")), "{case}: {tag}");
+            assert!(
+                tag.contains(&format!("stroke=\"{}\"", chart.ink.surface)),
+                "{case}: {tag}"
+            );
+            let opened = format!("<text{tag}>");
+            let attributes = attributes(&opened);
+            let at = |name| -> f32 {
+                attribute(&attributes, name)
+                    .and_then(|value| value.parse().ok())
+                    .unwrap_or_else(|| panic!("{case}: {tag}"))
+            };
+            // Past its own bar's axis end: right of a lying one, above an upright one.
+            let bar = drawn
+                .geometry
+                .marks
+                .iter()
+                .filter_map(|mark| match mark.shape {
+                    MarkShape::Rect {
+                        x,
+                        y,
+                        width,
+                        height,
+                    } if mark.value == 0.0 => Some((x, y, width, height)),
+                    _ => None,
+                })
+                .find(|(x, y, width, height)| match horizontal {
+                    true => (*y..=y + height).contains(&at("y")),
+                    false => (*x..=x + width).contains(&at("x")),
+                })
+                .unwrap_or_else(|| panic!("{case}: no bar under {tag}"));
+            match horizontal {
+                true => assert!(at("x") > bar.0, "{case}: {tag} {bar:?}"),
+                false => assert!(at("y") < bar.1, "{case}: {tag} {bar:?}"),
+            }
+        }
+        // Wide, the other bars are thick enough for their labels.
+        for value in ["2,10", "1,50"].into_iter().filter(|_| width >= 640.0) {
+            assert!(
+                drawn_texts(&drawn.svg)
+                    .iter()
+                    .any(|(label, _)| label == value),
+                "{case}: {value}"
+            );
+        }
+    }
+    // A stack of nothing but 0s writes one 0, past the axis.
+    let mut empty = bars(BarLayout::Stacked, true);
+    empty.labels_inside = true;
+    empty.format = ValueFormat::Fixed(0);
+    empty.series = vec![
+        spec("A", &[Some(0.0), Some(5.0)]),
+        spec("B", &[Some(0.0), Some(3.0)]),
+    ];
+    empty.x.truncate(2);
+    let drawn = draw_bar(&empty).expect("drawn");
+    let zeros = drawn_texts(&drawn.svg)
+        .into_iter()
+        .filter(|(label, tag)| label == "0" && tag.contains("stroke="))
+        .count();
+    assert_eq!(zeros, 1, "{}", drawn.svg);
+    // A 0 inside a stack writes nothing on the segment after it.
+    let mut stack = bars(BarLayout::Stacked, true);
+    stack.format = ValueFormat::Fixed(0);
+    stack.series = vec![
+        spec("A", &[Some(70.0), Some(28.0)]),
+        spec("B", &[Some(0.0), Some(30.0)]),
+    ];
+    stack.x.truncate(2);
+    let drawn = draw_bar(&stack).expect("drawn");
+    let labels = drawn_texts(&drawn.svg);
+    // The axis writes its own 0, in the axis' ink and without a halo.
+    assert!(
+        !labels
+            .iter()
+            .any(|(label, tag)| label == "0" && tag.contains("stroke=")),
+        "{}",
+        drawn.svg
+    );
+    for value in ["70", "28", "30"] {
+        assert!(
+            labels.iter().any(|(label, _)| label == value),
+            "{value}: {}",
+            drawn.svg
+        );
+    }
+}
+
+/// Whatever the layout, lying or upright, with falling bars and a thin one: no label straddles a
+/// bar's edge. Each lies within one bar or off them all.
+#[test]
+fn no_label_straddles_a_bar() {
+    let layouts = [BarLayout::Grouped, BarLayout::Stacked, BarLayout::Percent];
+    for (layout, horizontal, width) in layouts
+        .into_iter()
+        .flat_map(|layout| [(layout, true), (layout, false)])
+        .flat_map(|(layout, horizontal)| [(layout, horizontal, 640.0), (layout, horizontal, 300.0)])
+    {
+        let case = format!("{layout:?}, lying {horizontal}, {width} px");
+        let mut chart = bars(layout, horizontal);
+        chart.width = width;
+        chart.height = width / 2.0;
+        chart.labels_inside = true;
+        let negative = layout == BarLayout::Grouped;
+        chart.series = vec![
+            spec(
+                "A",
+                &[
+                    Some(70.0),
+                    Some(if negative { -3.0 } else { 3.0 }),
+                    Some(1.0),
+                ],
+            ),
+            spec("B", &[Some(29.0), Some(40.0), Some(55.0)]),
+        ];
+        let drawn = draw_bar(&chart).expect("drawn");
+        let bars: Vec<[f32; 4]> = drawn
+            .geometry
+            .marks
+            .iter()
+            .filter_map(|mark| match mark.shape {
+                MarkShape::Rect {
+                    x,
+                    y,
+                    width,
+                    height,
+                } if width > 0.0 && height > 0.0 => Some([x, y, x + width, y + height]),
+                _ => None,
+            })
+            .collect();
+        for (label, tag) in drawn_texts(&drawn.svg) {
+            let opened = format!("<text{tag}>");
+            let attributes = attributes(&opened);
+            let at = |name| attribute(&attributes, name).and_then(|v| v.parse::<f32>().ok());
+            let (Some(x), Some(y)) = (at("x"), at("y")) else {
+                continue;
+            };
+            let [left, top, right, bottom] = text_box(&attributes, &label, x, y);
+            let straddles = bars.iter().any(|[l, t, r, b]| {
+                let overlaps = left < *r && *l < right && top < *b && *t < bottom;
+                let within =
+                    *l - 1.0 <= left && right <= *r + 1.0 && *t - 1.0 <= top && bottom <= *b + 1.0;
+                overlaps && !within
+            });
+            assert!(!straddles, "{case}: {label} {tag}\n{}", drawn.svg);
+        }
+    }
+}
+
+/// With every bar at or under 0 the axis is the plot's top or right end: a bar of 0's value stands
+/// on the plot's side of it.
+#[test]
+fn a_bar_of_0_at_the_plots_end_writes_inside_it() {
+    for horizontal in [true, false] {
+        let mut chart = bars(BarLayout::Grouped, horizontal);
+        chart.labels_inside = true;
+        chart.format = ValueFormat::Fixed(0);
+        chart.axes.min = Some(-10.0);
+        chart.axes.max = Some(0.0);
+        chart.series = vec![spec("A", &[Some(-6.0), Some(0.0), Some(-4.0)])];
+        let drawn = draw_bar(&chart).expect("drawn");
+        let plot = drawn.geometry.plot;
+        let (_, tag) = drawn_texts(&drawn.svg)
+            .into_iter()
+            .find(|(label, tag)| label == "0" && tag.contains("stroke="))
+            .unwrap_or_else(|| panic!("lying {horizontal}: {}", drawn.svg));
+        let opened = format!("<text{tag}>");
+        let attributes = attributes(&opened);
+        let at = |name| attribute(&attributes, name).and_then(|v| v.parse::<f32>().ok());
+        let [left, top, right, bottom] =
+            text_box(&attributes, "0", at("x").expect("x"), at("y").expect("y"));
+        assert!(
+            plot.left - 1.0 <= left
+                && right <= plot.right + 1.0
+                && plot.top - 1.0 <= top
+                && bottom <= plot.bottom + 1.0,
+            "lying {horizontal}: {:?} {plot:?} {tag}",
+            [left, top, right, bottom]
+        );
+    }
+}
+
+/// A bar of 0 with an error range: its whisker runs up from the axis where the 0 is written, so the
+/// label comes after every error bar and its halo parts the whisker.
+#[test]
+fn a_bar_of_0_is_written_over_its_error_bar() {
+    for (layout, horizontal) in [
+        (BarLayout::Grouped, false),
+        (BarLayout::Grouped, true),
+        (BarLayout::Stacked, true),
+    ] {
+        let mut chart = bars(layout, horizontal);
+        chart.labels_inside = true;
+        chart.format = ValueFormat::Fixed(0);
+        chart.series = vec![spec("A", &[Some(3.0), Some(0.0), Some(2.0)])];
+        chart.errors = vec![vec![Some((2.0, 4.0)), Some((0.0, 1.5)), Some((1.0, 3.0))]];
+        let drawn = draw_bar(&chart).expect("drawn");
+        let zero = drawn_texts(&drawn.svg)
+            .into_iter()
+            .find(|(label, tag)| label == "0" && tag.contains("stroke="))
+            .unwrap_or_else(|| panic!("{layout:?} {horizontal}: {}", drawn.svg));
+        let at = drawn.svg.find(&zero.1).expect("in the svg");
+        let whiskers = drawn.svg.rfind("<line").expect("error bars");
+        assert!(at > whiskers, "{layout:?} {horizontal}: {}", drawn.svg);
+    }
+}

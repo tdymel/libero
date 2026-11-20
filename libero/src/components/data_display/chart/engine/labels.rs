@@ -3,14 +3,19 @@
 use super::*;
 use std::fmt::Write as _;
 
+/// The attributes that ring a label past its bar in `surface`, so a line under it cannot blur it.
+pub(super) fn halo(surface: HexColor) -> String {
+    format!(
+        " stroke=\"{surface}\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\""
+    )
+}
+
 /// The renderer writes an upright bar's label past its top, inside a falling bar. Moves a
 /// falling one's under its lower end, or just inside it in the bar's ink when the x axis is
 /// too near; a label past its bar is haloed in `surface`, so a line under it cannot blur it.
 pub(super) fn place_outside_labels(svg: &str, bottom: f32, surface: HexColor) -> String {
     const GAP: f32 = 8.0;
-    let halo = format!(
-        " stroke=\"{surface}\" stroke-width=\"3\" stroke-linejoin=\"round\" paint-order=\"stroke\""
-    );
+    let halo = halo(surface);
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
     while let Some(open) = rest.find("<text") {
