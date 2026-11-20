@@ -105,7 +105,12 @@ field_props! {
         /// surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<String>,
-        /// Focuses the first cell on mount.
+        /// Reads the code out of pasted or autofilled text, such as a link that carries it.
+        /// It gets text of three characters or more, never a typed one; what it returns goes
+        /// through `kind` as typed characters do.
+        #[props(default)]
+        read_paste: Option<Callback<String, String>>,
+        /// Focuses the first cell on mount, also as the dialog it opens in shows.
         #[props(default)]
         autofocus: Option<bool>,
     }
@@ -260,6 +265,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         cells: cells.clone(),
         length,
         kind,
+        read_paste: props.read_paste,
         root,
         handles,
         readonly,
@@ -375,6 +381,7 @@ struct PinEdit {
     cells: Vec<Option<char>>,
     length: usize,
     kind: PinKind,
+    read_paste: Option<Callback<String, String>>,
     root: ElementHandle,
     handles: CellHandles,
     readonly: bool,
@@ -388,6 +395,15 @@ struct PinEdit {
 }
 
 impl PinEdit {
+    /// The code in pasted or autofilled text, as the field's `read_paste` reads it. A cell's
+    /// `oninput` holds two characters when one is typed over another: those stay as they are.
+    fn read(&self, text: String) -> String {
+        match self.read_paste {
+            Some(read) if text.chars().count() > 2 => read.call(text),
+            _ => text,
+        }
+    }
+
     /// An out-of-range index stops at the ends: `wrapping_sub` on cell zero
     /// lands far past the last cell.
     fn focus(&self, index: usize) {
@@ -464,7 +480,7 @@ impl PinEdit {
             self.show(index, self.cells[index]);
             return;
         }
-        let mut raw: Vec<char> = raw.chars().map(fold_digit).collect();
+        let mut raw: Vec<char> = self.read(raw).chars().map(fold_digit).collect();
         let emptied = raw.is_empty();
         // The cell's old character sits on whichever side the caret was not.
         // Out before the filter, so a rejected insertion does not keep it as new.
@@ -495,7 +511,8 @@ impl PinEdit {
     /// A one-time code the browser wrote into the first cell before it mounted: spread
     /// from there, without moving the focus.
     fn prefilled(&self, raw: String) {
-        let accepted: Vec<char> = raw
+        let accepted: Vec<char> = self
+            .read(raw)
             .chars()
             .map(fold_digit)
             .filter(|c| self.kind.accepts(*c))
@@ -515,7 +532,8 @@ impl PinEdit {
             return;
         };
         event.prevent_default();
-        let accepted: Vec<char> = text
+        let accepted: Vec<char> = self
+            .read(text)
             .chars()
             .map(fold_digit)
             .filter(|c| self.kind.accepts(*c))
@@ -807,6 +825,8 @@ fn PinCell(
         .attr("aria-required", required.then_some("true"))
         .attr("aria-invalid", invalid.then_some("true"))
         .attr("autofocus", autofocus)
+        // A focus trap that opens with the field (a dialog's) focuses it, not its first stop.
+        .attr("data-autofocus", autofocus.then_some("true"))
         .event("oninput", move |event: FormEvent| {
             typed.current().typed(index, event.value())
         })
@@ -888,6 +908,34 @@ mod tests {
         assert!(!warns(
             || rsx! { LiberoProvider { PinField { aria_label: "Code" } } }
         ));
+    }
+
+    /// An autofocused field marks its first cell, and only it, for a dialog's focus trap.
+    #[test]
+    fn autofocus_marks_the_first_cell_for_a_focus_trap() {
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                LiberoProvider {
+                    PinField { label: "Code", length: 4usize, autofocus: true }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert_eq!(html.matches("data-autofocus=\"true\"").count(), 1, "{html}");
+        let first = html.find("<input").unwrap();
+        let marked = html.find("data-autofocus").unwrap();
+        assert_eq!(html[first..marked].matches("<input").count(), 1, "{html}");
+
+        let mut dom = VirtualDom::new(|| {
+            rsx! {
+                LiberoProvider {
+                    PinField { label: "Code", length: 4usize }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        assert!(!dioxus_ssr::render(&dom).contains("data-autofocus"));
     }
 
     /// Todo 4293: the hidden input posts what the cells show, not a longer raw value.

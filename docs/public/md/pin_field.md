@@ -47,7 +47,8 @@ fn Demo() -> Element {
 | `one_time_code` | `bool` | `true` | Lets a phone offer the code it just received. |
 | `separator` | `Element` | - | Rendered between the cells, such as a dash. On a row too narrow for every cell, the separators shrink away first, so the cells keep their touch size. |
 | `name` | `FieldName<String>` | - | What the pin posts as. A path such as `Login::FIELDS.code()` also binds the pin to the surrounding `Form`'s value when the field has no `oninput`. |
-| `autofocus` | `bool` | `false` | Focuses the first cell on mount. |
+| `read_paste` | `Callback<String, String>` | - | Reads the code out of pasted or autofilled text, such as an invite link that ends in it. It gets text of three characters or more, never a typed character. What it returns is filtered by `kind` like typed characters. |
+| `autofocus` | `bool` | `false` | Focuses the first cell on mount, also inside a dialog, whose focus trap starts there. |
 | `label` | `Caption` | - | The field's caption, above the cells. It names the group of cells. |
 | `description` | `Caption` | - | Between the label and the cells. Where the code came from. |
 | `label_trailing` | `Caption` | - | Content in the label row, outside the `<label>`, at the row's end: a button cannot sit inside the label. Takes a string or an `Element`. |

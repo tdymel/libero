@@ -741,3 +741,32 @@ fn every_cell_reports_required_and_invalid() {
         fixture.close().await.unwrap();
     });
 }
+
+/// `read_paste` reads the code out of a pasted link, by clipboard and as inserted text, and
+/// leaves a character typed over another alone.
+#[test]
+fn a_pasted_link_gives_the_code_read_paste_reads() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field/link", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        paste_over_selection(page, 0, "https://example.org/join/K7P3X").await;
+        expect_cells(page, "K|7|P|3|X @4", "a link pasted").await;
+
+        focus_at(page, 0, 0).await;
+        page.execute_bounded(InsertTextParams::new("https://example.org/join/AB2CD"))
+            .await
+            .unwrap();
+        expect_cells(page, "A|B|2|C|D @4", "a link inserted as text").await;
+
+        focus_at(page, 1, 1).await;
+        page.execute_bounded(InsertTextParams::new("Z"))
+            .await
+            .unwrap();
+        expect_cells(page, "A|Z|2|C|D @2", "Z typed after the B").await;
+
+        fixture.console.assert_clean("pin field link").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

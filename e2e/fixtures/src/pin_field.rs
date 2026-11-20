@@ -11,6 +11,7 @@ pub const ROUTES: Routes = &[
     ("/pin-field/echo", || rsx! { PinFieldEchoPage {} }),
     ("/pin-field/wide", || rsx! { PinFieldWidePage {} }),
     ("/pin-field/rule", || rsx! { PinFieldRulePage {} }),
+    ("/pin-field/link", || rsx! { PinFieldLinkPage {} }),
 ];
 
 /// A length rule, and a button to Tab to: the rule shows only once focus leaves the cells (1564).
@@ -109,6 +110,25 @@ fn PinFieldErrorPage() -> Element {
                 status: "That code is wrong.",
                 required: true,
                 length: 4usize,
+                value: pin(),
+                oninput: move |next: String| pin.set(next),
+            }
+        }
+    }
+}
+
+/// Five letter cells whose `read_paste` takes the code at the end of an invite link.
+#[component]
+fn PinFieldLinkPage() -> Element {
+    let mut pin = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            PinField {
+                label: "Code",
+                length: 5usize,
+                kind: "alphanumeric",
+                read_paste: |text: String| text.rsplit('/').next().unwrap_or_default().to_owned(),
                 value: pin(),
                 oninput: move |next: String| pin.set(next),
             }
