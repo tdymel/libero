@@ -254,6 +254,9 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
                 aria_label: props.aria_label.clone(),
                 title: props.title.clone(),
                 ondismiss: props.ondismiss,
+                // Docked, never the dialog's full screen: its negative margins would push the
+                // panel past the viewport's edge where a theme makes dialogs full screen on phones.
+                full_screen: false,
                 class,
                 sx,
                 states,

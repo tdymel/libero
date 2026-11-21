@@ -135,3 +135,47 @@ fn a_responsive_drawer_anchor_renders_its_base_on_the_server() {
         "the base's strip"
     );
 }
+
+/// Every dialog full screen on a phone, as an app's theme may ask.
+static PHONE_DIALOGS: libero::theme::Theme = libero::theme::Theme {
+    dialog: libero::theme::DialogDefaults {
+        full_screen: DialogFullScreen::Phone,
+        ..libero::theme::Theme::DEFAULT.dialog
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// A drawer docks: a theme's full-screen dialogs don't make it one, whose negative margins would
+/// push it past the screen's edge.
+#[test]
+fn a_drawer_stays_docked_under_a_theme_of_full_screen_dialogs() {
+    #[component]
+    fn Opener() -> Element {
+        let drawer = use_drawer(
+            DrawerOptions {
+                anchor: DrawerAnchor::Bottom.into(),
+                aria_label: Some("Sheet".into()),
+                ..Default::default()
+            },
+            |_: ModalScope<()>| rsx! { "drawer content" },
+        );
+        let dialog = use_modal(|_: ModalScope<()>| rsx! { Dialog { aria_label: "Plain", "one" } });
+        use_hook(move || {
+            drawer.open();
+            dialog.open();
+        });
+        rsx! {}
+    }
+    fn app() -> Element {
+        rsx! { LiberoProvider { themes: &PHONE_DIALOGS, Opener {} } }
+    }
+
+    let html = render(app);
+    assert!(
+        dialog_state(&html, "Plain").contains("full-screen-phone"),
+        "the theme reaches dialogs"
+    );
+    let drawer = dialog_state(&html, "Sheet");
+    assert!(drawer.contains("anchor-bottom"), "{drawer}");
+    assert!(!drawer.contains("full-screen"), "{drawer}");
+}
